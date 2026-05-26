@@ -39,6 +39,7 @@
   #home .wrap { justify-content:center; align-items:center; }
   .home-title { text-align:center; color:#fff; text-shadow:0 2px 10px rgba(0,0,0,.6); margin-bottom:36px; }
   .home-title h1 { font-size:30px; font-weight:900; letter-spacing:.08em; }
+  .ver-tag { font-size:12px; color:rgba(255,255,255,.7); font-weight:700; margin-top:6px; }
   .home-btns { width:100%; display:flex; flex-direction:column; gap:16px; }
   .home-machines { width:100%; display:flex; flex-direction:column; gap:12px; margin-bottom:22px; }
   .go-section-label { font-size:14px; font-weight:800; color:var(--code); margin:4px 2px 10px; text-align:left; }
@@ -78,6 +79,21 @@
 
   /* ===== WORK (read) ===== */
   .progress-text { font-size:14px; color:var(--muted); font-weight:700; margin-left:auto; }
+  .work-acts { display:flex; gap:8px; }
+  .wact { width:46px; height:46px; border-radius:10px; background:var(--panel-2); border:1px solid var(--line); cursor:pointer; font-size:20px; display:flex; align-items:center; justify-content:center; }
+  .wact.postpone { color:var(--accent); border-color:rgba(88,166,255,.45); }
+  .wact.skip { color:var(--warn); border-color:rgba(255,107,107,.45); }
+  .wact:active { transform:scale(.92); }
+  .toast { position:fixed; left:50%; top:14px; transform:translateX(-50%) translateY(-150%); background:#2a2320; border:1.5px solid var(--warn); color:#ffd9d9; border-radius:12px; padding:12px 14px; display:flex; align-items:center; gap:14px; font-size:14px; font-weight:700; box-shadow:0 6px 24px rgba(0,0,0,.5); transition:transform .3s cubic-bezier(.2,.8,.3,1); z-index:200; max-width:92%; }
+  .toast.show { transform:translateX(-50%) translateY(0); }
+  .toast .undo-btn { background:var(--warn); color:#2a0d0d; border:none; border-radius:8px; padding:8px 14px; font-weight:800; font-size:14px; cursor:pointer; white-space:nowrap; }
+  .miss-card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px; margin:16px auto; text-align:left; max-width:420px; }
+  .miss-card h3 { font-size:15px; margin:0 0 10px; color:var(--warn); }
+  .miss-row { display:flex; align-items:center; gap:10px; padding:10px; background:var(--panel-2); border-radius:8px; margin-bottom:8px; }
+  .miss-row .info { flex:1; min-width:0; }
+  .miss-row .c { font-family:ui-monospace,monospace; font-weight:700; font-size:14px; }
+  .miss-row .n { font-size:12px; color:var(--muted); }
+  .miss-row .back-btn { background:var(--ok); color:#04130a; border:none; border-radius:8px; padding:8px 12px; font-weight:800; font-size:13px; cursor:pointer; white-space:nowrap; }
   .target { background:var(--panel); border:1.5px solid var(--line); border-radius:16px; padding:18px; text-align:center; margin-bottom:12px; }
   .target.match { border-color:var(--ok); background:rgba(61,220,132,.08); }
   .target.manual { border-color:#5b9bd5; background:rgba(91,155,213,.10); }
@@ -196,6 +212,7 @@
   <div class="wrap">
     <div class="home-title">
       <h1>ピッキング補助</h1>
+      <div class="ver-tag">ver2</div>
     </div>
     <div class="home-btns">
       <button class="home-btn go" id="goBtn">GO</button>
@@ -238,7 +255,10 @@
   <div class="wrap">
     <div class="topbar">
       <button class="back" data-home>←</button>
-      <h2>読み取り</h2>
+      <div class="work-acts">
+        <button class="wact postpone" id="postponeBtn" title="後回し">⏭</button>
+        <button class="wact skip" id="missBtn" title="欠品">⚠</button>
+      </div>
       <span class="progress-text" id="prog">1 / 1</span>
     </div>
 
@@ -288,6 +308,10 @@
     <div class="check">✓</div>
     <h2>全部そろった！</h2>
     <p id="finishCount">0個 完了</p>
+    <div class="miss-card" id="missCard" style="display:none;">
+      <h3 id="missTitle">⚠ 欠品だった部品</h3>
+      <div id="missList"></div>
+    </div>
     <button class="btn" id="homeBtn2" style="max-width:280px;">ホームに戻る</button>
   </div>
 </section>
@@ -441,6 +465,11 @@
 
 <canvas id="canvas" style="display:none;"></canvas>
 
+<div class="toast" id="undoToast">
+  <span id="undoMsg"></span>
+  <button class="undo-btn" id="undoBtn">もどす</button>
+</div>
+
 <script>
   const $ = id => document.getElementById(id);
   const $$ = sel => document.querySelectorAll(sel);
@@ -496,8 +525,10 @@
   }
   let DB = loadDB();
 
-  let job = [];  // [{code, qty}]
+  let job = [];  // [{code, qty, name}]
   let idx = 0;
+  let missing = [];   // 欠品にしたjobインデックスの配列
+  let doneCount = 0;  // 集め終わった数（プログレス表示用）
 
   $('startBtn').onclick = () => {
     const rows = [...$('rows').children];
@@ -512,15 +543,19 @@
     if (!list.length){ $('inputErr').textContent='有効な部品がない。コードは英字＋数字8桁で入れてな。'; return; }
     if (bad.length){ $('inputErr').textContent='形が違う行がある: '+bad.slice(0,3).join(', ')+'。直してな。'; return; }
     $('inputErr').textContent='';
-    job = list; idx = 0;
+    job = list; idx = 0; missing = []; doneCount = 0;
     show('work'); renderWork();
   };
 
   /* ===== WORK ===== */
   function fmtCode(code){ return '<span class="pfx">'+code[0]+'</span>'+code.slice(1); }
+  function activeTotal(){ return job.length - missing.length; }  // 欠品を除いた集める総数
   function renderWork(){
+    // 今のidxが欠品なら、欠品でない次の部品まで飛ばす
+    while(idx < job.length && missing.includes(idx)) idx++;
+    if(idx >= job.length){ finish(); return; }
     const cur = job[idx];
-    $('prog').textContent = (idx+1)+' / '+job.length;
+    $('prog').textContent = (doneCount+1)+' / '+activeTotal();
     $('targetCode').innerHTML = fmtCode(cur.code);
     // 品名 ・ 個数 を横並びで表示（品名が無ければ個数だけ）
     const nm = (cur.name||'').trim();
@@ -640,8 +675,61 @@
       $('verdict').textContent= skipMode ? 'チェックを3つとも入れてな' : 'チェックを2つとも入れてな';
       return;
     }
-    if (idx < job.length-1){ idx++; renderWork(); }
+    doneCount++;            // この部品を集め終わった
+    idx++;
+    // 欠品を飛ばして次の集める部品へ
+    while(idx < job.length && missing.includes(idx)) idx++;
+    if (idx < job.length){ renderWork(); }
     else { finish(); }
+  };
+
+  /* ----- 後回し・欠品・もどす ----- */
+  let undoFn=null, undoTimer=null;
+  function showUndo(msg, fn){
+    $('undoMsg').textContent = msg;
+    undoFn = fn;
+    $('undoToast').classList.add('show');
+    clearTimeout(undoTimer);
+    undoTimer = setTimeout(()=>$('undoToast').classList.remove('show'), 4500);
+  }
+  $('undoBtn').onclick = ()=>{
+    if(undoFn) undoFn();
+    $('undoToast').classList.remove('show');
+    undoFn=null;
+  };
+
+  // 後回し：今の部品をjob末尾へ移動（idxはそのまま＝次が繰り上がる）
+  $('postponeBtn').onclick = ()=>{
+    if(matched) return;        // 一致/確認済みのときは押させない
+    sndTap();
+    const moved = job[idx];
+    missing = missing.map(m=> m>idx ? m-1 : m);  // 配列詰めに合わせて欠品indexを補正
+    job.splice(idx,1);
+    job.push(moved);
+    showUndo('「'+(moved.name||moved.code)+'」を後回しにした', ()=>{
+      job.pop();
+      job.splice(idx,0,moved);
+      missing = missing.map(m=> m>=idx ? m+1 : m);
+      renderWork();
+    });
+    renderWork();
+  };
+
+  // 欠品：missingに記録してすぐ次へ
+  $('missBtn').onclick = ()=>{
+    if(matched) return;
+    sndTap();
+    const missedIdx = idx;
+    const p = job[missedIdx];
+    missing.push(missedIdx);
+    showUndo('「'+(p.name||p.code)+'」を欠品にした', ()=>{
+      missing = missing.filter(m=>m!==missedIdx);
+      idx = missedIdx;
+      renderWork();
+    });
+    idx++;
+    while(idx < job.length && missing.includes(idx)) idx++;
+    if(idx < job.length){ renderWork(); } else { finish(); }
   };
 
   /* ----- スキップ（バーコードなし・手動確認） ----- */
@@ -740,7 +828,31 @@
 
   function finish(){
     stopScan();
-    $('finishCount').textContent = job.length+'個 完了';
+    $('undoToast').classList.remove('show');
+    const collected = job.length - missing.length;
+    $('finishCount').textContent = collected+'個 完了';
+    // 欠品リスト
+    if(missing.length){
+      $('missCard').style.display='block';
+      $('missTitle').textContent = '⚠ 欠品だった部品（'+missing.length+'件）';
+      const wrap=$('missList'); wrap.innerHTML='';
+      // missingは現在のjob配列のインデックス。表示用にコピーして処理
+      missing.slice().forEach(mi=>{
+        const p=job[mi]; if(!p) return;
+        const row=document.createElement('div'); row.className='miss-row';
+        row.innerHTML='<div class="info"><div class="c">'+p.code+'</div><div class="n">'+((p.name||'').replace(/</g,'&lt;'))+' ・ '+p.qty+'個</div></div>';
+        const b=document.createElement('button'); b.className='back-btn'; b.textContent='集める';
+        b.onclick=()=>{
+          // 欠品から戻す → その部品を集めにいく
+          missing = missing.filter(x=>x!==mi);
+          idx = mi;
+          show('work'); renderWork();
+        };
+        row.appendChild(b); wrap.appendChild(row);
+      });
+    } else {
+      $('missCard').style.display='none';
+    }
     show('finish');
   }
 
@@ -974,7 +1086,7 @@
       }
     });
     saveDB();
-    idx=0;
+    idx=0; missing=[]; doneCount=0;
     show('work'); renderWork();
   }
 
