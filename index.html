@@ -222,7 +222,7 @@
   <div class="wrap">
     <div class="home-title">
       <h1>ピッキング補助</h1>
-      <div class="ver-tag">ver3</div>
+      <div class="ver-tag">ver4</div>
     </div>
     <div class="home-btns">
       <button class="home-btn go" id="goBtn">GO</button>
@@ -1247,12 +1247,14 @@
     if(meaning){ code=(meaning.code||'').toUpperCase(); qty=meaning.qty; }
     // リストから「まだ完了してない・コードが一致・個数も一致」する項目を探す
     // ※お買い物モードは個数まで照合したいので、意味づけ(qty)が必須
-    const hit = (qty!=null) ? shopList.find(it=> !it.done && it.code===code && String(qty)===String(it.qty) ) : null;
+    // 個数は数字だけ取り出して比較（「300個」「300」「 300 」をすべて同じ扱いに）
+    const numOf = v => String(v==null?'':v).replace(/[^0-9.]/g,'');
+    const hit = (qty!=null && numOf(qty)!=='') ? shopList.find(it=> !it.done && it.code===code && numOf(qty)===numOf(it.qty) ) : null;
     if(hit){
       hit.done=true;
       if(navigator.vibrate) navigator.vibrate(60); sndOK();
       $('shopVerdict').className='verdict ok';
-      $('shopVerdict').textContent='✓ '+code+(qty!=null?' ・ '+qty+'個':'')+' OK！';
+      $('shopVerdict').textContent='✓ '+code+(qty!=null?' ・ '+numOf(qty)+'個':'')+' OK！';
       renderShopList();
     } else {
       // 不一致：理由を出す
@@ -1261,7 +1263,7 @@
       $('shopVerdict').className='verdict ng';
       if(!sameCode){ $('shopVerdict').textContent='✗ リストにない部品（'+code+'）'; }
       else if(sameCode.done){ $('shopVerdict').textContent='✗ もう確認済み（'+code+'）'; }
-      else if(qty!=null){ $('shopVerdict').textContent='✗ 個数が違う（袋'+qty+'個 / 必要'+sameCode.qty+'個）'; }
+      else if(qty!=null && numOf(qty)!==''){ $('shopVerdict').textContent='✗ 個数が違う（袋'+numOf(qty)+'個 / 必要'+numOf(sameCode.qty)+'個）'; }
       else { $('shopVerdict').textContent='✗ 個数が照合できん（意味づけしてな）'; }
     }
   }
