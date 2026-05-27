@@ -56,6 +56,16 @@
     backdrop-filter:blur(2px); transition:transform .08s; }
   .home-btn:active { transform:scale(.97); }
   .home-btn.go { background:rgba(46,93,58,.8); color:#eafbe9; border-color:var(--gold); font-size:30px; }
+  .home-btn.shop { font-size:18px; }
+  .shop-list { display:flex; flex-direction:column; gap:8px; margin-bottom:14px; }
+  .shop-item { display:flex; align-items:center; gap:10px; background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:12px; }
+  .shop-item.done { opacity:.55; border-color:var(--ok); }
+  .shop-item .si-check { width:26px; height:26px; border-radius:6px; border:2px solid var(--muted); flex:0 0 26px; display:flex; align-items:center; justify-content:center; color:transparent; font-size:16px; }
+  .shop-item.done .si-check { background:var(--ok); border-color:var(--ok); color:#04130a; }
+  .shop-item .si-info { flex:1; min-width:0; }
+  .shop-item .si-code { font-family:ui-monospace,monospace; font-weight:700; font-size:15px; }
+  .shop-item .si-qty { font-size:13px; color:var(--muted); }
+  .shop-item.done .si-qty { color:var(--ok); }
 
   /* ===== topbar ===== */
   .topbar { display:flex; align-items:center; gap:12px; margin-bottom:14px; }
@@ -212,10 +222,11 @@
   <div class="wrap">
     <div class="home-title">
       <h1>ピッキング補助</h1>
-      <div class="ver-tag">ver2</div>
+      <div class="ver-tag">ver3</div>
     </div>
     <div class="home-btns">
       <button class="home-btn go" id="goBtn">GO</button>
+      <button class="home-btn shop" id="shopBtn">🛒 お買い物モード（お試し）</button>
       <button class="home-btn" id="prodBtn">製品登録</button>
       <button class="home-btn" id="regBtn">部品登録（場所・意味）</button>
     </div>
@@ -313,6 +324,57 @@
       <div id="missList"></div>
     </div>
     <button class="btn" id="homeBtn2" style="max-width:280px;">ホームに戻る</button>
+  </div>
+</section>
+
+<!-- ============ お買い物モード：入力 ============ -->
+<section class="screen" id="shopInput">
+  <div class="wrap">
+    <div class="topbar">
+      <button class="back" data-home>←</button>
+      <h2>🛒 お買い物モード</h2>
+    </div>
+    <p class="status" style="text-align:left;margin:0 2px 12px;line-height:1.7;">集める部品を入れてな（コード・個数）。<br>作業場で、袋のバーコードを次々スキャンして確認する方式や。<br>※先に「部品登録①」で袋のバーコードを意味づけしておくこと。</p>
+    <div class="head"><span class="n"></span><span class="c">コード</span><span class="q">個数</span></div>
+    <div id="shopRows"></div>
+    <button class="add" id="shopAddBtn">＋ 行を追加</button>
+    <div class="input-foot">
+      <button class="btn ok" id="shopStartBtn">スキャン開始</button>
+    </div>
+    <p class="status ng" id="shopErr"></p>
+  </div>
+</section>
+
+<!-- ============ お買い物モード：スキャン ============ -->
+<section class="screen" id="shopScan">
+  <div class="wrap">
+    <div class="topbar">
+      <button class="back" data-home>←</button>
+      <h2>🛒 スキャン</h2>
+      <span class="progress-text" id="shopProg">0 / 0</span>
+    </div>
+
+    <!-- 残りリスト -->
+    <div class="shop-list" id="shopList"></div>
+
+    <!-- カメラ -->
+    <div class="cam-area" id="shopCamArea">
+      <video id="shopVideo" playsinline muted></video>
+      <div class="scan-line"></div>
+      <div class="cam-shutter" id="shopShutter"></div>
+      <button class="cam-start" id="shopCamStartBtn">📷 スキャン開始</button>
+    </div>
+    <div class="verdict" id="shopVerdict"></div>
+  </div>
+</section>
+
+<!-- ============ お買い物モード：完了 ============ -->
+<section class="screen" id="shopFinish">
+  <div class="wrap">
+    <div class="check">✓</div>
+    <h2>お買い物 完了！</h2>
+    <p id="shopFinishCount">0個 確認</p>
+    <button class="btn" data-home style="max-width:280px;">ホームに戻る</button>
   </div>
 </section>
 
@@ -479,6 +541,7 @@
     // 画面を切り替える前に、動いているカメラを全部止める（カメラの取り合い防止）
     try{ stopScan(); }catch(e){}
     try{ stopMeaningScan(); }catch(e){}
+    try{ stopShopScan(); }catch(e){}
     $$('.screen').forEach(s=>s.classList.remove('on')); $(id).classList.add('on');
   }
   $$('[data-home]').forEach(b => b.onclick = () => { stopScan(); show('home'); });
@@ -1091,6 +1154,117 @@
   }
 
   window.addEventListener('pagehide', stopScan);
+
+  /* =================================================================
+     お買い物モード（お試し）：作業場で袋を次々スキャンして確認
+     ================================================================= */
+  let shopList = [];   // [{code, qty, done}]
+  let shopReader=null, shopRunning=false;
+
+  $('shopBtn').onclick = ()=>{
+    show('shopInput');
+    if(!$('shopRows').children.length){ shopAddRow('C00006230','300'); shopAddRow('C00006230','300'); }
+  };
+  function shopAddRow(code, qty){
+    const row=document.createElement('div'); row.className='rowline';
+    row.innerHTML =
+      '<span class="n"></span>'+
+      '<div class="field c"><input class="uline sc-in" placeholder="C00006230" value="'+(code||'')+'" autocomplete="off" autocapitalize="characters"></div>'+
+      '<div class="field q"><input class="uline sq-in" type="number" inputmode="numeric" placeholder="300" value="'+(qty||'')+'"></div>'+
+      '<button class="del">×</button>';
+    row.querySelector('.del').onclick = ()=>{ row.remove(); shopRenumber(); };
+    $('shopRows').appendChild(row); shopRenumber();
+  }
+  function shopRenumber(){ [...$('shopRows').children].forEach((r,i)=> r.querySelector('.n').textContent=circled(i+1)); }
+  $('shopAddBtn').onclick = ()=> shopAddRow();
+
+  $('shopStartBtn').onclick = ()=>{
+    const rows=[...$('shopRows').children]; const list=[]; const bad=[];
+    rows.forEach(r=>{
+      const code=r.querySelector('.sc-in').value.trim().toUpperCase().replace(/\s+/g,'');
+      const qty =r.querySelector('.sq-in').value.trim();
+      if(!code && !qty) return;
+      if(/^[A-Z]\d{8}$/.test(code)) list.push({code, qty:qty||'?', done:false});
+      else bad.push(code||'(空)');
+    });
+    if(!list.length){ $('shopErr').textContent='部品がない。コードは英字＋数字8桁で入れてな。'; return; }
+    if(bad.length){ $('shopErr').textContent='形が違う行がある: '+bad.slice(0,3).join(', '); return; }
+    $('shopErr').textContent='';
+    shopList = list;
+    show('shopScan');
+    renderShopList();
+  };
+
+  function renderShopList(){
+    const wrap=$('shopList'); wrap.innerHTML='';
+    let doneN=0;
+    shopList.forEach(it=>{
+      if(it.done) doneN++;
+      const d=document.createElement('div'); d.className='shop-item'+(it.done?' done':'');
+      d.innerHTML='<div class="si-check">✓</div><div class="si-info"><div class="si-code">'+it.code+'</div><div class="si-qty">'+it.qty+'個</div></div>';
+      wrap.appendChild(d);
+    });
+    $('shopProg').textContent = doneN+' / '+shopList.length;
+    if(doneN===shopList.length && shopList.length){
+      // 全部完了
+      stopShopScan();
+      $('shopFinishCount').textContent = shopList.length+'件 確認';
+      setTimeout(()=>show('shopFinish'), 600);
+    }
+  }
+
+  async function startShopScan(){
+    if(shopRunning){ stopShopScan(); return; }
+    if(typeof ZXing==='undefined'){ $('shopVerdict').className='verdict ng'; $('shopVerdict').textContent='読み取りライブラリを読めんかった'; return; }
+    try{
+      shopReader=new ZXing.BrowserMultiFormatReader();
+      $('shopCamArea').classList.add('scanning');
+      $('shopCamStartBtn').textContent='■ 止める'; shopRunning=true;
+      $('shopVerdict').className='verdict'; $('shopVerdict').textContent='袋のバーコードをスキャンしてな';
+      await shopReader.decodeFromVideoDevice(null,'shopVideo',(result)=>{ if(result) onShopScan(result.getText()); });
+    }catch(e){
+      $('shopVerdict').className='verdict ng'; $('shopVerdict').textContent='カメラを開けんかった（権限/https を確認）';
+      stopShopScan();
+    }
+  }
+  function stopShopScan(){
+    if(shopReader){ try{shopReader.reset();}catch(e){} }
+    shopRunning=false; $('shopCamArea').classList.remove('scanning');
+    $('shopCamStartBtn').textContent='📷 スキャン開始';
+  }
+  $('shopCamStartBtn').onclick=(e)=>{ e.stopPropagation(); startShopScan(); };
+  $('shopCamArea').onclick=()=>{ startShopScan(); };
+
+  let shopLastVal='', shopLastTime=0;
+  function onShopScan(val){
+    const now=Date.now();
+    if(val===shopLastVal && now-shopLastTime<1500) return;
+    shopLastVal=val; shopLastTime=now;
+    const raw=val.trim().replace(/^\*+|\*+$/g,'').toUpperCase();
+    // 意味づけ（袋のバーコード→コード・個数）を解決
+    let code=raw, qty=null;
+    const meaning = DB.meaning && DB.meaning[val.trim()];
+    if(meaning){ code=(meaning.code||'').toUpperCase(); qty=meaning.qty; }
+    // リストから「まだ完了してない・コードが一致・個数も一致」する項目を探す
+    // ※お買い物モードは個数まで照合したいので、意味づけ(qty)が必須
+    const hit = (qty!=null) ? shopList.find(it=> !it.done && it.code===code && String(qty)===String(it.qty) ) : null;
+    if(hit){
+      hit.done=true;
+      if(navigator.vibrate) navigator.vibrate(60); sndOK();
+      $('shopVerdict').className='verdict ok';
+      $('shopVerdict').textContent='✓ '+code+(qty!=null?' ・ '+qty+'個':'')+' OK！';
+      renderShopList();
+    } else {
+      // 不一致：理由を出す
+      if(navigator.vibrate) navigator.vibrate([60,50,60]); sndNG();
+      const sameCode = shopList.find(it=>it.code===code);
+      $('shopVerdict').className='verdict ng';
+      if(!sameCode){ $('shopVerdict').textContent='✗ リストにない部品（'+code+'）'; }
+      else if(sameCode.done){ $('shopVerdict').textContent='✗ もう確認済み（'+code+'）'; }
+      else if(qty!=null){ $('shopVerdict').textContent='✗ 個数が違う（袋'+qty+'個 / 必要'+sameCode.qty+'個）'; }
+      else { $('shopVerdict').textContent='✗ 個数が照合できん（意味づけしてな）'; }
+    }
+  }
 
   /* =================================================================
      部品登録（第2段階）
