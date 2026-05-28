@@ -145,6 +145,12 @@
   .confirm-box.on { display:block; }
   .qty-msg { text-align:center; font-size:17px; font-weight:800; margin-bottom:14px; }
   .qty-msg b { color:var(--code); font-size:24px; }
+  .qty-row { display:flex; align-items:center; gap:18px; padding:18px 18px; border:1.5px solid var(--line); border-radius:12px; margin-bottom:12px; cursor:pointer; transition:border-color .15s, background .15s; }
+  .qty-row.checked { border-color:var(--ok); background:rgba(61,220,132,.08); }
+  .qty-row .qnum { font-size:48px; font-weight:900; color:var(--code); line-height:1; flex:1; }
+  .qty-row.checked .qnum { color:var(--ok); }
+  .qty-row .qbox { width:42px; height:42px; border:2.5px solid var(--muted); border-radius:8px; flex:0 0 42px; display:flex; align-items:center; justify-content:center; font-size:26px; color:transparent; }
+  .qty-row.checked .qbox { background:var(--ok); border-color:var(--ok); color:#04130a; }
   .chk { display:flex; align-items:center; gap:14px; padding:15px 14px; border:1.5px solid var(--line); border-radius:10px; margin-bottom:10px; cursor:pointer; transition:border-color .15s, background .15s; }
   .chk.checked { border-color:var(--ok); background:rgba(61,220,132,.06); }
   .chk .box { width:30px; height:30px; border:2px solid var(--muted); border-radius:6px; flex:0 0 30px; display:flex; align-items:center; justify-content:center; font-size:20px; color:transparent; }
@@ -222,7 +228,7 @@
   <div class="wrap">
     <div class="home-title">
       <h1>ピッキング補助</h1>
-      <div class="ver-tag">ver4</div>
+      <div class="ver-tag">ver5</div>
     </div>
     <div class="home-btns">
       <button class="home-btn go" id="goBtn">GO</button>
@@ -298,10 +304,8 @@
 
     <!-- confirm: appears after match -->
     <div class="confirm-box" id="confirmBox">
-      <div class="qty-msg"><b id="qtyNum">0</b> 個 用意してください</div>
       <div class="chk" id="chk3" style="display:none;"><div class="box">✓</div><div class="txt">品名を目で見て、合ってるか確認した？</div></div>
-      <div class="chk" id="chk1"><div class="box">✓</div><div class="txt" id="chk1txt">○個あるか、ちゃんと確認した？</div></div>
-      <div class="chk" id="chk2"><div class="box">✓</div><div class="txt">部品を元の位置に戻した？</div></div>
+      <div id="qtyRows"></div>
     </div>
 
     <div class="work-foot">
@@ -629,8 +633,6 @@
     $('verdict').textContent=''; $('verdict').className='verdict';
     showPlaceFor(cur.code);              // 登録された場所を表示（棚番 or 地図）
     $('confirmBox').classList.remove('on');
-    $('chk1txt').textContent = cur.qty+'個あるか、ちゃんと確認した？';
-    $('qtyNum').textContent = cur.qty;
     resetChecks();
     $('nextBtn').style.display='none';
     $('nextBtn').classList.add('locked');
@@ -717,25 +719,48 @@
   };
 
   /* ----- checks ----- */
-  let c1=false, c2=false, c3=false, skipMode=false;
+  let qtyChecks = [];      // 個数行のチェック状態（数の分だけ true/false）
+  let c3=false, skipMode=false;
+  function parseQtySegments(qty){
+    // "300+210" → ["300","210"]、"100" → ["100"]、"?" → ["?"]
+    const s = String(qty==null?'':qty).trim();
+    if(!s) return ['?'];
+    return s.split(/[+＋]/).map(x=>x.trim()).filter(x=>x.length);
+  }
+  function buildQtyRows(qty){
+    const segs = parseQtySegments(qty);
+    qtyChecks = segs.map(()=>false);
+    const wrap = $('qtyRows'); wrap.innerHTML='';
+    segs.forEach((n,i)=>{
+      const row = document.createElement('div');
+      row.className='qty-row';
+      row.innerHTML='<div class="qnum">'+n+'</div><div class="qbox">✓</div>';
+      row.onclick = ()=>{
+        qtyChecks[i] = !qtyChecks[i];
+        row.classList.toggle('checked', qtyChecks[i]);
+        updateNext();
+      };
+      wrap.appendChild(row);
+    });
+  }
   function resetChecks(){
-    c1=false; c2=false; c3=false; skipMode=false;
-    $('chk1').classList.remove('checked'); $('chk2').classList.remove('checked'); $('chk3').classList.remove('checked');
+    qtyChecks = []; c3=false; skipMode=false;
+    $('qtyRows').innerHTML='';
+    $('chk3').classList.remove('checked');
     $('chk3').style.display='none';
     updateNext();
   }
-  $('chk1').onclick = ()=>{ c1=!c1; $('chk1').classList.toggle('checked',c1); updateNext(); };
-  $('chk2').onclick = ()=>{ c2=!c2; $('chk2').classList.toggle('checked',c2); updateNext(); };
   $('chk3').onclick = ()=>{ c3=!c3; $('chk3').classList.toggle('checked',c3); updateNext(); };
   function updateNext(){
-    // スキップ（手動確認）のときは3つ目も必須
-    const ok = c1 && c2 && (!skipMode || c3);
+    // 全ての個数チェック ＋ スキップ時は品名確認(c3)も必須
+    const allQty = qtyChecks.length>0 && qtyChecks.every(v=>v);
+    const ok = allQty && (!skipMode || c3);
     $('nextBtn').classList.toggle('locked', !ok);
   }
   $('nextBtn').onclick = () => {
     if ($('nextBtn').classList.contains('locked')){
       $('verdict').className='verdict ng';
-      $('verdict').textContent= skipMode ? 'チェックを3つとも入れてな' : 'チェックを2つとも入れてな';
+      $('verdict').textContent= skipMode ? '個数チェックと品名確認を入れてな' : 'チェックを全部入れてな';
       return;
     }
     doneCount++;            // この部品を集め終わった
@@ -808,7 +833,8 @@
     hidePlaceBox();                  // 地図は消す（一致時と同じ）
     $('camArea').style.display='none';
     $('skipBtn').style.display='none';
-    $('chk3').style.display='flex';  // 3つ目のチェックを出す
+    $('chk3').style.display='flex';  // スキップ時は品名確認も
+    buildQtyRows(job[idx].qty);      // 個数行を作る（+で2分割 or 1つ）
     $('confirmBox').classList.add('on');
     $('nextBtn').style.display='block';
     $('redoBtn').style.display='block';   // 間違えたとき用
@@ -865,10 +891,7 @@
       $('target').className='target match';
       $('verdict').className='verdict ok'; $('verdict').textContent='✓ 一致！ 個数を確認してな';
       hidePlaceBox();   // 一致後は地図を消す（個数確認だけ）
-      // 自作バーコードに個数表示があれば、それを併記
-      if (meaning && meaning.qty){
-        $('qtyNum').textContent = job[idx].qty + '（' + meaning.qty + '）';
-      }
+      buildQtyRows(job[idx].qty);  // 個数行を作る（+で2分割 or 1つ）
       $('camArea').style.display='none';
       $('skipBtn').style.display='none';
       $('confirmBox').classList.add('on');
