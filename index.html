@@ -173,6 +173,8 @@
   .ocr-cam video { width:100%; height:100%; object-fit:cover; }
   .ocr-frame { position:absolute; top:38%; left:12%; right:12%; bottom:38%; border:2px dashed var(--accent); border-radius:8px; pointer-events:none; }
   .ocr-status { font-size:13px; color:var(--muted); text-align:center; margin-bottom:10px; min-height:20px; }
+  .ocr-bw { margin-bottom:10px; padding:6px; background:#000; border-radius:8px; }
+  .ocr-bw img, .ocr-bw canvas { display:block; width:100%; border-radius:6px; }
   .ocr-result { font-size:40px; font-weight:900; text-align:center; margin-bottom:10px; }
   .ocr-result.ok { color:var(--ok); } .ocr-result.ng { color:var(--warn); }
   .ocr-btns, .ocr-confirm { display:flex; gap:10px; }
@@ -254,7 +256,7 @@
   <div class="wrap">
     <div class="home-title">
       <h1>ピッキング補助</h1>
-      <div class="ver-tag">ver8</div>
+      <div class="ver-tag">ver9</div>
     </div>
     <div class="home-btns">
       <button class="home-btn go" id="goBtn">GO</button>
@@ -580,6 +582,7 @@
     <div class="ocr-title">個数をスキャン（お試し）</div>
     <div class="ocr-target">目標: <b id="ocrTarget">—</b> 個</div>
     <div class="ocr-cam"><video id="ocrVideo" playsinline muted></video><div class="ocr-frame"></div></div>
+    <div class="ocr-bw" id="ocrBwPreview" style="display:none;"></div>
     <div class="ocr-status" id="ocrStatus">ラベルの数字を枠に合わせて「読む」を押してな</div>
     <div class="ocr-result" id="ocrResult" style="display:none;"></div>
     <div class="ocr-btns">
@@ -1317,6 +1320,7 @@
     $('ocrTarget').textContent = ocrTargetNum;
     $('ocrResult').style.display='none';
     $('ocrConfirm').style.display='none';
+    $('ocrBwPreview').style.display='none'; $('ocrBwPreview').innerHTML='';
     document.querySelector('.ocr-btns').style.display='flex';
     $('ocrStatus').textContent='ラベルの数字を枠に合わせて「読む」を押してな';
     $('ocrModal').classList.add('on');
@@ -1331,29 +1335,61 @@
     $('ocrModal').classList.remove('on');
   }
   $('ocrCancel').onclick = stopQtyOcr;
+  // 画像を白黒2値化＋拡大（数字をくっきりさせてOCRしやすく）
+  function makeBW(video, cx, cy, cw, ch){
+    const scale = 2.5;  // 拡大倍率
+    const cv=document.createElement('canvas'); cv.width=cw*scale; cv.height=ch*scale;
+    const ctx=cv.getContext('2d');
+    ctx.drawImage(video, cx,cy,cw,ch, 0,0,cv.width,cv.height);
+    const img=ctx.getImageData(0,0,cv.width,cv.height);
+    const d=img.data;
+    // まず平均輝度を出して、しきい値を決める
+    let sum=0; for(let i=0;i<d.length;i+=4){ sum += (d[i]*0.299+d[i+1]*0.587+d[i+2]*0.114); }
+    const avg = sum/(d.length/4);
+    const thresh = avg*0.85;  // 平均より少し暗いとこを黒に
+    for(let i=0;i<d.length;i+=4){
+      const lum = d[i]*0.299+d[i+1]*0.587+d[i+2]*0.114;
+      const val = lum < thresh ? 0 : 255;  // 2値化
+      d[i]=d[i+1]=d[i+2]=val;
+    }
+    ctx.putImageData(img,0,0);
+    return cv;
+  }
+
   $('ocrShoot').onclick = async ()=>{
     if(typeof Tesseract==='undefined'){ $('ocrStatus').textContent='文字読み取りライブラリを読めんかった（ネット確認）'; return; }
     const v=$('ocrVideo'); if(!v.videoWidth){ $('ocrStatus').textContent='カメラ準備中…もう一回押してな'; return; }
-    $('ocrStatus').textContent='読み取り中…（数秒かかる）';
-    // 枠の部分だけ切り出してOCR（中央の帯）
+    $('ocrStatus').textContent='白黒にして読み取り中…（数秒）';
     const cw=v.videoWidth, ch=v.videoHeight;
     const cx=cw*0.12, cy=ch*0.38, cWidth=cw*0.76, cHeight=ch*0.24;
-    const canvas=document.createElement('canvas'); canvas.width=cWidth; canvas.height=cHeight;
-    canvas.getContext('2d').drawImage(v, cx,cy,cWidth,cHeight, 0,0,cWidth,cHeight);
+    const bw = makeBW(v, cx, cy, cWidth, cHeight);
+    // 白黒画像を枠内にプレビュー表示（「これを読んでるで」）
+    $('ocrBwPreview').style.display='block';
+    $('ocrBwPreview').innerHTML='';
+    bw.style.width='100%'; bw.style.borderRadius='8px';
+    $('ocrBwPreview').appendChild(bw);
     try{
-      const { data } = await Tesseract.recognize(canvas, 'eng', { tessedit_char_whitelist:'0123456789' });
-      const digits = (data.text||'').replace(/[^0-9]/g,'');
+      // 3回読んで多数決（ブレ対策）
+      const votes={};
+      for(let k=0;k<3;k++){
+        const { data } = await Tesseract.recognize(bw, 'eng', { tessedit_char_whitelist:'0123456789' });
+        const dg = (data.text||'').replace(/[^0-9]/g,'');
+        if(dg) votes[dg]=(votes[dg]||0)+1;
+      }
+      let digits='', best=0;
+      for(const k in votes){ if(votes[k]>best){ best=votes[k]; digits=k; } }
       ocrReadValue = digits;
       const resEl=$('ocrResult'); resEl.style.display='block';
       document.querySelector('.ocr-btns').style.display='none';
       $('ocrConfirm').style.display='flex';
-      if(!digits){ resEl.textContent='読めず'; resEl.className='ocr-result ng'; $('ocrStatus').textContent='数字が読めんかった。もう一回試すか、手でチェックしてな'; }
+      if(!digits){ resEl.textContent='読めず'; resEl.className='ocr-result ng'; $('ocrStatus').textContent='数字が読めんかった。白黒画像を見て、ピントや枠を調整してもう一回'; }
       else if(digits===ocrTargetNum){ resEl.textContent=digits; resEl.className='ocr-result ok'; $('ocrStatus').textContent='✓ 目標と一致！ 合ってたら「これでOK」'; }
-      else { resEl.textContent=digits; resEl.className='ocr-result ng'; $('ocrStatus').textContent='⚠ 目標('+ocrTargetNum+')と違う数字や。よう確認してな'; }
+      else { resEl.textContent=digits; resEl.className='ocr-result ng'; $('ocrStatus').textContent='⚠ 目標('+ocrTargetNum+')と違う。白黒画像を見て確認してな'; }
     }catch(e){ $('ocrStatus').textContent='読み取りエラー。もう一回試してな'; }
   };
   $('ocrRetry').onclick = ()=>{
     $('ocrResult').style.display='none'; $('ocrConfirm').style.display='none';
+    $('ocrBwPreview').style.display='none'; $('ocrBwPreview').innerHTML='';
     document.querySelector('.ocr-btns').style.display='flex';
     $('ocrStatus').textContent='ラベルの数字を枠に合わせて「読む」を押してな';
   };
