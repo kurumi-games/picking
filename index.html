@@ -111,6 +111,20 @@
   .target .code { font-family:ui-monospace,Menlo,monospace; font-size:clamp(30px,10vw,46px); font-weight:800; letter-spacing:.05em; word-break:break-all; }
   .target .code .pfx { color:var(--accent); }
   .target-name { font-size:16px; font-weight:700; color:var(--ink); margin-top:8px; line-height:1.4; }
+  .target { position:relative; }
+  .loc-l { position:absolute; top:10px; left:10px; right:auto; white-space:nowrap; display:flex; align-items:center; gap:5px; background:var(--panel-2); border:1px solid rgba(217,184,106,.5); color:var(--gold); border-radius:9px; padding:7px 11px; font-size:15px; font-weight:800; cursor:pointer; }
+  .loc-l.empty { color:var(--muted); border-color:var(--line); border-style:dashed; }
+  .loc-r { position:absolute; top:10px; right:10px; left:auto; white-space:nowrap; display:flex; align-items:center; gap:5px; background:var(--panel-2); border:1px solid rgba(88,166,255,.5); color:var(--accent); border-radius:9px; padding:7px 11px; font-size:15px; font-weight:800; cursor:pointer; }
+  .shelf-panel { background:var(--panel); border:1px solid var(--gold); border-radius:14px; padding:12px; margin-bottom:12px; }
+  .shelf-panel .sp-hint { font-size:12px; color:var(--muted); margin:0 0 8px; }
+  .shelf-panel .sp-row { display:flex; gap:8px; align-items:center; }
+  .shelf-panel input { flex:1; background:var(--panel-2); border:1px solid var(--line); border-radius:8px; color:var(--ink); padding:12px; font-size:18px; font-weight:700; text-transform:uppercase; }
+  .shelf-panel .sp-save { background:var(--ok); color:#04130a; border:none; border-radius:8px; padding:12px 18px; font-size:15px; font-weight:800; cursor:pointer; }
+  .map-panel { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:12px; margin-bottom:12px; }
+  .map-panel .map-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+  .map-panel .map-head .ttl { font-size:13px; color:var(--muted); }
+  .map-panel .map-head .map-edit { background:var(--panel-2); border:1px solid var(--accent); color:var(--accent); border-radius:8px; padding:8px 14px; font-size:13px; font-weight:800; cursor:pointer; }
+  .map-panel .map-empty { font-size:12px; color:var(--muted); text-align:center; padding:8px; }
   .target-name .tn-dot { color:var(--muted); margin:0 8px; }
   .target-name .tn-qty { color:var(--ok); }
 
@@ -228,7 +242,7 @@
   <div class="wrap">
     <div class="home-title">
       <h1>ピッキング補助</h1>
-      <div class="ver-tag">ver5</div>
+      <div class="ver-tag">ver6</div>
     </div>
     <div class="home-btns">
       <button class="home-btn go" id="goBtn">GO</button>
@@ -280,9 +294,20 @@
     </div>
 
     <div class="target" id="target">
+      <button class="loc-l empty" id="shelfBadge">棚番</button>
+      <button class="loc-r" id="mapBadge">📍 地図</button>
       <div class="lbl">これを読み取ってください</div>
       <div class="code" id="targetCode">—</div>
       <div class="target-name" id="targetName" style="display:none;"></div>
+    </div>
+
+    <!-- 棚番の入力パネル（棚番ボタンを押すと出る） -->
+    <div class="shelf-panel" id="shelfPanel" style="display:none;">
+      <p class="sp-hint">棚番を入れてな（例: H061-2）</p>
+      <div class="sp-row">
+        <input id="shelfInput" placeholder="H061-2" autocapitalize="characters" autocomplete="off">
+        <button class="sp-save" id="shelfSave">保存</button>
+      </div>
     </div>
 
     <div class="cam-area" id="camArea">
@@ -293,13 +318,14 @@
     </div>
     <div class="verdict" id="verdict"></div>
 
-    <div class="place" id="placeBox" style="display:none;">
-      <div class="lbl">場所</div>
-      <div class="val" id="placeVal" style="display:none;">—</div>
-      <div class="place-map" id="placeMap" style="display:none;"></div>
-      <div class="place-edit-row">
-        <button class="btn ghost sm" id="placeEditBtn">📍 編集</button>
+    <!-- 地図パネル（地図ボタンを押すと出る／カメラ枠は消える） -->
+    <div class="map-panel" id="placeBox" style="display:none;">
+      <div class="map-head">
+        <span class="ttl">📍 場所（地図）</span>
+        <button class="map-edit" id="placeEditBtn">📍 編集</button>
       </div>
+      <div class="place-map" id="placeMap"></div>
+      <div class="map-empty" id="mapEmpty" style="display:none;">まだ地図に登録されてない。「📍 編集」で位置を置いてな</div>
     </div>
 
     <!-- confirm: appears after match -->
@@ -644,39 +670,89 @@
     stopScan();
   }
 
-  // 読み取り画面に登録場所を表示（地図は見るだけ。編集はボタンから）
+  // 読み取り画面に登録場所を表示（棚番=左バッジ、地図=右ボタン）
   let curWorkCode = null;   // いま読み取り中の部品コード
   function showPlaceFor(code){
     curWorkCode = code;
-    const box=$('placeBox'), valEl=$('placeVal'), mapEl=$('placeMap');
+    $('shelfBadge').style.display='flex';
+    $('mapBadge').style.display='flex';
     const p = (DB.place && DB.place[code]) ? DB.place[code] : null;
     const shelf = p ? (p.shelf||'') : '';
-    const pins = pinsOf(p);
-
-    box.style.display='block';
-    // 棚番があるときだけ棚番テキストを出す。それ以外は文字を出さない
-    if(shelf){ valEl.style.display='block'; valEl.textContent='棚番 '+shelf; }
-    else { valEl.style.display='none'; valEl.textContent=''; }
-
-    // 地図：ピンがあるときだけ表示。タップ編集はしない（見るだけ）
-    if(pins.length){
-      mapEl.style.display='block';
-      mapEl.innerHTML = warehouseSVG();
-      const svg = mapEl.querySelector('svg');
-      const ns='http://www.w3.org/2000/svg';
-      pins.forEach(pt=>{
-        const g=document.createElementNS(ns,'g'); g.setAttribute('class','pinmark');
-        g.setAttribute('transform','translate('+pt.x+','+pt.y+')');
-        g.innerHTML='<path d="M0 0 C -11 -20 -11 -30 0 -30 C 11 -30 11 -20 0 0 Z" fill="#ff4d4d" stroke="#fff" stroke-width="1.5"/><circle cx="0" cy="-21" r="5" fill="#fff"/>';
-        svg.appendChild(g);
-      });
-    } else {
-      mapEl.style.display='none'; mapEl.innerHTML='';
-    }
+    // 左上：棚番バッジ（あれば棚番、なければ点線「棚番」ボタン）
+    const badge=$('shelfBadge');
+    if(shelf){ badge.textContent=shelf; badge.classList.remove('empty'); }
+    else { badge.textContent='棚番'; badge.classList.add('empty'); }
+    // パネルは閉じた状態から
+    $('shelfPanel').style.display='none';
+    $('placeBox').style.display='none';
+    $('mapBadge').style.display='flex';
   }
 
-  // 一致後：場所表示（地図含む）をまるごと隠す
-  function hidePlaceBox(){ $('placeBox').style.display='none'; }
+  // 地図パネルを描画（ピンがあれば表示、なければ空メッセージ）
+  function drawWorkMap(){
+    const code=curWorkCode;
+    const p = (DB.place && DB.place[code]) ? DB.place[code] : null;
+    const pins = pinsOf(p);
+    const mapEl=$('placeMap');
+    mapEl.innerHTML = warehouseSVG();
+    const svg = mapEl.querySelector('svg');
+    const ns='http://www.w3.org/2000/svg';
+    pins.forEach(pt=>{
+      const g=document.createElementNS(ns,'g'); g.setAttribute('class','pinmark');
+      g.setAttribute('transform','translate('+pt.x+','+pt.y+')');
+      g.innerHTML='<path d="M0 0 C -11 -20 -11 -30 0 -30 C 11 -30 11 -20 0 0 Z" fill="#ff4d4d" stroke="#fff" stroke-width="1.5"/><circle cx="0" cy="-21" r="5" fill="#fff"/>';
+      svg.appendChild(g);
+    });
+    $('mapEmpty').style.display = pins.length ? 'none' : 'block';
+  }
+
+  // 棚番バッジ → 入力パネル開閉
+  $('shelfBadge').onclick = ()=>{
+    const panel=$('shelfPanel');
+    const opening = panel.style.display==='none';
+    panel.style.display = opening ? 'block' : 'none';
+    $('placeBox').style.display='none';   // 地図は閉じる
+    if(opening){
+      const p=(DB.place&&DB.place[curWorkCode])?DB.place[curWorkCode]:null;
+      $('shelfInput').value = p ? (p.shelf||'') : '';
+      $('camArea').style.display='none';   // 入力中はカメラ枠を消す
+      setTimeout(()=>$('shelfInput').focus(),50);
+    } else {
+      if(!matched) $('camArea').style.display='block';
+    }
+  };
+  // 棚番を保存
+  $('shelfSave').onclick = ()=>{
+    const code=curWorkCode; if(!code) return;
+    const val=$('shelfInput').value.trim().toUpperCase();
+    if(!DB.place||typeof DB.place!=='object') DB.place={};
+    if(!DB.place[code]) DB.place[code]={shelf:'',pins:[]};
+    DB.place[code].shelf = val;
+    saveDB();
+    const badge=$('shelfBadge');
+    if(val){ badge.textContent=val; badge.classList.remove('empty'); }
+    else { badge.textContent='棚番'; badge.classList.add('empty'); }
+    $('shelfPanel').style.display='none';
+    if(!matched) $('camArea').style.display='block';
+  };
+
+  // 地図ボタン → 地図パネル開閉（開いてる間はカメラ枠を消す）
+  $('mapBadge').onclick = ()=>{
+    const box=$('placeBox');
+    const opening = box.style.display==='none';
+    box.style.display = opening ? 'block' : 'none';
+    $('shelfPanel').style.display='none';  // 棚番入力は閉じる
+    if(opening){ drawWorkMap(); $('camArea').style.display='none'; }
+    else { if(!matched) $('camArea').style.display='block'; }
+  };
+
+  // 一致後：場所まわりをまるごと隠す
+  function hidePlaceBox(){
+    $('placeBox').style.display='none';
+    $('shelfPanel').style.display='none';
+    $('shelfBadge').style.display='none';
+    $('mapBadge').style.display='none';
+  }
 
   // 「📍編集」ボタン → 専用の編集画面へ
   let wpePins=[];
