@@ -112,9 +112,11 @@
   .target .code .pfx { color:var(--accent); }
   .target-name { font-size:16px; font-weight:700; color:var(--ink); margin-top:8px; line-height:1.4; }
   .target { position:relative; }
-  .loc-l { position:absolute; top:10px; left:10px; right:auto; white-space:nowrap; display:flex; align-items:center; gap:5px; background:var(--panel-2); border:1px solid rgba(217,184,106,.5); color:var(--gold); border-radius:9px; padding:7px 11px; font-size:15px; font-weight:800; cursor:pointer; }
+  .loc-l, .loc-r { position:absolute; top:10px; white-space:nowrap; display:flex; align-items:center; justify-content:center; gap:4px; background:var(--panel-2); border:1px solid var(--line); border-radius:9px; padding:6px 10px; font-size:14px; font-weight:800; cursor:pointer; min-width:64px; }
+  .loc-l { left:10px; right:auto; color:var(--gold); border-color:rgba(217,184,106,.5); }
   .loc-l.empty { color:var(--muted); border-color:var(--line); border-style:dashed; }
-  .loc-r { position:absolute; top:10px; right:10px; left:auto; white-space:nowrap; display:flex; align-items:center; gap:5px; background:var(--panel-2); border:1px solid rgba(88,166,255,.5); color:var(--accent); border-radius:9px; padding:7px 11px; font-size:15px; font-weight:800; cursor:pointer; }
+  .loc-r { right:10px; left:auto; color:var(--accent); border-color:rgba(88,166,255,.5); }
+  .loc-r .pin { font-size:12px; }
   .shelf-panel { background:var(--panel); border:1px solid var(--gold); border-radius:14px; padding:12px; margin-bottom:12px; }
   .shelf-panel .sp-hint { font-size:12px; color:var(--muted); margin:0 0 8px; }
   .shelf-panel .sp-row { display:flex; gap:8px; align-items:center; }
@@ -135,11 +137,6 @@
   /* シャッター（④フェード）：閉じてる時に表示、起動中は消える */
   .cam-shutter { position:absolute; inset:0; z-index:4; background:repeating-linear-gradient(180deg,#9aa6b2 0 7px,#6b7886 7px 9px,#7e8b99 9px 16px); border-bottom:3px solid #4a5560; transition:opacity .25s ease; }
   .cam-area.scanning .cam-shutter { opacity:0; pointer-events:none; }
-  /* 横向き：カメラ枠を高さ基準にして大きく使う */
-  @media (orientation:landscape) and (max-height:560px){
-    .cam-area { aspect-ratio:auto; height:62vh; }
-    .target .code { font-size:clamp(24px,6vw,38px); }
-  }
   #video { width:100%; height:100%; object-fit:cover; display:block; }
   .scan-line { position:absolute; left:8%; right:8%; height:2px; background:var(--ok); box-shadow:0 0 12px var(--ok); animation:sweep 2s ease-in-out infinite; }
   @keyframes sweep { 0%,100%{ top:30%; } 50%{ top:70%; } }
@@ -242,7 +239,7 @@
   <div class="wrap">
     <div class="home-title">
       <h1>ピッキング補助</h1>
-      <div class="ver-tag">ver6</div>
+      <div class="ver-tag">ver7</div>
     </div>
     <div class="home-btns">
       <button class="home-btn go" id="goBtn">GO</button>
@@ -295,7 +292,7 @@
 
     <div class="target" id="target">
       <button class="loc-l empty" id="shelfBadge">棚番</button>
-      <button class="loc-r" id="mapBadge">📍 地図</button>
+      <button class="loc-r" id="mapBadge"><span class="pin">📍</span>地図</button>
       <div class="lbl">これを読み取ってください</div>
       <div class="code" id="targetCode">—</div>
       <div class="target-name" id="targetName" style="display:none;"></div>
@@ -415,7 +412,7 @@
       <h2>場所の編集</h2>
     </div>
     <div class="fieldwrap" style="margin-top:6px;"><label>部品コード</label><div class="readonly-bc" id="wpeCode">—</div></div>
-    <div class="fieldwrap"><label>棚番（あれば入力。なければ空欄でOK）</label><input type="text" id="wpeShelf" class="boxin" placeholder="H071-2"></div>
+    <div class="fieldwrap" id="wpeShelfWrap"><label>棚番（あれば入力。なければ空欄でOK）</label><input type="text" id="wpeShelf" class="boxin" placeholder="H071-2"></div>
     <label style="font-size:12px;color:var(--muted);display:block;margin:4px 2px 6px;">棚番が無いときは地図をタップして📍（もう一度タップで消す・複数OK）</label>
     <div class="map-box" id="wpeMapBox"></div>
     <div class="row" style="margin-top:8px;">
@@ -565,6 +562,18 @@
 <script>
   const $ = id => document.getElementById(id);
   const $$ = sel => document.querySelectorAll(sel);
+
+  /* ===== 画面を縦に固定（スマホを横に倒しても画面は縦のまま） =====
+     低い位置のバーコードを読むとき、スマホを寝かせても表示が崩れないように */
+  function lockPortrait(){
+    try{
+      if(screen.orientation && screen.orientation.lock){
+        screen.orientation.lock('portrait').catch(()=>{});
+      }
+    }catch(e){}
+  }
+  lockPortrait();
+  document.addEventListener('click', lockPortrait, {once:true}); // 最初のタップ後にも再試行（ブラウザ制限対策）
 
   /* ===== screen nav ===== */
   function show(id){
@@ -760,7 +769,8 @@
     const code = curWorkCode; if(!code) return;
     const p = (DB.place && DB.place[code]) ? DB.place[code] : null;
     $('wpeCode').textContent = code;
-    $('wpeShelf').value = p ? (p.shelf||'') : '';
+    $('wpeShelf').value = p ? (p.shelf||'') : '';   // 既存棚番は保持（保存時に使う）
+    $('wpeShelfWrap').style.display='none';          // 地図からの編集では棚番欄は出さない（棚番は左上ボタン専用）
     wpePins = pinsOf(p);
     show('workPlaceEdit');
     $('wpeMapBox').innerHTML = warehouseSVG();
