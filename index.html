@@ -171,7 +171,7 @@
   .ocr-target { font-size:14px; color:var(--muted); margin-bottom:10px; } .ocr-target b { color:var(--ok); font-size:18px; }
   .ocr-cam { position:relative; background:#000; border-radius:12px; overflow:hidden; aspect-ratio:4/3; margin-bottom:10px; }
   .ocr-cam video { width:100%; height:100%; object-fit:cover; }
-  .ocr-frame { position:absolute; top:38%; left:12%; right:12%; bottom:38%; border:2px dashed var(--accent); border-radius:8px; pointer-events:none; }
+  .ocr-frame { position:absolute; top:42%; left:25%; right:25%; bottom:42%; border:2px dashed var(--accent); border-radius:8px; pointer-events:none; }
   .ocr-status { font-size:13px; color:var(--muted); text-align:center; margin-bottom:10px; min-height:20px; }
   .ocr-bw { margin-bottom:10px; padding:6px; background:#000; border-radius:8px; }
   .ocr-bw img, .ocr-bw canvas { display:block; width:100%; border-radius:6px; }
@@ -256,7 +256,7 @@
   <div class="wrap">
     <div class="home-title">
       <h1>ピッキング補助</h1>
-      <div class="ver-tag">ver9</div>
+      <div class="ver-tag">ver10</div>
     </div>
     <div class="home-btns">
       <button class="home-btn go" id="goBtn">GO</button>
@@ -1369,11 +1369,37 @@
     bw.style.width='100%'; bw.style.borderRadius='8px';
     $('ocrBwPreview').appendChild(bw);
     try{
-      // 3回読んで多数決（ブレ対策）
+      // 文字ごとの大きさを見て「一番デカい文字＝個数」だけ拾う
+      // （日付・会社名・g/ などの小さい文字は捨てる）
+      function readBig(){
+        return Tesseract.recognize(bw, 'eng', {
+          tessedit_char_whitelist:'0123456789'
+        }).then(({data})=>{
+          // 文字単位（symbols）の高さを集める
+          let syms=[];
+          (data.symbols||[]).forEach(s=>{
+            if(s.bbox && /[0-9]/.test(s.text)){
+              const h = s.bbox.y1 - s.bbox.y0;
+              syms.push({ ch:s.text, h:h, x:s.bbox.x0 });
+            }
+          });
+          if(!syms.length){
+            // symbolsが取れない端末向けの保険：words単位、無ければtext全体
+            (data.words||[]).forEach(w=>{
+              if(w.bbox){ const h=w.bbox.y1-w.bbox.y0; (w.text||'').split('').forEach((c,idx)=>{ if(/[0-9]/.test(c)) syms.push({ch:c,h:h,x:w.bbox.x0+idx}); }); }
+            });
+          }
+          if(!syms.length) return (data.text||'').replace(/[^0-9]/g,'');
+          // 一番デカい文字の高さを基準に、その7割以上の高さの文字だけ残す
+          const maxH = Math.max(...syms.map(s=>s.h));
+          const big = syms.filter(s=>s.h >= maxH*0.7).sort((a,b)=>a.x-b.x);
+          return big.map(s=>s.ch).join('');
+        });
+      }
+      // 3回読んで多数決
       const votes={};
       for(let k=0;k<3;k++){
-        const { data } = await Tesseract.recognize(bw, 'eng', { tessedit_char_whitelist:'0123456789' });
-        const dg = (data.text||'').replace(/[^0-9]/g,'');
+        const dg = await readBig();
         if(dg) votes[dg]=(votes[dg]||0)+1;
       }
       let digits='', best=0;
