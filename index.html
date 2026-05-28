@@ -10,6 +10,7 @@
     document.write('<script src="https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js"><\/script>');
   }
 </script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <style>
   :root {
     --bg:#0f1419; --panel:#1a222c; --panel-2:#232f3c; --line:#2f3e4d;
@@ -162,6 +163,20 @@
   .qty-row.checked .qnum { color:var(--ok); }
   .qty-row .qbox { width:42px; height:42px; border:2.5px solid var(--muted); border-radius:8px; flex:0 0 42px; display:flex; align-items:center; justify-content:center; font-size:26px; color:transparent; }
   .qty-row.checked .qbox { background:var(--ok); border-color:var(--ok); color:#04130a; }
+  .qty-row .qty-ocr { width:42px; height:42px; flex:0 0 42px; border:1px solid var(--accent); background:var(--panel-2); color:var(--accent); border-radius:8px; font-size:18px; cursor:pointer; }
+  .ocr-modal { position:fixed; inset:0; background:rgba(0,0,0,.8); z-index:300; display:none; align-items:center; justify-content:center; padding:16px; }
+  .ocr-modal.on { display:flex; }
+  .ocr-card { background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:16px; width:100%; max-width:400px; }
+  .ocr-title { font-size:16px; font-weight:800; margin-bottom:4px; }
+  .ocr-target { font-size:14px; color:var(--muted); margin-bottom:10px; } .ocr-target b { color:var(--ok); font-size:18px; }
+  .ocr-cam { position:relative; background:#000; border-radius:12px; overflow:hidden; aspect-ratio:4/3; margin-bottom:10px; }
+  .ocr-cam video { width:100%; height:100%; object-fit:cover; }
+  .ocr-frame { position:absolute; top:38%; left:12%; right:12%; bottom:38%; border:2px dashed var(--accent); border-radius:8px; pointer-events:none; }
+  .ocr-status { font-size:13px; color:var(--muted); text-align:center; margin-bottom:10px; min-height:20px; }
+  .ocr-result { font-size:40px; font-weight:900; text-align:center; margin-bottom:10px; }
+  .ocr-result.ok { color:var(--ok); } .ocr-result.ng { color:var(--warn); }
+  .ocr-btns, .ocr-confirm { display:flex; gap:10px; }
+  .ocr-btns .btn, .ocr-confirm .btn { flex:1; padding:14px; }
   .chk { display:flex; align-items:center; gap:14px; padding:15px 14px; border:1.5px solid var(--line); border-radius:10px; margin-bottom:10px; cursor:pointer; transition:border-color .15s, background .15s; }
   .chk.checked { border-color:var(--ok); background:rgba(61,220,132,.06); }
   .chk .box { width:30px; height:30px; border:2px solid var(--muted); border-radius:6px; flex:0 0 30px; display:flex; align-items:center; justify-content:center; font-size:20px; color:transparent; }
@@ -239,7 +254,7 @@
   <div class="wrap">
     <div class="home-title">
       <h1>ピッキング補助</h1>
-      <div class="ver-tag">ver7</div>
+      <div class="ver-tag">ver8</div>
     </div>
     <div class="home-btns">
       <button class="home-btn go" id="goBtn">GO</button>
@@ -559,6 +574,25 @@
   <button class="undo-btn" id="undoBtn">もどす</button>
 </div>
 
+<!-- 個数スキャン（OCRお試し）モーダル -->
+<div class="ocr-modal" id="ocrModal">
+  <div class="ocr-card">
+    <div class="ocr-title">個数をスキャン（お試し）</div>
+    <div class="ocr-target">目標: <b id="ocrTarget">—</b> 個</div>
+    <div class="ocr-cam"><video id="ocrVideo" playsinline muted></video><div class="ocr-frame"></div></div>
+    <div class="ocr-status" id="ocrStatus">ラベルの数字を枠に合わせて「読む」を押してな</div>
+    <div class="ocr-result" id="ocrResult" style="display:none;"></div>
+    <div class="ocr-btns">
+      <button class="btn sub" id="ocrCancel">とじる</button>
+      <button class="btn ok" id="ocrShoot">読む</button>
+    </div>
+    <div class="ocr-confirm" id="ocrConfirm" style="display:none;">
+      <button class="btn sub" id="ocrRetry">やり直し</button>
+      <button class="btn ok" id="ocrAccept">これでOK</button>
+    </div>
+  </div>
+</div>
+
 <script>
   const $ = id => document.getElementById(id);
   const $$ = sel => document.querySelectorAll(sel);
@@ -581,6 +615,7 @@
     try{ stopScan(); }catch(e){}
     try{ stopMeaningScan(); }catch(e){}
     try{ stopShopScan(); }catch(e){}
+    try{ stopQtyOcr(); }catch(e){}
     $$('.screen').forEach(s=>s.classList.remove('on')); $(id).classList.add('on');
   }
   $$('[data-home]').forEach(b => b.onclick = () => { stopScan(); show('home'); });
@@ -820,11 +855,18 @@
     segs.forEach((n,i)=>{
       const row = document.createElement('div');
       row.className='qty-row';
-      row.innerHTML='<div class="qnum">'+n+'</div><div class="qbox">✓</div>';
-      row.onclick = ()=>{
+      row.innerHTML='<div class="qnum">'+n+'</div><button class="qty-ocr" title="個数をスキャン">📷</button><div class="qbox">✓</div>';
+      // 行クリック＝チェック切り替え（📷ボタン以外）
+      row.onclick = (e)=>{
+        if(e.target.closest('.qty-ocr')) return;  // 📷は別処理
         qtyChecks[i] = !qtyChecks[i];
         row.classList.toggle('checked', qtyChecks[i]);
         updateNext();
+      };
+      // 📷ボタン＝OCRで個数を読む
+      row.querySelector('.qty-ocr').onclick = (e)=>{
+        e.stopPropagation();
+        startQtyOcr(n, i, row);
       };
       wrap.appendChild(row);
     });
@@ -1263,6 +1305,67 @@
   }
 
   window.addEventListener('pagehide', stopScan);
+
+  /* =================================================================
+     個数スキャン（OCRお試し）：ラベルの数字を読んで個数チェックに使う
+     ※精度は保証できない。必ず目視で「これでOK」を確認してから反映
+     ================================================================= */
+  let ocrStream=null, ocrTargetNum='', ocrRowIndex=-1, ocrRowEl=null, ocrReadValue='';
+  async function startQtyOcr(targetNum, rowIndex, rowEl){
+    ocrTargetNum = String(targetNum).replace(/[^0-9.]/g,'');
+    ocrRowIndex = rowIndex; ocrRowEl = rowEl; ocrReadValue='';
+    $('ocrTarget').textContent = ocrTargetNum;
+    $('ocrResult').style.display='none';
+    $('ocrConfirm').style.display='none';
+    document.querySelector('.ocr-btns').style.display='flex';
+    $('ocrStatus').textContent='ラベルの数字を枠に合わせて「読む」を押してな';
+    $('ocrModal').classList.add('on');
+    try{
+      ocrStream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:'environment' } });
+      $('ocrVideo').srcObject = ocrStream; await $('ocrVideo').play();
+    }catch(e){ $('ocrStatus').textContent='カメラを開けんかった（権限/httpsを確認）'; }
+  }
+  function stopQtyOcr(){
+    if(ocrStream){ ocrStream.getTracks().forEach(t=>t.stop()); ocrStream=null; }
+    $('ocrVideo').srcObject=null;
+    $('ocrModal').classList.remove('on');
+  }
+  $('ocrCancel').onclick = stopQtyOcr;
+  $('ocrShoot').onclick = async ()=>{
+    if(typeof Tesseract==='undefined'){ $('ocrStatus').textContent='文字読み取りライブラリを読めんかった（ネット確認）'; return; }
+    const v=$('ocrVideo'); if(!v.videoWidth){ $('ocrStatus').textContent='カメラ準備中…もう一回押してな'; return; }
+    $('ocrStatus').textContent='読み取り中…（数秒かかる）';
+    // 枠の部分だけ切り出してOCR（中央の帯）
+    const cw=v.videoWidth, ch=v.videoHeight;
+    const cx=cw*0.12, cy=ch*0.38, cWidth=cw*0.76, cHeight=ch*0.24;
+    const canvas=document.createElement('canvas'); canvas.width=cWidth; canvas.height=cHeight;
+    canvas.getContext('2d').drawImage(v, cx,cy,cWidth,cHeight, 0,0,cWidth,cHeight);
+    try{
+      const { data } = await Tesseract.recognize(canvas, 'eng', { tessedit_char_whitelist:'0123456789' });
+      const digits = (data.text||'').replace(/[^0-9]/g,'');
+      ocrReadValue = digits;
+      const resEl=$('ocrResult'); resEl.style.display='block';
+      document.querySelector('.ocr-btns').style.display='none';
+      $('ocrConfirm').style.display='flex';
+      if(!digits){ resEl.textContent='読めず'; resEl.className='ocr-result ng'; $('ocrStatus').textContent='数字が読めんかった。もう一回試すか、手でチェックしてな'; }
+      else if(digits===ocrTargetNum){ resEl.textContent=digits; resEl.className='ocr-result ok'; $('ocrStatus').textContent='✓ 目標と一致！ 合ってたら「これでOK」'; }
+      else { resEl.textContent=digits; resEl.className='ocr-result ng'; $('ocrStatus').textContent='⚠ 目標('+ocrTargetNum+')と違う数字や。よう確認してな'; }
+    }catch(e){ $('ocrStatus').textContent='読み取りエラー。もう一回試してな'; }
+  };
+  $('ocrRetry').onclick = ()=>{
+    $('ocrResult').style.display='none'; $('ocrConfirm').style.display='none';
+    document.querySelector('.ocr-btns').style.display='flex';
+    $('ocrStatus').textContent='ラベルの数字を枠に合わせて「読む」を押してな';
+  };
+  $('ocrAccept').onclick = ()=>{
+    // 目視で確認した上でチェックON
+    if(ocrRowIndex>=0 && ocrRowEl){
+      qtyChecks[ocrRowIndex]=true;
+      ocrRowEl.classList.add('checked');
+      updateNext();
+    }
+    stopQtyOcr();
+  };
 
   /* =================================================================
      お買い物モード（お試し）：作業場で袋を次々スキャンして確認
