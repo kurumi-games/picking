@@ -1314,6 +1314,30 @@
      ※精度は保証できない。必ず目視で「これでOK」を確認してから反映
      ================================================================= */
   let ocrStream=null, ocrTargetNum='', ocrRowIndex=-1, ocrRowEl=null, ocrReadValue='';
+  // Tesseract.js v5：ワーカーを1回だけ作って使い回す。
+  // パラメータは setParameters でセットしないと効かない（recognize第3引数では無視される）
+  let ocrWorker=null, ocrWorkerReady=null;
+  function getOcrWorker(){
+    if(ocrWorkerReady) return ocrWorkerReady;
+    ocrWorkerReady = (async ()=>{
+      const w = await Tesseract.createWorker('eng');
+      await w.setParameters({
+        tessedit_char_whitelist:'0123456789',
+        tessedit_pageseg_mode:'7',   // 1行として読む
+        tessedit_ocr_engine_mode:'1',
+        load_system_dawg:'0',
+        load_freq_dawg:'0'
+      });
+      ocrWorker = w;
+      return w;
+    })();
+    return ocrWorkerReady;
+  }
+  async function ocrRecognize(image){
+    const w = await getOcrWorker();
+    // blocks:true を指定しないと symbols（文字単位の座標）が返らない（v5仕様）
+    return w.recognize(image, undefined, { text:true, blocks:true });
+  }
   async function startQtyOcr(targetNum, rowIndex, rowEl){
     ocrTargetNum = String(targetNum).replace(/[^0-9.]/g,'');
     ocrRowIndex = rowIndex; ocrRowEl = rowEl; ocrReadValue='';
@@ -1361,7 +1385,8 @@
     const v=$('ocrVideo'); if(!v.videoWidth){ $('ocrStatus').textContent='カメラ準備中…もう一回押してな'; return; }
     $('ocrStatus').textContent='白黒にして読み取り中…（数秒）';
     const cw=v.videoWidth, ch=v.videoHeight;
-    const cx=cw*0.12, cy=ch*0.38, cWidth=cw*0.76, cHeight=ch*0.24;
+    // 見えてる枠(.ocr-frame: 左右25%, 上下42%)と読み取り範囲を一致させる
+    const cx=cw*0.25, cy=ch*0.42, cWidth=cw*0.50, cHeight=ch*0.16;
     const bw = makeBW(v, cx, cy, cWidth, cHeight);
     // 白黒画像を枠内にプレビュー表示（「これを読んでるで」）
     $('ocrBwPreview').style.display='block';
@@ -1372,12 +1397,16 @@
       // 文字ごとの大きさを見て「一番デカい文字＝個数」だけ拾う
       // （日付・会社名・g/ などの小さい文字は捨てる）
       function readBig(){
-        return Tesseract.recognize(bw, 'eng', {
-          tessedit_char_whitelist:'0123456789'
-        }).then(({data})=>{
-          // 文字単位（symbols）の高さを集める
+        return ocrRecognize(bw).then(({data})=>{
+          // 文字単位（symbols）を集める。v5のblocks出力では
+          // symbolsがトップレベルに無く blocks>paragraphs>lines>words>symbols とネストされる場合があるので両対応
+          let symbols = data.symbols;
+          if(!symbols || !symbols.length){
+            symbols=[];
+            (data.blocks||[]).forEach(b=>(b.paragraphs||[]).forEach(p=>(p.lines||[]).forEach(l=>(l.words||[]).forEach(w=>(w.symbols||[]).forEach(s=>symbols.push(s))))));
+          }
           let syms=[];
-          (data.symbols||[]).forEach(s=>{
+          symbols.forEach(s=>{
             if(s.bbox && /[0-9]/.test(s.text)){
               const h = s.bbox.y1 - s.bbox.y0;
               syms.push({ ch:s.text, h:h, x:s.bbox.x0 });
@@ -1385,7 +1414,12 @@
           });
           if(!syms.length){
             // symbolsが取れない端末向けの保険：words単位、無ければtext全体
-            (data.words||[]).forEach(w=>{
+            let words = data.words;
+            if(!words || !words.length){
+              words=[];
+              (data.blocks||[]).forEach(b=>(b.paragraphs||[]).forEach(p=>(p.lines||[]).forEach(l=>(l.words||[]).forEach(w=>words.push(w)))));
+            }
+            words.forEach(w=>{
               if(w.bbox){ const h=w.bbox.y1-w.bbox.y0; (w.text||'').split('').forEach((c,idx)=>{ if(/[0-9]/.test(c)) syms.push({ch:c,h:h,x:w.bbox.x0+idx}); }); }
             });
           }
