@@ -86,20 +86,54 @@
   .mp-tab.on { background:var(--accent); border-color:var(--accent); color:#fff; }
   .mp-zoom { display:flex; gap:6px; margin-left:auto; }
   .mp-zbtn { width:36px; height:36px; border-radius:9px; border:1.5px solid var(--line); background:#fff; font-size:16px; font-weight:900; color:var(--txt); cursor:pointer; }
-  #mpStage { position:relative; height:56vh; overflow:hidden; touch-action:none; background:#e9edf1; border-radius:12px; border:1px solid var(--line); }
+  .mp-search { display:flex; gap:7px; margin-bottom:8px; }
+  .mp-search input { flex:1; border:1.5px solid var(--line); border-radius:10px; padding:10px 12px; font-size:15px; }
+  .mp-search input:focus { outline:none; border-color:var(--accent); }
+  .mp-search button { padding:0 16px; border-radius:10px; border:none; background:var(--accent); color:#fff; font-size:14px; font-weight:800; cursor:pointer; }
+  #mpStage { position:relative; height:52vh; overflow:hidden; touch-action:none; background:#e9edf1; border-radius:12px; border:1px solid var(--line); }
   #mpWorld { position:absolute; left:0; top:0; transform-origin:0 0; }
   #mpFrame { position:absolute; left:0; top:0; background:#fff; border:3px solid #3a4654; }
   #mpGrid { position:absolute; left:0; top:0; pointer-events:none; }
   .mp-rect { position:absolute; border:2px solid rgba(60,75,90,.55); border-radius:3px; display:flex; align-items:center; justify-content:center; text-align:center; font-weight:800; color:#2b3542; overflow:hidden; line-height:1.15; user-select:none; }
   .mp-rect.sel { border-color:var(--accent); box-shadow:0 0 0 2px rgba(26,115,217,.35); z-index:5; }
+  .mp-rect.ovl { outline:3px dashed var(--warn); outline-offset:2px; z-index:4; }
+  .mp-rect.hit { outline:4px solid #f5c518; outline-offset:2px; z-index:7; animation:mpblink .55s ease-in-out infinite alternate; }
+  @keyframes mpblink { from{ outline-color:#f5c518; } to{ outline-color:rgba(245,197,24,.15); } }
   .mp-rect .lbl { pointer-events:none; padding:1px; word-break:break-all; }
+  .mp-rect .mp-pn { position:absolute; top:1px; left:2px; font-size:9.5px; font-weight:900; background:rgba(29,42,56,.75); color:#fff; border-radius:6px; padding:1px 5px; pointer-events:none; }
   .mp-handle { position:absolute; right:-13px; bottom:-13px; width:30px; height:30px; border-radius:50%; background:var(--accent); border:2.5px solid #fff; box-shadow:0 1px 4px rgba(0,0,0,.35); display:none; }
   .mp-rect.sel .mp-handle { display:block; }
+  .mp-rect.t-wall { background:#5f6b78 !important; border-color:#46525f; color:#fff; }
+  .mp-rect.t-door { background:#f0c15c !important; border-color:#b98a2a; color:#5c4408; }
+  .mp-rect.t-shut { background:repeating-linear-gradient(90deg,#9aa6b2 0 7px,#cdd6de 7px 14px) !important; border-color:#7b8894; color:#333; }
+  .mp-rect.t-shut.vert { background:repeating-linear-gradient(180deg,#9aa6b2 0 7px,#cdd6de 7px 14px) !important; }
+  .mp-rect.t-nest { border:2.5px solid #c93a3a; color:#8a1f1f;
+    background:
+      linear-gradient(to top right,
+        transparent calc(50% - 1px),
+        rgba(201,58,58,.55) calc(50% - 1px), rgba(201,58,58,.55) calc(50% + 1px),
+        transparent calc(50% + 1px)),
+      #fdf1f1 !important; }
+  .mp-rect.t-nest .nu { position:absolute; top:1px; right:3px; font-size:10px; font-weight:900; pointer-events:none; }
+  .mp-rect.t-nest .nd { position:absolute; bottom:0px; left:3px; font-size:10px; font-weight:900; pointer-events:none; }
+  .mp-rect.t-load { background:rgba(93,146,214,.55) !important; border-color:#33639f; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.35); }
   .mp-tools { display:flex; gap:7px; overflow-x:auto; padding:8px 0 2px; }
   .mp-tb { flex:0 0 auto; padding:11px 13px; border-radius:10px; border:1.5px solid var(--line); background:#fff; font-size:13.5px; font-weight:800; color:var(--txt); cursor:pointer; white-space:nowrap; }
   .mp-tb.main { background:var(--ok); border-color:var(--ok); color:#fff; }
   .mp-tb.warn { color:var(--warn); border-color:rgba(209,60,60,.4); }
   .mp-tb:disabled { opacity:.4; }
+
+  /* ===== 倉庫3D（おまけ・俯瞰のみ） ===== */
+  .w3-modal { position:fixed; inset:0; background:rgba(15,25,38,.72); z-index:400; display:none; flex-direction:column; padding:10px; }
+  .w3-modal.on { display:flex; }
+  .w3-head { display:flex; align-items:center; gap:10px; padding:6px 4px; }
+  .w3-head h2 { color:#fff; font-size:16px; flex:1; }
+  .w3-close { padding:9px 16px; border-radius:10px; border:none; background:#fff; font-weight:800; font-size:14px; cursor:pointer; }
+  #w3Stage { flex:1; position:relative; touch-action:none; perspective:1100px; display:flex; align-items:center; justify-content:center; overflow:hidden; background:linear-gradient(180deg,#2c3a4a 0%,#465a6e 100%); border-radius:14px; cursor:grab; }
+  #w3World { position:relative; width:0; height:0; transform-style:preserve-3d; }
+  #w3World div { transform-style:preserve-3d; }
+  .w3f { position:absolute; box-sizing:border-box; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+  .w3-hint { text-align:center; color:#c9d4de; font-size:12px; padding:7px; }
 
   /* ===== topbar ===== */
   .topbar { display:flex; align-items:center; gap:12px; margin-bottom:14px; }
@@ -386,7 +420,12 @@
         <button class="mp-zbtn" id="mpZOut">−</button>
         <button class="mp-zbtn" id="mpZIn">＋</button>
         <button class="mp-zbtn" id="mpZFit" style="width:auto;padding:0 9px;font-size:12.5px;">全体</button>
+        <button class="mp-zbtn" id="mpZ3d" style="width:auto;padding:0 9px;font-size:12.5px;background:var(--accent);border-color:var(--accent);color:#fff;">3D</button>
       </div>
+    </div>
+    <div class="mp-search">
+      <input id="mpQ" placeholder="部品コード・名前で検索（例: C7300）">
+      <button id="mpQBtn">検索</button>
     </div>
     <div class="mp-tabs" id="mpTabs"></div>
     <div id="mpStage">
@@ -397,14 +436,31 @@
     </div>
     <div class="mp-tools">
       <button class="mp-tb main" id="mpAdd">＋ 四角</button>
+      <button class="mp-tb" id="mpAddWall">＋ 柱・壁</button>
+      <button class="mp-tb" id="mpAddDoor">＋ 扉</button>
+      <button class="mp-tb" id="mpAddShut">＋ シャッター</button>
+      <button class="mp-tb" id="mpAddNest">＋ ネステナー</button>
+      <button class="mp-tb" id="mpAddLoad">＋ 荷物</button>
       <button class="mp-tb" id="mpName" disabled>名前</button>
+      <button class="mp-tb" id="mpParts" disabled>部品</button>
       <button class="mp-tb" id="mpColor" disabled>色</button>
+      <button class="mp-tb" id="mpPal" disabled>切り込み</button>
+      <button class="mp-tb" id="mpRot" disabled>回転</button>
       <button class="mp-tb" id="mpDup" disabled>複製</button>
       <button class="mp-tb warn" id="mpDel" disabled>削除</button>
+      <button class="mp-tb" id="mpFloorC">床色</button>
       <button class="mp-tb" id="mpSize">外枠</button>
+      <button class="mp-tb" id="mpImport">モック取込</button>
     </div>
   </div>
 </section>
+
+<!-- ============ 倉庫3D（おまけ） ============ -->
+<div class="w3-modal" id="w3Modal">
+  <div class="w3-head"><h2>倉庫 3Dビュー（おまけ）</h2><button class="w3-close" id="w3Close">とじる</button></div>
+  <div id="w3Stage"><div id="w3World"></div></div>
+  <p class="w3-hint">👆 指でドラッグして回せる</p>
+</div>
 
 <!-- ============ START SELECT ============ -->
 <section class="screen" id="startsel">
@@ -844,8 +900,8 @@
     const mk=a=>a.map(r=>({id:id++, x:r[0], y:r[1], w:r[2], h:r[3], label:r[4], color:r[5]}));
     return {
       floors:[
-        {name:'フロア1', cols:27, rows:32, rects:mk(F1)},
-        {name:'フロア2', cols:27, rows:32, rects:mk(F2)}
+        {name:'フロア1', cols:27, rows:32, floor:'green', rects:mk(F1)},
+        {name:'フロア2', cols:27, rows:32, floor:'green', rects:mk(F2)}
       ],
       cur:0
     };
@@ -1283,13 +1339,19 @@
   $('v3Close').onclick = ()=> $('v3Modal').classList.remove('on');
   $('v3Modal').onclick = (e)=>{ if(e.target===$('v3Modal')) $('v3Modal').classList.remove('on'); };
 
-  /* ===== 倉庫マップ（🗺）：方眼＋四角の配置。データはDB.mapsで共有 ===== */
+  /* ===== 倉庫マップ（🗺）：片付け場所の地図。データはDB.mapsで共有 =====
+     色＝状態：薄赤=定位置 / 薄紫=仮置き / 水色=引越し（出張） */
   const MP_CELL = 22;
   const MP_COLORS = ['#e3e8ee','#c3ccd6','#8d99a6','#dbe7f7','#ffe0b8','#f2a9a9','#d9b8ea','#a8d8ef'];
-  // 色の意味（今後の紐付けで使う）: 赤#f2a9a9=定位置 / 紫#d9b8ea=仮置き / 水色#a8d8ef=出張
+  const MP_FLOORS = {
+    green: { bg:'#63997b', grid:'rgba(255,255,255,.3)' },
+    gray:  { bg:'#cfd4d9', grid:'rgba(90,100,110,.35)' },
+    white: { bg:'#ffffff', grid:'#dfe5eb' }
+  };
   let mpScale=1, mpTx=0, mpTy=0, mpSel=null;
+  let mpHits=[];   // 検索でヒットした四角のid
   function mpFloor(){ return DB.maps.floors[DB.maps.cur]; }
-  function mpSeq(){ return DB.maps.floors.reduce((m,f)=>f.rects.reduce((mm,r)=>Math.max(mm,r.id),m),0)+1; }
+  function mpSeq(){ return DB.maps.floors.reduce((m,f)=>f.rects.reduce((mm,r)=>Math.max(mm,r.id||0),m),0)+1; }
   function mpApply(){ $('mpWorld').style.transform='translate('+mpTx+'px,'+mpTy+'px) scale('+mpScale+')'; }
   function mpFit(){
     const st=$('mpStage').getBoundingClientRect();
@@ -1309,77 +1371,136 @@
   }
   function mpRender(){
     const f=mpFloor(), W=f.cols*MP_CELL, H=f.rows*MP_CELL;
+    const fl = MP_FLOORS[f.floor] || MP_FLOORS.green;
     // タブ
     const tabs=$('mpTabs'); tabs.innerHTML='';
-    DB.maps.floors.forEach((fl,i)=>{
+    DB.maps.floors.forEach((flr,i)=>{
       const b=document.createElement('button');
       b.className='mp-tab'+(i===DB.maps.cur?' on':'');
-      b.textContent=fl.name;
-      b.onclick=()=>{ DB.maps.cur=i; mpSel=null; saveDB(); mpRender(); mpFit(); };
+      b.textContent=flr.name;
+      b.onclick=()=>{ DB.maps.cur=i; mpSel=null; mpHits=[]; saveDB(); mpRender(); mpFit(); };
       tabs.appendChild(b);
     });
     // 外枠と方眼
     const fr=$('mpFrame'); fr.style.width=W+'px'; fr.style.height=H+'px';
+    fr.style.background=fl.bg;
     const g=$('mpGrid');
     g.setAttribute('width',W); g.setAttribute('height',H);
     g.style.width=W+'px'; g.style.height=H+'px';
     let lines='';
-    for(let x=1;x<f.cols;x++) lines+='<line x1="'+(x*MP_CELL)+'" y1="0" x2="'+(x*MP_CELL)+'" y2="'+H+'" stroke="#dfe5eb" stroke-width="1"/>';
-    for(let y=1;y<f.rows;y++) lines+='<line x1="0" y1="'+(y*MP_CELL)+'" x2="'+W+'" y2="'+(y*MP_CELL)+'" stroke="#dfe5eb" stroke-width="1"/>';
+    for(let x=1;x<f.cols;x++) lines+='<line x1="'+(x*MP_CELL)+'" y1="0" x2="'+(x*MP_CELL)+'" y2="'+H+'" stroke="'+fl.grid+'" stroke-width="1"/>';
+    for(let y=1;y<f.rows;y++) lines+='<line x1="0" y1="'+(y*MP_CELL)+'" x2="'+W+'" y2="'+(y*MP_CELL)+'" stroke="'+fl.grid+'" stroke-width="1"/>';
     g.innerHTML=lines;
+    // かぶり検出（選択中とマスを共有する四角）
+    const s = f.rects.find(q=>q.id===mpSel);
+    const ovl = s ? f.rects.filter(q=> q.id!==s.id &&
+      q.x < s.x+s.w && s.x < q.x+q.w && q.y < s.y+s.h && s.y < q.y+q.h
+    ).map(q=>q.id) : [];
     // 四角
     $('mpWorld').querySelectorAll('.mp-rect').forEach(n=>n.remove());
     f.rects.forEach(r=>{
       const d=document.createElement('div');
-      d.className='mp-rect'+(r.id===mpSel?' sel':'');
+      d.className='mp-rect'
+        +(r.type?' t-'+r.type:'')
+        +(r.h>r.w?' vert':'')
+        +(r.id===mpSel?' sel':'')
+        +(ovl.indexOf(r.id)>=0?' ovl':'')
+        +(mpHits.indexOf(r.id)>=0?' hit':'');
       d.style.left=(r.x*MP_CELL)+'px'; d.style.top=(r.y*MP_CELL)+'px';
       d.style.width=(r.w*MP_CELL)+'px'; d.style.height=(r.h*MP_CELL)+'px';
       d.style.background=r.color||MP_COLORS[0];
+      if(r.pal && !r.type){
+        const P=MP_CELL*2;
+        d.style.backgroundImage=
+          'repeating-linear-gradient(90deg, rgba(60,75,90,.4) 0 1.5px, transparent 1.5px '+P+'px),'+
+          'repeating-linear-gradient(180deg, rgba(60,75,90,.4) 0 1.5px, transparent 1.5px '+P+'px)';
+      }
       d.style.fontSize=Math.max(9, Math.min(15, r.h*MP_CELL*0.3))+'px';
       d.dataset.id=r.id;
-      d.innerHTML='<div class="lbl">'+String(r.label||'').replace(/</g,'&lt;')+'</div><div class="mp-handle"></div>';
+      const corners=(r.type==='nest')?'<span class="nu">上</span><span class="nd">下</span>':'';
+      const pn=(r.parts && r.parts.length)?'<span class="mp-pn">📦'+r.parts.length+'</span>':'';
+      d.innerHTML=corners+pn+'<div class="lbl">'+String(r.label||'').replace(/</g,'&lt;')+'</div><div class="mp-handle"></div>';
       $('mpWorld').appendChild(d);
     });
     const on = mpSel!=null;
-    ['mpName','mpColor','mpDup','mpDel'].forEach(id=> $(id).disabled=!on);
+    ['mpName','mpParts','mpColor','mpPal','mpRot','mpDup','mpDel'].forEach(id=> $(id).disabled=!on);
   }
   function mpGetSel(){ return mpFloor().rects.find(r=>r.id===mpSel); }
   function mpSelect(id){ mpSel=id; mpRender(); }
+  function mpAddRect(w,h,type,label){
+    const st=$('mpStage').getBoundingClientRect();
+    const f=mpFloor();
+    const cx=((st.width/2)-mpTx)/mpScale/MP_CELL, cy=((st.height/2)-mpTy)/mpScale/MP_CELL;
+    const r={ id:mpSeq(), x:Math.max(0,Math.min(f.cols-w,Math.round(cx-w/2))), y:Math.max(0,Math.min(f.rows-h,Math.round(cy-h/2))), w, h, label:label||'', color:MP_COLORS[0] };
+    if(type) r.type=type;
+    f.rects.push(r); mpSelect(r.id); saveDB();
+  }
 
   $('mapBtn').onclick = ()=>{ show('map'); mpRender(); requestAnimationFrame(mpFit); };
   $('mapBack').onclick = ()=> show('home');
   $('mpZIn').onclick = ()=> mpZoomAt(1.25);
   $('mpZOut').onclick = ()=> mpZoomAt(1/1.25);
   $('mpZFit').onclick = mpFit;
-  $('mpAdd').onclick = ()=>{
-    const st=$('mpStage').getBoundingClientRect();
-    const f=mpFloor();
-    const cx=((st.width/2)-mpTx)/mpScale/MP_CELL, cy=((st.height/2)-mpTy)/mpScale/MP_CELL;
-    const r={ id:mpSeq(), x:Math.max(0,Math.min(f.cols-4,Math.round(cx-2))), y:Math.max(0,Math.min(f.rows-3,Math.round(cy-1.5))), w:4, h:3, label:'', color:MP_COLORS[0] };
-    f.rects.push(r); mpSelect(r.id); saveDB();
-  };
+  $('mpAdd').onclick     = ()=> mpAddRect(4,3);
+  $('mpAddWall').onclick = ()=> mpAddRect(4,1,'wall');
+  $('mpAddDoor').onclick = ()=> mpAddRect(2,1,'door','扉');
+  $('mpAddShut').onclick = ()=> mpAddRect(5,1,'shut');
+  $('mpAddNest').onclick = ()=> mpAddRect(2,2,'nest');
+  $('mpAddLoad').onclick = ()=> mpAddRect(2,2,'load');
   $('mpName').onclick = ()=>{
     const r=mpGetSel(); if(!r) return;
-    const v=prompt('名前（例: ⑩、資材、H022）', r.label||'');
+    const v=prompt('名前（例: ⑩、資材、A-①）', r.label||'');
     if(v!==null){ r.label=v.trim(); mpRender(); saveDB(); }
   };
-  $('mpColor').onclick = ()=>{
+  $('mpParts').onclick = ()=>{
     const r=mpGetSel(); if(!r) return;
+    const cur=(r.parts||[]).join(' ');
+    const v=prompt('この場所に置く部品コード（スペース区切りで複数OK）\n例: C00007300 C00006846', cur);
+    if(v===null) return;
+    const list=v.toUpperCase().split(/[\s,、]+/).filter(s=>s);
+    if(list.length) r.parts=list; else delete r.parts;
+    mpRender(); saveDB();
+  };
+  $('mpColor').onclick = ()=>{
+    const r=mpGetSel(); if(!r || (r.type && r.type!=='load')) return;   // 柱・扉・シャッター・ネステナーは固定色
     const i=MP_COLORS.indexOf(r.color);
     r.color=MP_COLORS[(i+1)%MP_COLORS.length];
+    mpRender(); saveDB();
+  };
+  $('mpPal').onclick = ()=>{
+    const r=mpGetSel(); if(!r || r.type) return;
+    r.pal=!r.pal;
+    mpRender(); saveDB();
+  };
+  $('mpRot').onclick = ()=>{
+    const r=mpGetSel(); if(!r) return;
+    const f=mpFloor();
+    const w=r.h, h=r.w;
+    r.x=Math.max(0, Math.min(f.cols-w, r.x));
+    r.y=Math.max(0, Math.min(f.rows-h, r.y));
+    r.w=w; r.h=h;
     mpRender(); saveDB();
   };
   $('mpDup').onclick = ()=>{
     const r=mpGetSel(); if(!r) return;
     const f=mpFloor();
     const c={...r, id:mpSeq(), x:Math.min(f.cols-r.w, r.x+1), y:Math.min(f.rows-r.h, r.y+1)};
+    delete c.parts;   // 部品の紐付けは複製しない（場所は1つやから）
     f.rects.push(c); mpSelect(c.id); saveDB();
   };
   $('mpDel').onclick = ()=>{
     if(mpSel==null) return;
     const f=mpFloor();
+    const r=mpGetSel();
+    if(r && r.parts && r.parts.length && !confirm('部品が'+r.parts.length+'件紐付いてる。消してええ？')) return;
     f.rects=f.rects.filter(q=>q.id!==mpSel);
     mpSelect(null); saveDB();
+  };
+  $('mpFloorC').onclick = ()=>{
+    const f=mpFloor();
+    const order=['green','gray','white'];
+    f.floor=order[(order.indexOf(f.floor||'green')+1)%order.length];
+    mpRender(); saveDB();
   };
   $('mpSize').onclick = ()=>{
     const f=mpFloor();
@@ -1388,12 +1509,58 @@
     const nc=parseInt(c,10), nr=parseInt(rr,10);
     if(nc>=6 && nr>=6 && nc<=200 && nr<=200){ f.cols=nc; f.rows=nr; mpRender(); mpFit(); saveDB(); }
   };
+  // モック（warehouse-map.html）で描いた地図の取り込み。同じサイト（GitHub Pages）で開いてる時だけ効く
+  $('mpImport').onclick = ()=>{
+    let mock=null;
+    try{ mock=JSON.parse(localStorage.getItem('wmap_v2')||'null'); }catch(e){}
+    if(!mock || !mock.rects || !mock.rects.length){
+      alert('モックの地図が見つからん。モック（warehouse-map.html）と同じサイトのURLで開いてる時だけ取り込めるで。');
+      return;
+    }
+    if(!confirm('モックの地図（四角'+mock.rects.length+'個）を新しいフロアとして取り込む？')) return;
+    let id=mpSeq();
+    DB.maps.floors.push({
+      name:'取込マップ',
+      cols:mock.cols, rows:mock.rows,
+      floor:mock.floor||'green',
+      rects:mock.rects.map(r=>({...r, id:id++}))
+    });
+    DB.maps.cur=DB.maps.floors.length-1;
+    saveDB(); mpRender(); mpFit();
+  };
+  // 検索：部品コードか名前 → 該当の四角が黄色く点滅
+  // ゼロ埋めは吸収する（C7300 でも C00007300 でもヒット）
+  function mpNorm(s){ return String(s).toUpperCase().replace(/^([A-Z]+)0+/, '$1'); }
+  function mpMatch(r, q, nq){
+    const inParts=(r.parts||[]).some(p=> p.indexOf(q)>=0 || mpNorm(p).indexOf(nq)>=0);
+    const inLabel=String(r.label||'').toUpperCase().indexOf(q)>=0;
+    return inParts || inLabel;
+  }
+  function mpSearch(){
+    const q=$('mpQ').value.trim().toUpperCase();
+    if(!q) return;
+    const nq=mpNorm(q);
+    // 全フロアから探して、最初に見つかったフロアに切替
+    let floorIdx=-1;
+    DB.maps.floors.forEach((flr,i)=>{
+      if(floorIdx<0 && flr.rects.some(r=>mpMatch(r,q,nq))) floorIdx=i;
+    });
+    if(floorIdx<0){ alert('「'+q+'」は地図にまだ登録されてへん'); return; }
+    DB.maps.cur=floorIdx;
+    const f=mpFloor();
+    mpHits=f.rects.filter(r=>mpMatch(r,q,nq)).map(r=>r.id);
+    mpSel=null;
+    mpRender(); mpFit();
+    setTimeout(()=>{ mpHits=[]; mpRender(); }, 6000);   // 6秒で点滅解除
+  }
+  $('mpQBtn').onclick = mpSearch;
+  $('mpQ').addEventListener('keydown', e=>{ if(e.key==='Enter') mpSearch(); });
 
-  // タッチ操作：タップ選択・ドラッグ移動・ハンドル伸縮・空きパン・2本指ズーム
+  // タッチ操作：タップ選択・もう一回タップで名前（切り込み区画はマスに箱置き）・ドラッグ移動・ハンドル伸縮・パン・ピンチ
   (function(){
     const st=$('mpStage');
     const ptrs=new Map();
-    let mode=null, tgt=null, start=null, pinch0=null, tapped=null;
+    let mode=null, tgt=null, start=null, pinch0=null, tapped=null, lastSelAtDown=null;
     const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
     const mid=(a,b)=>({x:(a.x+b.x)/2,y:(a.y+b.y)/2});
     st.addEventListener('pointerdown', e=>{
@@ -1407,11 +1574,13 @@
       }
       const el=e.target;
       tapped={x:e.clientX,y:e.clientY,t:Date.now(),el};
+      const relDown=el.closest('.mp-rect');
+      lastSelAtDown = (relDown && parseInt(relDown.dataset.id,10)===mpSel) ? mpSel : null;
       if(el.classList.contains('mp-handle')){
         mode='resize'; tgt=mpGetSel();
         start={x:e.clientX,y:e.clientY,w:tgt.w,h:tgt.h};
-      } else if(el.closest('.mp-rect')){
-        const id=parseInt(el.closest('.mp-rect').dataset.id,10);
+      } else if(relDown){
+        const id=parseInt(relDown.dataset.id,10);
         if(id!==mpSel) mpSelect(id);
         mode='move'; tgt=mpGetSel();
         start={x:e.clientX,y:e.clientY,rx:tgt.x,ry:tgt.y};
@@ -1423,7 +1592,7 @@
     st.addEventListener('pointermove', e=>{
       if(!ptrs.has(e.pointerId)) return;
       ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
-      if(tapped && Math.hypot(e.clientX-tapped.x,e.clientY-tapped.y)>8) tapped=null;
+      if(tapped && Math.hypot(e.clientX-tapped.x,e.clientY-tapped.y)>18) tapped=null;
       if(mode==='pinch' && pinch0 && ptrs.size===2){
         const [a,b]=[...ptrs.values()];
         const r=st.getBoundingClientRect();
@@ -1439,9 +1608,9 @@
       if(mode==='move' && tgt){
         const dx=Math.round((e.clientX-start.x)/mpScale/MP_CELL);
         const dy=Math.round((e.clientY-start.y)/mpScale/MP_CELL);
-        tgt.x=Math.max(0,Math.min(f.cols-tgt.w, start.rx+dx));
-        tgt.y=Math.max(0,Math.min(f.rows-tgt.h, start.ry+dy));
-        mpRender();
+        const nx=Math.max(0,Math.min(f.cols-tgt.w, start.rx+dx));
+        const ny=Math.max(0,Math.min(f.rows-tgt.h, start.ry+dy));
+        if(nx!==tgt.x || ny!==tgt.y){ tgt.x=nx; tgt.y=ny; mpRender(); }
       } else if(mode==='resize' && tgt){
         const dw=Math.round((e.clientX-start.x)/mpScale/MP_CELL);
         const dh=Math.round((e.clientY-start.y)/mpScale/MP_CELL);
@@ -1458,13 +1627,141 @@
       ptrs.delete(e.pointerId);
       if(mode==='pinch' && ptrs.size<2){ mode=null; pinch0=null; }
       if(ptrs.size===0){
-        if(tapped && Date.now()-tapped.t<400 && !tapped.el.closest('.mp-rect')) mpSelect(null);
+        if(tapped && Date.now()-tapped.t<600){
+          const rectEl = tapped.el.closest('.mp-rect');
+          if(!rectEl){
+            mpSelect(null);
+          } else if(lastSelAtDown===parseInt(rectEl.dataset.id,10)){
+            const r=mpGetSel();
+            if(r && r.pal && !r.type){
+              // 切り込み区画：タップしたマス（2×2）に箱を置く
+              const fr=$('mpFrame').getBoundingClientRect();
+              const f=mpFloor();
+              const gx=(tapped.x-fr.left)/fr.width*f.cols;
+              const gy=(tapped.y-fr.top )/fr.height*f.rows;
+              let col=Math.floor((gx-r.x)/2), row=Math.floor((gy-r.y)/2);
+              col=Math.max(0,Math.min(Math.floor((r.w-1)/2),col));
+              row=Math.max(0,Math.min(Math.floor((r.h-1)/2),row));
+              const v=prompt('このマスに置く箱の名前（例: 1140グローブ）','');
+              if(v!==null){
+                f.rects.push({id:mpSeq(), x:r.x+col*2, y:r.y+row*2, w:2, h:2, label:v.trim(), color:MP_COLORS[0], type:'load'});
+                mpRender(); saveDB();
+              }
+            } else if(r){
+              const v=prompt('名前（例: ⑩、資材、A-①）', r.label||'');
+              if(v!==null){ r.label=v.trim(); mpRender(); saveDB(); }
+            }
+          }
+        }
         if(mode==='move'||mode==='resize') saveDB();
-        mode=null; tgt=null; tapped=null;
+        mode=null; tgt=null; tapped=null; lastSelAtDown=null;
       }
     }
     st.addEventListener('pointerup', up);
     st.addEventListener('pointercancel', up);
+  })();
+
+  /* ===== 倉庫3D（おまけ・俯瞰グリグリのみ） ===== */
+  let w3rx=-32, w3ry=-28, w3s=1;
+  const C3=15;
+  function w3Face(parent,w,h,tf,css){
+    const d=document.createElement('div');
+    d.className='w3f';
+    d.style.cssText='width:'+w+'px;height:'+h+'px;left:'+(-w/2)+'px;top:'+(-h/2)+'px;transform:'+tf+';'+css;
+    parent.appendChild(d);
+    return d;
+  }
+  function w3Box(parent,cx,cz,w,d,H,side,top){
+    const g=document.createElement('div');
+    g.style.transform='translate3d('+cx+'px,0px,'+cz+'px)';
+    parent.appendChild(g);
+    w3Face(g,w,H,'translate3d(0px,'+(-H/2)+'px,'+(d/2)+'px)',side);
+    w3Face(g,w,H,'translate3d(0px,'+(-H/2)+'px,'+(-d/2)+'px) rotateY(180deg)',side);
+    w3Face(g,d,H,'translate3d('+(w/2)+'px,'+(-H/2)+'px,0px) rotateY(90deg)',side);
+    w3Face(g,d,H,'translate3d('+(-w/2)+'px,'+(-H/2)+'px,0px) rotateY(-90deg)',side);
+    return w3Face(g,w,d,'translate3d(0px,'+(-H)+'px,0px) rotateX(90deg)',top||side);
+  }
+  function build3D(){
+    const world=$('w3World'); world.innerHTML='';
+    const f=mpFloor();
+    const W=f.cols*C3, D=f.rows*C3;
+    const fl=MP_FLOORS[f.floor]||MP_FLOORS.green;
+    w3Face(world,W,D,'translate3d(0px,0px,0px) rotateX(90deg)',
+      'background:'+fl.bg+';border:2px solid #3a4654;'+
+      'background-image:repeating-linear-gradient(90deg,rgba(255,255,255,.12) 0 1px,transparent 1px '+(C3*2)+'px),repeating-linear-gradient(180deg,rgba(255,255,255,.12) 0 1px,transparent 1px '+(C3*2)+'px);');
+    f.rects.forEach(r=>{
+      const cx=(r.x+r.w/2)*C3-W/2, cz=(r.y+r.h/2)*C3-D/2;
+      const w=r.w*C3-2, d=r.h*C3-2;
+      if(r.type==='wall'){
+        w3Box(world,cx,cz,w,d,92,'background:#5f6b78;border:1px solid #46525f;','background:#75828f;border:1px solid #46525f;');
+      } else if(r.type==='door'){
+        w3Box(world,cx,cz,w,d,34,'background:#f0c15c;border:1px solid #b98a2a;','background:#f6d489;border:1px solid #b98a2a;');
+      } else if(r.type==='shut'){
+        w3Box(world,cx,cz,w,d,92,
+          'background:repeating-linear-gradient(180deg,#9aa6b2 0 6px,#cdd6de 6px 12px);border:1px solid #7b8894;',
+          'background:#aab6c2;border:1px solid #7b8894;');
+      } else if(r.type==='nest'){
+        const legH=52, loadDn=40, loadUp=42, slab=6, lw=4;
+        w3Box(world,cx,cz,w*0.86,d*0.86,loadDn,'background:#d8b98a;border:1px solid #a8895c;','background:#e8d2ab;border:1px solid #a8895c;');
+        [[-1,-1],[1,-1],[-1,1],[1,1]].forEach(p=>{
+          w3Box(world, cx+p[0]*(w/2-lw/2), cz+p[1]*(d/2-lw/2), lw, lw, legH,'background:#c93a3a;');
+        });
+        const g=document.createElement('div');
+        g.style.transform='translate3d('+cx+'px,'+(-legH)+'px,'+cz+'px)';
+        world.appendChild(g);
+        w3Face(g,w,d,'translate3d(0px,'+(-slab/2)+'px,0px) rotateX(90deg)','background:#c93a3a;border:1px solid #8f2525;');
+        const upg=document.createElement('div');
+        upg.style.transform='translate3d('+cx+'px,'+(-(legH+slab))+'px,'+cz+'px)';
+        world.appendChild(upg);
+        w3Face(upg,w*0.86,loadUp,'translate3d(0px,'+(-loadUp/2)+'px,'+(d*0.86/2)+'px)','background:#d8b98a;border:1px solid #a8895c;');
+        w3Face(upg,w*0.86,loadUp,'translate3d(0px,'+(-loadUp/2)+'px,'+(-d*0.86/2)+'px) rotateY(180deg)','background:#d8b98a;border:1px solid #a8895c;');
+        w3Face(upg,d*0.86,loadUp,'translate3d('+(w*0.86/2)+'px,'+(-loadUp/2)+'px,0px) rotateY(90deg)','background:#d8b98a;border:1px solid #a8895c;');
+        w3Face(upg,d*0.86,loadUp,'translate3d('+(-w*0.86/2)+'px,'+(-loadUp/2)+'px,0px) rotateY(-90deg)','background:#d8b98a;border:1px solid #a8895c;');
+        w3Face(upg,w*0.86,d*0.86,'translate3d(0px,'+(-loadUp)+'px,0px) rotateX(90deg)','background:#e8d2ab;border:1px solid #a8895c;');
+      } else if(r.type==='load'){
+        const sh=document.createElement('div');
+        sh.style.transform='translate3d(0px,-13px,0px)';
+        world.appendChild(sh);
+        w3Face(sh,w*0.8,d*0.8,'translate3d('+cx+'px,0px,'+cz+'px) rotateX(90deg)','background:rgba(20,30,42,.28);border-radius:6px;');
+        const g=document.createElement('div');
+        g.style.transform='translate3d(0px,-20px,0px)';
+        world.appendChild(g);
+        const top=w3Box(g,cx,cz,w*0.94,d*0.94,16,
+          'background:#5d92d6;border:1px solid #33639f;',
+          'background:#8bb5eb;border:1px solid #33639f;font-size:10px;font-weight:800;color:#123258;');
+        if(r.label) top.textContent=r.label;
+      } else {
+        const H = r.pal ? 12 : 52;
+        const top=w3Box(world,cx,cz,w,d,H,
+          'background:#b9c2cc;border:1px solid #8d99a6;',
+          'background:#e2e7ec;border:1px solid #8d99a6;');
+        if(r.pal){
+          top.style.backgroundImage=
+            'repeating-linear-gradient(90deg, rgba(60,75,90,.35) 0 1px, transparent 1px '+(C3*2)+'px),'+
+            'repeating-linear-gradient(180deg, rgba(60,75,90,.35) 0 1px, transparent 1px '+(C3*2)+'px)';
+        }
+      }
+    });
+    const st=$('w3Stage').getBoundingClientRect();
+    w3s=Math.min((st.width-40)/W, (st.height-40)/D, 1)*1.15;
+    w3rx=-32; w3ry=-28;
+    w3Apply();
+  }
+  function w3Apply(){
+    $('w3World').style.transform='rotateX('+w3rx+'deg) rotateY('+w3ry+'deg) scale3d('+w3s+','+w3s+','+w3s+')';
+  }
+  $('mpZ3d').onclick = ()=>{ $('w3Modal').classList.add('on'); requestAnimationFrame(build3D); };
+  $('w3Close').onclick = ()=> $('w3Modal').classList.remove('on');
+  (function(){
+    const st=$('w3Stage'); let drag=false,px=0,py=0;
+    st.addEventListener('pointerdown',e=>{drag=true;px=e.clientX;py=e.clientY;st.setPointerCapture(e.pointerId);});
+    st.addEventListener('pointermove',e=>{
+      if(!drag)return;
+      w3ry+=(e.clientX-px)*0.4; w3rx-=(e.clientY-py)*0.4;
+      w3rx=Math.max(-89,Math.min(-5,w3rx));
+      px=e.clientX;py=e.clientY; w3Apply();
+    });
+    ['pointerup','pointercancel'].forEach(ev=>st.addEventListener(ev,()=>{drag=false;}));
   })();
 
   /* ===== タップ検数（📸）：写真を撮って部品を1個ずつタップして数える =====
