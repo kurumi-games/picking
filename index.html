@@ -451,6 +451,7 @@
       <button class="mp-tb" id="mpFloorC">床色</button>
       <button class="mp-tb" id="mpSize">外枠</button>
       <button class="mp-tb" id="mpImport">モック取込</button>
+      <button class="mp-tb warn" id="mpFloorDel">フロア削除</button>
     </div>
   </div>
 </section>
@@ -1378,7 +1379,14 @@
       const b=document.createElement('button');
       b.className='mp-tab'+(i===DB.maps.cur?' on':'');
       b.textContent=flr.name;
-      b.onclick=()=>{ DB.maps.cur=i; mpSel=null; mpHits=[]; saveDB(); mpRender(); mpFit(); };
+      b.onclick=()=>{
+        if(i===DB.maps.cur){
+          const v=prompt('フロアの名前', flr.name);
+          if(v!==null && v.trim()){ flr.name=v.trim(); saveDB(); mpRender(); }
+          return;
+        }
+        DB.maps.cur=i; mpSel=null; mpHits=[]; saveDB(); mpRender(); mpFit();
+      };
       tabs.appendChild(b);
     });
     // 外枠と方眼
@@ -1509,13 +1517,27 @@
     const nc=parseInt(c,10), nr=parseInt(rr,10);
     if(nc>=6 && nr>=6 && nc<=200 && nr<=200){ f.cols=nc; f.rows=nr; mpRender(); mpFit(); saveDB(); }
   };
+  // フロア削除（最後の1枚は消せない）
+  $('mpFloorDel').onclick = ()=>{
+    if(DB.maps.floors.length<=1){ alert('最後の1フロアは消せへん'); return; }
+    const f=mpFloor();
+    const linked=f.rects.filter(r=>r.parts&&r.parts.length).length;
+    if(!confirm('「'+f.name+'」を丸ごと削除する？'+(linked?'（部品の紐付き区画が'+linked+'個あるで）':''))) return;
+    DB.maps.floors.splice(DB.maps.cur,1);
+    DB.maps.cur=0;
+    mpSel=null; mpHits=[];
+    saveDB(); mpRender(); mpFit();
+  };
   // モック（warehouse-map.html）で描いた地図の取り込み。同じサイト（GitHub Pages）で開いてる時だけ効く
   $('mpImport').onclick = ()=>{
     let mock=null;
     try{ mock=JSON.parse(localStorage.getItem('wmap_v2')||'null'); }catch(e){}
     if(!mock || !mock.rects || !mock.rects.length){
-      alert('モックの地図が見つからん。モック（warehouse-map.html）と同じサイトのURLで開いてる時だけ取り込めるで。');
-      return;
+      // 同じサイトに保存がなければ貼り付けで取り込む
+      const v=prompt('モックの「出力（アプリへ）」でコピーしたデータをここに貼り付けてな');
+      if(v===null) return;
+      try{ mock=JSON.parse(v.trim()); }catch(e){ alert('データの形が読めんかった。コピーし直してみて'); return; }
+      if(!mock || !mock.rects || !mock.rects.length){ alert('四角が入ってへんデータやった'); return; }
     }
     if(!confirm('モックの地図（四角'+mock.rects.length+'個）を新しいフロアとして取り込む？')) return;
     let id=mpSeq();
