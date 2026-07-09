@@ -129,10 +129,30 @@
   .mp-pt.c-r { background:#f5b9b9; }
   .mp-pt.c-p { background:#dcc2ee; }
   .mp-pt.c-b { background:#bcdcf5; }
-  .mps-modal { position:fixed; inset:0; background:rgba(15,25,38,.8); z-index:420; display:none; flex-direction:column; padding:14px; gap:10px; }
+  .mps-modal { position:fixed; inset:0; background:rgba(15,25,38,.8); z-index:420; display:none; align-items:center; justify-content:center; padding:20px; }
   .mps-modal.on { display:flex; }
-  .mps-modal video { flex:1; width:100%; object-fit:cover; border-radius:14px; background:#000; }
-  .mps-modal .mps-t { color:#fff; text-align:center; font-size:15px; font-weight:800; }
+  .mps-box { width:100%; max-width:380px; background:var(--panel); border-radius:16px; padding:14px; display:flex; flex-direction:column; gap:10px; }
+  .mps-box video { width:100%; height:34vh; object-fit:cover; border-radius:12px; background:#000; }
+  .mps-box .mps-t { text-align:center; font-size:14.5px; font-weight:800; color:var(--txt); }
+
+  /* ===== 部品の場所（現場用のシンプル画面） ===== */
+  .td-big { display:block; width:100%; padding:20px; border-radius:14px; border:none; background:var(--ok); color:#fff; font-size:20px; font-weight:900; cursor:pointer; margin-bottom:12px; }
+  .td-search { display:flex; gap:8px; margin-bottom:12px; }
+  .td-search input { flex:1; border:1.5px solid var(--line); border-radius:12px; padding:14px; font-size:16px; }
+  .td-search input:focus { outline:none; border-color:var(--accent); }
+  .td-search button { padding:0 20px; border-radius:12px; border:none; background:var(--accent); color:#fff; font-size:15px; font-weight:800; }
+  .td-code { text-align:center; font-size:18px; font-weight:900; margin-bottom:8px; }
+  .td-state { text-align:center; font-size:13px; color:var(--muted); font-weight:700; margin-bottom:8px; }
+  #tdStage { position:relative; height:48vh; overflow:hidden; touch-action:none; background:#e9edf1; border-radius:12px; border:1px solid var(--line); display:none; }
+  #tdStage.on { display:block; }
+  #tdWorld { position:absolute; left:0; top:0; transform-origin:0 0; }
+  #tdFrame { position:absolute; left:0; top:0; background:#fff; border:3px solid #3a4654; }
+  #tdGrid { position:absolute; left:0; top:0; pointer-events:none; }
+  .td-legend { display:none; justify-content:center; gap:14px; font-size:12.5px; font-weight:800; color:var(--muted); padding:8px 0 0; }
+  .td-legend.on { display:flex; }
+  .td-legend i { display:inline-block; width:13px; height:13px; border-radius:3px; margin-right:4px; vertical-align:-2px; }
+  .td-paint { display:none; gap:7px; overflow-x:auto; padding:10px 0 2px; }
+  .td-paint.on { display:flex; }
 
   .mp-tools { display:flex; gap:7px; overflow-x:auto; padding:8px 0 2px; }
   .mp-tb { flex:0 0 auto; padding:11px 13px; border-radius:10px; border:1.5px solid var(--line); background:#fff; font-size:13.5px; font-weight:800; color:var(--txt); cursor:pointer; white-space:nowrap; }
@@ -394,7 +414,8 @@
       <button class="home-btn shop" id="shopBtn">🛒 お買い物モード（お試し）</button>
       <button class="home-btn" id="prodBtn">製品登録</button>
       <button class="home-btn" id="regBtn">部品登録（場所・意味）</button>
-      <button class="home-btn" id="mapBtn">🗺 倉庫マップ</button>
+      <button class="home-btn" id="tidyBtn">📍 部品の場所（読み取り・検索）</button>
+      <button class="home-btn" id="mapBtn">🗺 倉庫マップ（編集用）</button>
     </div>
   </div>
 </section>
@@ -424,6 +445,45 @@
       <button class="btn ok" id="startBtn">手入力でスタート</button>
     </div>
     <p class="status ng" id="inputErr"></p>
+  </div>
+</section>
+
+<!-- ============ 部品の場所（現場用） ============ -->
+<section class="screen" id="tidy">
+  <div class="wrap">
+    <div class="topbar">
+      <button class="back" id="tidyBack">←</button>
+      <h2>部品の場所</h2>
+    </div>
+    <button class="td-big" id="tdScan">📷 現品票を読み取る</button>
+    <div class="td-search">
+      <input id="tdQ" placeholder="部品コードで検索（例: C7300）">
+      <button id="tdQBtn">検索</button>
+    </div>
+    <div class="td-code" id="tdCode" style="display:none;"></div>
+    <div class="td-state" id="tdState" style="display:none;"></div>
+    <div id="tdStage">
+      <div id="tdWorld">
+        <div id="tdFrame"></div>
+        <svg id="tdGrid"></svg>
+      </div>
+    </div>
+    <div class="td-legend" id="tdLegend">
+      <span><i style="background:rgba(230,77,77,.85);"></i>定位置</span>
+      <span><i style="background:rgba(167,93,209,.85);"></i>仮置き</span>
+      <span><i style="background:rgba(77,163,230,.85);"></i>引越し</span>
+    </div>
+    <div class="td-paint" id="tdPaint">
+      <button class="mp-pt c-r on" id="tdTr">🔴 定位置</button>
+      <button class="mp-pt c-p" id="tdTp">🟣 仮置き</button>
+      <button class="mp-pt c-b" id="tdTb">🔵 引越し</button>
+      <button class="mp-pt" id="tdTe">⬜ 消す</button>
+      <button class="mp-pt" id="tdTh">✋ 動かす</button>
+      <button class="mp-pt" id="tdDone" style="background:var(--ok);color:#fff;border-color:var(--ok);">✔ 保存して完了</button>
+    </div>
+    <div class="td-paint" id="tdView" style="display:none;">
+      <button class="mp-pt" id="tdEdit">✏️ 塗り直す</button>
+    </div>
   </div>
 </section>
 
@@ -485,9 +545,11 @@
 
 <!-- ============ マップ用バーコード読み取り ============ -->
 <div class="mps-modal" id="mpsModal">
-  <p class="mps-t">現品票のバーコードを写してな</p>
-  <video id="mpsVideo" playsinline muted></video>
-  <button class="w3-close" id="mpsClose">とじる</button>
+  <div class="mps-box">
+    <p class="mps-t">📷 現品票のバーコードを写してな</p>
+    <video id="mpsVideo" playsinline muted></video>
+    <button class="btn ghost sm" id="mpsClose">とじる</button>
+  </div>
 </div>
 
 <!-- ============ 倉庫3D（おまけ） ============ -->
@@ -954,6 +1016,16 @@
     if(!obj.count   || typeof obj.count!=='object')   obj.count   = {};
     if(!obj.maps    || typeof obj.maps!=='object')    obj.maps    = defaultMaps();
     if(!obj.spots   || typeof obj.spots!=='object')   obj.spots   = {};   // 部品ごとの塗り絵 {CODE:{cells:[{f,x,y,s}]}}
+    // 旧データ（1マス単位）をパレット単位（2×2の偶数位置）に寄せて重複を除く
+    Object.keys(obj.spots).forEach(k=>{
+      const seen={}, out=[];
+      (obj.spots[k].cells||[]).forEach(c=>{
+        c.x=Math.floor(c.x/2)*2; c.y=Math.floor(c.y/2)*2;
+        const key=c.f+':'+c.x+':'+c.y;
+        if(!seen[key]){ seen[key]=1; out.push(c); }
+      });
+      obj.spots[k].cells=out;
+    });
     if(!canLS) window.__memDB = obj;
     return obj;
   }
@@ -1474,7 +1546,7 @@
         const d=document.createElement('div');
         d.className='mp-spot s-'+c.s;
         d.style.left=(c.x*MP_CELL)+'px'; d.style.top=(c.y*MP_CELL)+'px';
-        d.style.width=MP_CELL+'px'; d.style.height=MP_CELL+'px';
+        d.style.width=(MP_CELL*2)+'px'; d.style.height=(MP_CELL*2)+'px';
         $('mpWorld').appendChild(d);
       });
     }
@@ -1518,8 +1590,9 @@
   function mpPaintCell(clientX, clientY){
     const fr=$('mpFrame').getBoundingClientRect();
     const f=mpFloor();
-    const x=Math.floor((clientX-fr.left)/fr.width*f.cols);
-    const y=Math.floor((clientY-fr.top )/fr.height*f.rows);
+    // パレット1枚＝2×2マスを塗りの単位にする
+    const x=Math.floor((clientX-fr.left)/fr.width*f.cols/2)*2;
+    const y=Math.floor((clientY-fr.top )/fr.height*f.rows/2)*2;
     if(x<0||y<0||x>=f.cols||y>=f.rows) return;
     const cells=DB.spots[mpPart].cells;
     const i=cells.findIndex(c=> c.f===DB.maps.cur && c.x===x && c.y===y);
@@ -1530,8 +1603,202 @@
       else { cells.push({f:DB.maps.cur, x, y, s:mpTool}); mpRender(); }
     }
   }
+  /* ===== 部品の場所（現場用のシンプル画面） =====
+     読み取り or 検索 → 塗られた地図が出る。新規なら塗って登録。 */
+  let tdCodeCur=null, tdTool='r', tdEditing=false, tdF=0;
+  let tdScale=1, tdTx=0, tdTy=0;
+  function tdApply(){ $('tdWorld').style.transform='translate('+tdTx+'px,'+tdTy+'px) scale('+tdScale+')'; }
+  function tdFit(){
+    const st=$('tdStage').getBoundingClientRect();
+    if(st.width<10) return;
+    const f=DB.maps.floors[tdF], W=f.cols*MP_CELL, H=f.rows*MP_CELL;
+    tdScale=Math.min(st.width/(W+24), st.height/(H+24));
+    tdTx=(st.width-W*tdScale)/2; tdTy=(st.height-H*tdScale)/2;
+    tdApply();
+  }
+  function tdRender(){
+    const f=DB.maps.floors[tdF];
+    const W=f.cols*MP_CELL, H=f.rows*MP_CELL;
+    const fl=MP_FLOORS[f.floor]||MP_FLOORS.green;
+    const fr=$('tdFrame'); fr.style.width=W+'px'; fr.style.height=H+'px'; fr.style.background=fl.bg;
+    const g=$('tdGrid');
+    g.setAttribute('width',W); g.setAttribute('height',H);
+    g.style.width=W+'px'; g.style.height=H+'px';
+    let lines='';
+    for(let x=1;x<f.cols;x++) lines+='<line x1="'+(x*MP_CELL)+'" y1="0" x2="'+(x*MP_CELL)+'" y2="'+H+'" stroke="'+fl.grid+'" stroke-width="1"/>';
+    for(let y=1;y<f.rows;y++) lines+='<line x1="0" y1="'+(y*MP_CELL)+'" x2="'+W+'" y2="'+(y*MP_CELL)+'" stroke="'+fl.grid+'" stroke-width="1"/>';
+    g.innerHTML=lines;
+    $('tdWorld').querySelectorAll('.mp-rect,.mp-spot').forEach(n=>n.remove());
+    f.rects.forEach(r=>{
+      const d=document.createElement('div');
+      d.className='mp-rect'+(r.type?' t-'+r.type:'')+(r.h>r.w?' vert':'');
+      d.style.left=(r.x*MP_CELL)+'px'; d.style.top=(r.y*MP_CELL)+'px';
+      d.style.width=(r.w*MP_CELL)+'px'; d.style.height=(r.h*MP_CELL)+'px';
+      d.style.background=r.color||MP_COLORS[0];
+      if(r.pal && !r.type){
+        const P=MP_CELL*2;
+        d.style.backgroundImage=
+          'repeating-linear-gradient(90deg, rgba(60,75,90,.4) 0 1.5px, transparent 1.5px '+P+'px),'+
+          'repeating-linear-gradient(180deg, rgba(60,75,90,.4) 0 1.5px, transparent 1.5px '+P+'px)';
+      }
+      d.style.fontSize=Math.max(9, Math.min(15, r.h*MP_CELL*0.3))+'px';
+      const corners=(r.type==='nest')?'<span class="nu">上</span><span class="nd">下</span>':'';
+      d.innerHTML=corners+'<div class="lbl">'+String(r.label||'').replace(/</g,'&lt;')+'</div>';
+      $('tdWorld').appendChild(d);
+    });
+    // この部品の塗りマス
+    if(tdCodeCur && DB.spots[tdCodeCur]){
+      DB.spots[tdCodeCur].cells.forEach(c=>{
+        if(c.f!==tdF) return;
+        const d=document.createElement('div');
+        d.className='mp-spot s-'+c.s;
+        d.style.left=(c.x*MP_CELL)+'px'; d.style.top=(c.y*MP_CELL)+'px';
+        d.style.width=(MP_CELL*2)+'px'; d.style.height=(MP_CELL*2)+'px';
+        $('tdWorld').appendChild(d);
+      });
+    }
+  }
+  function tdStateText(){
+    const cells=(DB.spots[tdCodeCur]&&DB.spots[tdCodeCur].cells)||[];
+    const n={r:0,p:0,b:0};
+    cells.forEach(c=>n[c.s]++);
+    const parts=[];
+    if(n.r) parts.push('🔴定位置'+n.r);
+    if(n.p) parts.push('🟣仮置き'+n.p);
+    if(n.b) parts.push('🔵引越し'+n.b);
+    return parts.length? parts.join('　') : 'まだ塗られてへん';
+  }
+  function tdOpen(code, editNow){
+    tdCodeCur=code;
+    if(!DB.spots[code]) DB.spots[code]={cells:[]};
+    const first=DB.spots[code].cells[0];
+    tdF = (first && DB.maps.floors[first.f]) ? first.f : DB.maps.cur;
+    tdEditing = !!editNow || !DB.spots[code].cells.length;
+    tdTool='r';
+    $('tdCode').textContent='📦 '+code;
+    $('tdCode').style.display='block';
+    $('tdState').textContent=tdStateText();
+    $('tdState').style.display='block';
+    $('tdStage').classList.add('on');
+    $('tdLegend').classList.add('on');
+    $('tdPaint').classList.toggle('on', tdEditing);
+    $('tdView').style.display = tdEditing ? 'none' : 'flex';
+    $('tdView').classList.toggle('on', !tdEditing);
+    tdToolBtns();
+    tdRender();
+    requestAnimationFrame(tdFit);
+  }
+  function tdToolBtns(){
+    const m={r:'tdTr',p:'tdTp',b:'tdTb',e:'tdTe',hand:'tdTh'};
+    Object.keys(m).forEach(k=> $(m[k]).classList.toggle('on', tdTool===k));
+  }
+  $('tdTr').onclick=()=>{ tdTool='r'; tdToolBtns(); };
+  $('tdTp').onclick=()=>{ tdTool='p'; tdToolBtns(); };
+  $('tdTb').onclick=()=>{ tdTool='b'; tdToolBtns(); };
+  $('tdTe').onclick=()=>{ tdTool='e'; tdToolBtns(); };
+  $('tdTh').onclick=()=>{ tdTool='hand'; tdToolBtns(); };
+  $('tdDone').onclick=()=>{
+    if(DB.spots[tdCodeCur] && !DB.spots[tdCodeCur].cells.length){
+      alert('まだ1マスも塗られてへんで。塗ってから保存してな（やめる時は←）');
+      return;
+    }
+    saveDB();
+    tdOpen(tdCodeCur, false);   // 表示モードに戻る
+  };
+  $('tdEdit').onclick=()=> tdOpen(tdCodeCur, true);
+  function tdPaintCell(clientX, clientY){
+    const fr=$('tdFrame').getBoundingClientRect();
+    const f=DB.maps.floors[tdF];
+    const x=Math.floor((clientX-fr.left)/fr.width*f.cols/2)*2;
+    const y=Math.floor((clientY-fr.top )/fr.height*f.rows/2)*2;
+    if(x<0||y<0||x>=f.cols||y>=f.rows) return;
+    const cells=DB.spots[tdCodeCur].cells;
+    const i=cells.findIndex(c=> c.f===tdF && c.x===x && c.y===y);
+    if(tdTool==='e'){
+      if(i>=0){ cells.splice(i,1); tdRender(); $('tdState').textContent=tdStateText(); }
+    } else {
+      if(i>=0){ if(cells[i].s!==tdTool){ cells[i].s=tdTool; tdRender(); $('tdState').textContent=tdStateText(); } }
+      else { cells.push({f:tdF, x, y, s:tdTool}); tdRender(); $('tdState').textContent=tdStateText(); }
+    }
+  }
+  // タッチ：塗り or パン・ピンチ
+  (function(){
+    const st=$('tdStage');
+    const ptrs=new Map();
+    let mode=null, start=null, pinch0=null;
+    const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+    const mid=(a,b)=>({x:(a.x+b.x)/2,y:(a.y+b.y)/2});
+    st.addEventListener('pointerdown', e=>{
+      st.setPointerCapture(e.pointerId);
+      ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+      if(ptrs.size===2){
+        const [a,b]=[...ptrs.values()];
+        pinch0={d:dist(a,b), m:mid(a,b), scale:tdScale, tx:tdTx, ty:tdTy};
+        mode='pinch';
+        return;
+      }
+      if(tdEditing && tdTool!=='hand'){
+        mode='paint';
+        tdPaintCell(e.clientX, e.clientY);
+      } else {
+        mode='pan';
+        start={x:e.clientX,y:e.clientY,tx:tdTx,ty:tdTy};
+      }
+    });
+    st.addEventListener('pointermove', e=>{
+      if(!ptrs.has(e.pointerId)) return;
+      ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+      if(mode==='pinch' && pinch0 && ptrs.size===2){
+        const [a,b]=[...ptrs.values()];
+        const r=st.getBoundingClientRect();
+        const ns=Math.max(.15,Math.min(6, pinch0.scale*dist(a,b)/pinch0.d));
+        const m=mid(a,b);
+        const px=(pinch0.m.x-r.left-pinch0.tx)/pinch0.scale;
+        const py=(pinch0.m.y-r.top -pinch0.ty)/pinch0.scale;
+        tdTx=(m.x-r.left)-px*ns; tdTy=(m.y-r.top)-py*ns; tdScale=ns;
+        tdApply();
+      } else if(mode==='paint'){
+        tdPaintCell(e.clientX, e.clientY);
+      } else if(mode==='pan'){
+        tdTx=start.tx+(e.clientX-start.x);
+        tdTy=start.ty+(e.clientY-start.y);
+        tdApply();
+      }
+    });
+    function up(e){
+      ptrs.delete(e.pointerId);
+      if(mode==='pinch' && ptrs.size<2){ mode=null; pinch0=null; }
+      if(ptrs.size===0){
+        if(mode==='paint') saveDB();
+        mode=null; start=null;
+      }
+    }
+    st.addEventListener('pointerup', up);
+    st.addEventListener('pointercancel', up);
+  })();
+  // 画面の出入り
+  $('tidyBtn').onclick=()=> show('tidy');
+  $('tidyBack').onclick=()=>{
+    if(tdCodeCur && DB.spots[tdCodeCur] && !DB.spots[tdCodeCur].cells.length) delete DB.spots[tdCodeCur];
+    tdCodeCur=null; saveDB(); show('home');
+  };
+  // 検索
+  function tdSearch(){
+    const q=$('tdQ').value.trim().toUpperCase();
+    if(!q) return;
+    const nq=mpNorm(q);
+    const codes=Object.keys(DB.spots).filter(c=> DB.spots[c].cells.length && (c.indexOf(q)>=0 || mpNorm(c).indexOf(nq)>=0));
+    if(codes.length){ tdOpen(codes[0], false); return; }
+    if(confirm('「'+q+'」はまだ場所が登録されてへん。今から塗って登録する？')) tdOpen(q, true);
+  }
+  $('tdQBtn').onclick=tdSearch;
+  $('tdQ').addEventListener('keydown', e=>{ if(e.key==='Enter') tdSearch(); });
+  // 読み取り（スキャナはマップと共用。読んだ結果をこの画面に返す）
+  $('tdScan').onclick=()=>{ mpsTarget='tidy'; startMapScan(); };
+
   /* ===== バーコード読み取り（現品票 → 部品の地図を開く） ===== */
   let mpsReader=null;
+  let mpsTarget='map';   // 'map'（編集画面）か 'tidy'（現場画面）か
   async function startMapScan(){
     if(typeof ZXing==='undefined'){ alert('読み取りライブラリを読めんかった。通信を確認してな'); return; }
     $('mpsModal').classList.add('on');
@@ -1542,10 +1809,13 @@
         const code=String(result.getText()).toUpperCase().replace(/[^A-Z0-9-]/g,'');
         if(!code) return;
         stopMapScan();
-        if(DB.spots[code] && DB.spots[code].cells.length){
-          mpOpenPart(code);   // 登録済み → 場所が光る
+        const reg = DB.spots[code] && DB.spots[code].cells.length;
+        if(mpsTarget==='tidy'){
+          if(reg) tdOpen(code, false);
+          else if(confirm('「'+code+'」はまだ場所が登録されてへん。今から塗って登録する？')) tdOpen(code, true);
         } else {
-          if(confirm('「'+code+'」はまだ場所が登録されてへん。今から塗って登録する？')) mpOpenPart(code);
+          if(reg) mpOpenPart(code);
+          else if(confirm('「'+code+'」はまだ場所が登録されてへん。今から塗って登録する？')) mpOpenPart(code);
         }
       });
     }catch(e){ alert('カメラを起動できんかった'); stopMapScan(); }
@@ -1554,7 +1824,7 @@
     $('mpsModal').classList.remove('on');
     try{ if(mpsReader){ mpsReader.reset(); mpsReader=null; } }catch(e){}
   }
-  $('mpScanBtn').onclick=startMapScan;
+  $('mpScanBtn').onclick=()=>{ mpsTarget='map'; startMapScan(); };
   $('mpsClose').onclick=stopMapScan;
   function mpGetSel(){ return mpFloor().rects.find(r=>r.id===mpSel); }
   function mpSelect(id){ mpSel=id; mpRender(); }
