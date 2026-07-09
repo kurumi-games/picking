@@ -117,6 +117,23 @@
   .mp-rect.t-nest .nu { position:absolute; top:1px; right:3px; font-size:10px; font-weight:900; pointer-events:none; }
   .mp-rect.t-nest .nd { position:absolute; bottom:0px; left:3px; font-size:10px; font-weight:900; pointer-events:none; }
   .mp-rect.t-load { background:rgba(93,146,214,.55) !important; border-color:#33639f; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.35); }
+  .mp-spot { position:absolute; pointer-events:none; z-index:6; border-radius:2px; }
+  .mp-spot.s-r { background:rgba(230,77,77,.72); box-shadow:inset 0 0 0 1.5px #b32626; }
+  .mp-spot.s-p { background:rgba(167,93,209,.72); box-shadow:inset 0 0 0 1.5px #7c3fa3; }
+  .mp-spot.s-b { background:rgba(77,163,230,.72); box-shadow:inset 0 0 0 1.5px #2a72ad; }
+  .mp-paint { display:none; gap:7px; overflow-x:auto; padding:8px 0 2px; align-items:center; }
+  .mp-paint.on { display:flex; }
+  .mp-pcode { flex:0 0 auto; font-size:13px; font-weight:900; background:var(--panel-2); border:1px solid var(--line); border-radius:8px; padding:8px 10px; max-width:130px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .mp-pt { flex:0 0 auto; padding:10px 12px; border-radius:10px; border:2px solid var(--line); background:#fff; font-size:13px; font-weight:800; cursor:pointer; white-space:nowrap; }
+  .mp-pt.on { border-color:var(--txt); box-shadow:0 0 0 2px rgba(29,42,56,.2); }
+  .mp-pt.c-r { background:#f5b9b9; }
+  .mp-pt.c-p { background:#dcc2ee; }
+  .mp-pt.c-b { background:#bcdcf5; }
+  .mps-modal { position:fixed; inset:0; background:rgba(15,25,38,.8); z-index:420; display:none; flex-direction:column; padding:14px; gap:10px; }
+  .mps-modal.on { display:flex; }
+  .mps-modal video { flex:1; width:100%; object-fit:cover; border-radius:14px; background:#000; }
+  .mps-modal .mps-t { color:#fff; text-align:center; font-size:15px; font-weight:800; }
+
   .mp-tools { display:flex; gap:7px; overflow-x:auto; padding:8px 0 2px; }
   .mp-tb { flex:0 0 auto; padding:11px 13px; border-radius:10px; border:1.5px solid var(--line); background:#fff; font-size:13.5px; font-weight:800; color:var(--txt); cursor:pointer; white-space:nowrap; }
   .mp-tb.main { background:var(--ok); border-color:var(--ok); color:#fff; }
@@ -426,6 +443,16 @@
     <div class="mp-search">
       <input id="mpQ" placeholder="部品コード・名前で検索（例: C7300）">
       <button id="mpQBtn">検索</button>
+      <button id="mpScanBtn" style="background:var(--ok);">📷</button>
+    </div>
+    <div class="mp-paint" id="mpPaint">
+      <span class="mp-pcode" id="mpPCode"></span>
+      <button class="mp-pt c-r on" id="mpTr">🔴 定位置</button>
+      <button class="mp-pt c-p" id="mpTp">🟣 仮置き</button>
+      <button class="mp-pt c-b" id="mpTb">🔵 引越し</button>
+      <button class="mp-pt" id="mpTe">⬜ 消す</button>
+      <button class="mp-pt" id="mpTh">✋ 動かす</button>
+      <button class="mp-pt" id="mpPClose" style="color:var(--warn);">✕ とじる</button>
     </div>
     <div class="mp-tabs" id="mpTabs"></div>
     <div id="mpStage">
@@ -455,6 +482,13 @@
     </div>
   </div>
 </section>
+
+<!-- ============ マップ用バーコード読み取り ============ -->
+<div class="mps-modal" id="mpsModal">
+  <p class="mps-t">現品票のバーコードを写してな</p>
+  <video id="mpsVideo" playsinline muted></video>
+  <button class="w3-close" id="mpsClose">とじる</button>
+</div>
 
 <!-- ============ 倉庫3D（おまけ） ============ -->
 <div class="w3-modal" id="w3Modal">
@@ -844,6 +878,7 @@
     try{ stopMeaningScan(); }catch(e){}
     try{ stopShopScan(); }catch(e){}
     try{ stopQtyOcr(); }catch(e){}
+    try{ stopMapScan(); }catch(e){}
     $$('.screen').forEach(s=>s.classList.remove('on')); $(id).classList.add('on');
   }
   $$('[data-home]').forEach(b => b.onclick = () => { stopScan(); show('home'); });
@@ -918,6 +953,7 @@
     if(!obj.products|| typeof obj.products!=='object')obj.products= {};
     if(!obj.count   || typeof obj.count!=='object')   obj.count   = {};
     if(!obj.maps    || typeof obj.maps!=='object')    obj.maps    = defaultMaps();
+    if(!obj.spots   || typeof obj.spots!=='object')   obj.spots   = {};   // 部品ごとの塗り絵 {CODE:{cells:[{f,x,y,s}]}}
     if(!canLS) window.__memDB = obj;
     return obj;
   }
@@ -1430,9 +1466,96 @@
       d.innerHTML=corners+pn+'<div class="lbl">'+String(r.label||'').replace(/</g,'&lt;')+'</div><div class="mp-handle"></div>';
       $('mpWorld').appendChild(d);
     });
+    // 部品モード：その部品の塗りマスを重ねる
+    $('mpWorld').querySelectorAll('.mp-spot').forEach(n=>n.remove());
+    if(mpPart && DB.spots[mpPart]){
+      DB.spots[mpPart].cells.forEach(c=>{
+        if(c.f!==DB.maps.cur) return;
+        const d=document.createElement('div');
+        d.className='mp-spot s-'+c.s;
+        d.style.left=(c.x*MP_CELL)+'px'; d.style.top=(c.y*MP_CELL)+'px';
+        d.style.width=MP_CELL+'px'; d.style.height=MP_CELL+'px';
+        $('mpWorld').appendChild(d);
+      });
+    }
     const on = mpSel!=null;
     ['mpName','mpParts','mpColor','mpPal','mpRot','mpDup','mpDel'].forEach(id=> $(id).disabled=!on);
   }
+  /* ===== 部品モード：1部品＝1枚の塗り絵。定位置🔴・仮置き🟣・引越し🔵 ===== */
+  let mpPart=null;    // 表示中の部品コード（nullなら通常編集）
+  let mpTool='r';     // r=定位置 p=仮置き b=引越し e=消す hand=動かす
+  function mpOpenPart(code){
+    mpPart=code;
+    if(!DB.spots[code]) DB.spots[code]={cells:[]};
+    // 塗りがあるフロアに切替
+    const first=DB.spots[code].cells[0];
+    if(first && DB.maps.floors[first.f]) DB.maps.cur=first.f;
+    mpSel=null; mpTool = DB.spots[code].cells.length ? 'hand' : 'r';   // 登録済みなら見るだけモードから
+    $('mpPCode').textContent='📦 '+code;
+    $('mpPaint').classList.add('on');
+    document.querySelector('#map .mp-tools').style.display='none';   // 塗り中はレイアウト編集を隠す
+    mpToolBtns();
+    mpRender(); mpFit();
+  }
+  function mpClosePart(){
+    // 空っぽのまま閉じたら登録自体を消しとく
+    if(mpPart && DB.spots[mpPart] && !DB.spots[mpPart].cells.length) delete DB.spots[mpPart];
+    mpPart=null;
+    $('mpPaint').classList.remove('on');
+    document.querySelector('#map .mp-tools').style.display='flex';
+    saveDB(); mpRender();
+  }
+  function mpToolBtns(){
+    const m={r:'mpTr',p:'mpTp',b:'mpTb',e:'mpTe',hand:'mpTh'};
+    Object.keys(m).forEach(k=> $(m[k]).classList.toggle('on', mpTool===k));
+  }
+  $('mpTr').onclick=()=>{ mpTool='r'; mpToolBtns(); };
+  $('mpTp').onclick=()=>{ mpTool='p'; mpToolBtns(); };
+  $('mpTb').onclick=()=>{ mpTool='b'; mpToolBtns(); };
+  $('mpTe').onclick=()=>{ mpTool='e'; mpToolBtns(); };
+  $('mpTh').onclick=()=>{ mpTool='hand'; mpToolBtns(); };
+  $('mpPClose').onclick=mpClosePart;
+  function mpPaintCell(clientX, clientY){
+    const fr=$('mpFrame').getBoundingClientRect();
+    const f=mpFloor();
+    const x=Math.floor((clientX-fr.left)/fr.width*f.cols);
+    const y=Math.floor((clientY-fr.top )/fr.height*f.rows);
+    if(x<0||y<0||x>=f.cols||y>=f.rows) return;
+    const cells=DB.spots[mpPart].cells;
+    const i=cells.findIndex(c=> c.f===DB.maps.cur && c.x===x && c.y===y);
+    if(mpTool==='e'){
+      if(i>=0){ cells.splice(i,1); mpRender(); }
+    } else {
+      if(i>=0){ if(cells[i].s!==mpTool){ cells[i].s=mpTool; mpRender(); } }
+      else { cells.push({f:DB.maps.cur, x, y, s:mpTool}); mpRender(); }
+    }
+  }
+  /* ===== バーコード読み取り（現品票 → 部品の地図を開く） ===== */
+  let mpsReader=null;
+  async function startMapScan(){
+    if(typeof ZXing==='undefined'){ alert('読み取りライブラリを読めんかった。通信を確認してな'); return; }
+    $('mpsModal').classList.add('on');
+    try{
+      mpsReader=new ZXing.BrowserMultiFormatReader();
+      await mpsReader.decodeFromVideoDevice(undefined, 'mpsVideo', (result)=>{
+        if(!result) return;
+        const code=String(result.getText()).toUpperCase().replace(/[^A-Z0-9-]/g,'');
+        if(!code) return;
+        stopMapScan();
+        if(DB.spots[code] && DB.spots[code].cells.length){
+          mpOpenPart(code);   // 登録済み → 場所が光る
+        } else {
+          if(confirm('「'+code+'」はまだ場所が登録されてへん。今から塗って登録する？')) mpOpenPart(code);
+        }
+      });
+    }catch(e){ alert('カメラを起動できんかった'); stopMapScan(); }
+  }
+  function stopMapScan(){
+    $('mpsModal').classList.remove('on');
+    try{ if(mpsReader){ mpsReader.reset(); mpsReader=null; } }catch(e){}
+  }
+  $('mpScanBtn').onclick=startMapScan;
+  $('mpsClose').onclick=stopMapScan;
   function mpGetSel(){ return mpFloor().rects.find(r=>r.id===mpSel); }
   function mpSelect(id){ mpSel=id; mpRender(); }
   function mpAddRect(w,h,type,label){
@@ -1445,7 +1568,7 @@
   }
 
   $('mapBtn').onclick = ()=>{ show('map'); mpRender(); requestAnimationFrame(mpFit); };
-  $('mapBack').onclick = ()=> show('home');
+  $('mapBack').onclick = ()=>{ if(mpPart) mpClosePart(); show('home'); };
   $('mpZIn').onclick = ()=> mpZoomAt(1.25);
   $('mpZOut').onclick = ()=> mpZoomAt(1/1.25);
   $('mpZFit').onclick = mpFit;
@@ -1562,12 +1685,22 @@
     const q=$('mpQ').value.trim().toUpperCase();
     if(!q) return;
     const nq=mpNorm(q);
+    // まず部品の塗り絵から探す（1部品＝1枚）
+    const codes=Object.keys(DB.spots).filter(c=> DB.spots[c].cells.length && (c.indexOf(q)>=0 || mpNorm(c).indexOf(nq)>=0));
+    if(codes.length){
+      mpOpenPart(codes[0]);
+      return;
+    }
     // 全フロアから探して、最初に見つかったフロアに切替
     let floorIdx=-1;
     DB.maps.floors.forEach((flr,i)=>{
       if(floorIdx<0 && flr.rects.some(r=>mpMatch(r,q,nq))) floorIdx=i;
     });
-    if(floorIdx<0){ alert('「'+q+'」は地図にまだ登録されてへん'); return; }
+    if(floorIdx<0){
+      if(/^[A-Z]?\d/.test(q) && confirm('「'+q+'」はまだ場所が登録されてへん。今から塗って登録する？')) mpOpenPart(q);
+      else if(!/^[A-Z]?\d/.test(q)) alert('「'+q+'」は地図に見つからんかった');
+      return;
+    }
     DB.maps.cur=floorIdx;
     const f=mpFloor();
     mpHits=f.rects.filter(r=>mpMatch(r,q,nq)).map(r=>r.id);
@@ -1595,6 +1728,17 @@
         return;
       }
       const el=e.target;
+      // 部品モード：塗りツール中はマスを塗る／✋なら移動
+      if(mpPart && mpTool!=='hand'){
+        mode='paint';
+        mpPaintCell(e.clientX, e.clientY);
+        return;
+      }
+      if(mpPart){
+        mode='pan';
+        start={x:e.clientX,y:e.clientY,tx:mpTx,ty:mpTy};
+        return;
+      }
       tapped={x:e.clientX,y:e.clientY,t:Date.now(),el};
       const relDown=el.closest('.mp-rect');
       lastSelAtDown = (relDown && parseInt(relDown.dataset.id,10)===mpSel) ? mpSel : null;
@@ -1627,6 +1771,10 @@
         return;
       }
       const f=mpFloor();
+      if(mode==='paint'){
+        mpPaintCell(e.clientX, e.clientY);   // なぞって塗れる
+        return;
+      }
       if(mode==='move' && tgt){
         const dx=Math.round((e.clientX-start.x)/mpScale/MP_CELL);
         const dy=Math.round((e.clientY-start.y)/mpScale/MP_CELL);
@@ -1675,7 +1823,7 @@
             }
           }
         }
-        if(mode==='move'||mode==='resize') saveDB();
+        if(mode==='move'||mode==='resize'||mode==='paint') saveDB();
         mode=null; tgt=null; tapped=null; lastSelAtDown=null;
       }
     }
