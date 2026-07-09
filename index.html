@@ -462,6 +462,14 @@
     </div>
     <div class="td-code" id="tdCode" style="display:none;"></div>
     <div class="td-state" id="tdState" style="display:none;"></div>
+    <div class="mp-tabs" id="tdTabs" style="margin-bottom:8px;"></div>
+    <div class="mp-tabs" id="tdZoom" style="margin-bottom:8px;">
+      <button class="mp-tab on" id="tdZAll">全体</button>
+      <button class="mp-tab" id="tdZTL">左上</button>
+      <button class="mp-tab" id="tdZTR">右上</button>
+      <button class="mp-tab" id="tdZBL">左下</button>
+      <button class="mp-tab" id="tdZBR">右下</button>
+    </div>
     <div id="tdStage">
       <div id="tdWorld">
         <div id="tdFrame"></div>
@@ -538,6 +546,7 @@
       <button class="mp-tb" id="mpFloorC">床色</button>
       <button class="mp-tb" id="mpSize">外枠</button>
       <button class="mp-tb" id="mpImport">モック取込</button>
+      <button class="mp-tb" id="mpFloorAdd">＋地図追加</button>
       <button class="mp-tb warn" id="mpFloorDel">フロア削除</button>
     </div>
   </div>
@@ -1016,11 +1025,10 @@
     if(!obj.count   || typeof obj.count!=='object')   obj.count   = {};
     if(!obj.maps    || typeof obj.maps!=='object')    obj.maps    = defaultMaps();
     if(!obj.spots   || typeof obj.spots!=='object')   obj.spots   = {};   // 部品ごとの塗り絵 {CODE:{cells:[{f,x,y,s}]}}
-    // 旧データ（1マス単位）をパレット単位（2×2の偶数位置）に寄せて重複を除く
+    // 重複マスの掃除
     Object.keys(obj.spots).forEach(k=>{
       const seen={}, out=[];
       (obj.spots[k].cells||[]).forEach(c=>{
-        c.x=Math.floor(c.x/2)*2; c.y=Math.floor(c.y/2)*2;
         const key=c.f+':'+c.x+':'+c.y;
         if(!seen[key]){ seen[key]=1; out.push(c); }
       });
@@ -1587,12 +1595,21 @@
   $('mpTe').onclick=()=>{ mpTool='e'; mpToolBtns(); };
   $('mpTh').onclick=()=>{ mpTool='hand'; mpToolBtns(); };
   $('mpPClose').onclick=mpClosePart;
+  // パレット1枚＝2×2の吸着。タップした区画のマス目に合わせる（はみ出し防止）
+  function palSnap(f, gx, gy){
+    let ox=0, oy=0;
+    for(let i=f.rects.length-1;i>=0;i--){
+      const r=f.rects[i];
+      if(r.type) continue;   // 柱・扉などは無視、普通の区画だけ
+      if(gx>=r.x && gx<r.x+r.w && gy>=r.y && gy<r.y+r.h){ ox=r.x%2; oy=r.y%2; break; }
+    }
+    return { x: Math.floor((gx-ox)/2)*2+ox, y: Math.floor((gy-oy)/2)*2+oy };
+  }
   function mpPaintCell(clientX, clientY){
     const fr=$('mpFrame').getBoundingClientRect();
     const f=mpFloor();
-    // パレット1枚＝2×2マスを塗りの単位にする
-    const x=Math.floor((clientX-fr.left)/fr.width*f.cols/2)*2;
-    const y=Math.floor((clientY-fr.top )/fr.height*f.rows/2)*2;
+    const p=palSnap(f, (clientX-fr.left)/fr.width*f.cols, (clientY-fr.top)/fr.height*f.rows);
+    const x=p.x, y=p.y;
     if(x<0||y<0||x>=f.cols||y>=f.rows) return;
     const cells=DB.spots[mpPart].cells;
     const i=cells.findIndex(c=> c.f===DB.maps.cur && c.x===x && c.y===y);
@@ -1608,15 +1625,46 @@
   let tdCodeCur=null, tdTool='r', tdEditing=false, tdF=0;
   let tdScale=1, tdTx=0, tdTy=0;
   function tdApply(){ $('tdWorld').style.transform='translate('+tdTx+'px,'+tdTy+'px) scale('+tdScale+')'; }
+  let tdZone='all';   // all / tl tr bl br（同じ地図を4分割で拡大表示）
   function tdFit(){
     const st=$('tdStage').getBoundingClientRect();
     if(st.width<10) return;
-    const f=DB.maps.floors[tdF], W=f.cols*MP_CELL, H=f.rows*MP_CELL;
-    tdScale=Math.min(st.width/(W+24), st.height/(H+24));
-    tdTx=(st.width-W*tdScale)/2; tdTy=(st.height-H*tdScale)/2;
+    const f=DB.maps.floors[tdF];
+    const W=f.cols*MP_CELL, H=f.rows*MP_CELL;
+    // 表示する範囲（世界地図の一部をドンと拡大する方式。半分ずつ重ねて境目の見落としを防ぐ）
+    let rx=0, ry=0, rw=W, rh=H;
+    const hw=W*0.55, hh=H*0.55;   // ちょい重なるように55%
+    if(tdZone==='tl'){ rx=0;      ry=0;      rw=hw; rh=hh; }
+    if(tdZone==='tr'){ rx=W-hw;   ry=0;      rw=hw; rh=hh; }
+    if(tdZone==='bl'){ rx=0;      ry=H-hh;   rw=hw; rh=hh; }
+    if(tdZone==='br'){ rx=W-hw;   ry=H-hh;   rw=hw; rh=hh; }
+    tdScale=Math.min(st.width/(rw+16), st.height/(rh+16));
+    tdTx=(st.width-rw*tdScale)/2 - rx*tdScale;
+    tdTy=(st.height-rh*tdScale)/2 - ry*tdScale;
     tdApply();
   }
+  function tdSetZone(z){
+    tdZone=z;
+    [['all','tdZAll'],['tl','tdZTL'],['tr','tdZTR'],['bl','tdZBL'],['br','tdZBR']].forEach(([k,id])=> $(id).classList.toggle('on', z===k));
+    tdFit();
+  }
+  $('tdZAll').onclick=()=> tdSetZone('all');
+  $('tdZTL').onclick=()=> tdSetZone('tl');
+  $('tdZTR').onclick=()=> tdSetZone('tr');
+  $('tdZBL').onclick=()=> tdSetZone('bl');
+  $('tdZBR').onclick=()=> tdSetZone('br');
   function tdRender(){
+    // 地図の切替タブ（1枚目=全体、2枚目以降=拡大図など）
+    const tabs=$('tdTabs'); tabs.innerHTML='';
+    if(DB.maps.floors.length>1){
+      DB.maps.floors.forEach((flr,i)=>{
+        const b=document.createElement('button');
+        b.className='mp-tab'+(i===tdF?' on':'');
+        b.textContent=flr.name;
+        b.onclick=()=>{ tdF=i; tdRender(); requestAnimationFrame(tdFit); };
+        tabs.appendChild(b);
+      });
+    }
     const f=DB.maps.floors[tdF];
     const W=f.cols*MP_CELL, H=f.rows*MP_CELL;
     const fl=MP_FLOORS[f.floor]||MP_FLOORS.green;
@@ -1630,6 +1678,7 @@
     g.innerHTML=lines;
     $('tdWorld').querySelectorAll('.mp-rect,.mp-spot').forEach(n=>n.remove());
     f.rects.forEach(r=>{
+      if(r.type==='load') return;   // 荷物ブロックは特定部品の情報やから現場画面には出さない
       const d=document.createElement('div');
       d.className='mp-rect'+(r.type?' t-'+r.type:'')+(r.h>r.w?' vert':'');
       d.style.left=(r.x*MP_CELL)+'px'; d.style.top=(r.y*MP_CELL)+'px';
@@ -1709,8 +1758,8 @@
   function tdPaintCell(clientX, clientY){
     const fr=$('tdFrame').getBoundingClientRect();
     const f=DB.maps.floors[tdF];
-    const x=Math.floor((clientX-fr.left)/fr.width*f.cols/2)*2;
-    const y=Math.floor((clientY-fr.top )/fr.height*f.rows/2)*2;
+    const p=palSnap(f, (clientX-fr.left)/fr.width*f.cols, (clientY-fr.top)/fr.height*f.rows);
+    const x=p.x, y=p.y;
     if(x<0||y<0||x>=f.cols||y>=f.rows) return;
     const cells=DB.spots[tdCodeCur].cells;
     const i=cells.findIndex(c=> c.f===tdF && c.x===x && c.y===y);
@@ -1777,7 +1826,16 @@
     st.addEventListener('pointercancel', up);
   })();
   // 画面の出入り
-  $('tidyBtn').onclick=()=> show('tidy');
+  $('tidyBtn').onclick=()=>{
+    show('tidy');
+    if(!tdCodeCur){
+      // 部品未選択でもまっさらの地図をデフォルト表示
+      tdF=DB.maps.cur;
+      $('tdStage').classList.add('on');
+      tdRender();
+      requestAnimationFrame(tdFit);
+    }
+  };
   $('tidyBack').onclick=()=>{
     if(tdCodeCur && DB.spots[tdCodeCur] && !DB.spots[tdCodeCur].cells.length) delete DB.spots[tdCodeCur];
     tdCodeCur=null; saveDB(); show('home');
@@ -1909,6 +1967,14 @@
     const rr=prompt('外枠の縦のマス数', f.rows); if(rr===null) return;
     const nc=parseInt(c,10), nr=parseInt(rr,10);
     if(nc>=6 && nr>=6 && nc<=200 && nr<=200){ f.cols=nc; f.rows=nr; mpRender(); mpFit(); saveDB(); }
+  };
+  // 地図（フロア）追加：拡大図とかエリア別の地図を増やす
+  $('mpFloorAdd').onclick = ()=>{
+    const name=prompt('新しい地図の名前（例: 2:電源エリア）', (DB.maps.floors.length+1)+'枚目');
+    if(name===null) return;
+    DB.maps.floors.push({ name:(name.trim()||(DB.maps.floors.length+1)+'枚目'), cols:30, rows:34, floor:'green', rects:[] });
+    DB.maps.cur=DB.maps.floors.length-1;
+    mpSel=null; saveDB(); mpRender(); mpFit();
   };
   // フロア削除（最後の1枚は消せない）
   $('mpFloorDel').onclick = ()=>{
