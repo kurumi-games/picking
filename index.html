@@ -143,7 +143,7 @@
   .td-search button { padding:0 20px; border-radius:12px; border:none; background:var(--accent); color:#fff; font-size:15px; font-weight:800; }
   .td-code { text-align:center; font-size:18px; font-weight:900; margin-bottom:8px; }
   .td-state { text-align:center; font-size:13px; color:var(--muted); font-weight:700; margin-bottom:8px; }
-  #tdStage { position:relative; height:48vh; overflow:hidden; touch-action:none; background:#e9edf1; border-radius:12px; border:1px solid var(--line); display:none; }
+  #tdStage { position:relative; height:48vh; overflow:hidden; touch-action:none; background:#dfe5ea; border-radius:12px; border:1px solid var(--line); display:none; }
   #tdStage.on { display:block; }
   #tdWorld { position:absolute; left:0; top:0; transform-origin:0 0; }
   #tdFrame { position:absolute; left:0; top:0; background:#fff; border:3px solid #3a4654; }
@@ -1625,7 +1625,15 @@
   function tdApply(){ $('tdWorld').style.transform='translate('+tdTx+'px,'+tdTy+'px) scale('+tdScale+')'; }
   let tdZone='all';   // all=全体 / mark=マークの周りを拡大
   function tdFit(smooth){
-    const st=$('tdStage').getBoundingClientRect();
+    // ステージの高さを地図の縦横比に合わせる（外側の無駄な余白をなくす）
+    const stEl=$('tdStage');
+    const f0=DB.maps.floors[tdF];
+    const stW=stEl.getBoundingClientRect().width;
+    if(stW>10){
+      const idealH=stW * (f0.rows/f0.cols);
+      stEl.style.height=Math.min(idealH, window.innerHeight*0.62)+'px';
+    }
+    const st=stEl.getBoundingClientRect();
     if(st.width<10) return;
     const f=DB.maps.floors[tdF];
     const W=f.cols*MP_CELL, H=f.rows*MP_CELL;
@@ -1886,7 +1894,7 @@
       tdF=DB.maps.cur;
       $('tdStage').classList.add('on');
       tdRender();
-      requestAnimationFrame(tdFit);
+      requestAnimationFrame(()=>{ tdFit(); requestAnimationFrame(()=>tdFit()); });
     }
   };
   $('tidyBack').onclick=()=>{ tdReset(); saveDB(); show('home'); };
