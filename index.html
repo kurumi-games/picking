@@ -408,7 +408,7 @@
   <div class="wrap">
     <div class="home-title">
       <h1>ピッキング補助</h1>
-      <div class="ver-tag">ver15（7/9 地図の外にスクロールできないように）</div>
+      <div class="ver-tag">ver17（7/9 現場画面を大改修）</div>
     </div>
     <div class="home-btns">
       <button class="home-btn go" id="goBtn">GO</button>
@@ -456,39 +456,26 @@
       <button class="back" id="tidyBack">←</button>
       <h2>部品の場所</h2>
     </div>
-    <button class="td-big" id="tdScan">📷 現品票を読み取る</button>
     <div class="td-search">
       <input id="tdQ" placeholder="部品コードで検索（例: C7300）">
       <button id="tdQBtn">検索</button>
+      <button id="tdScan" style="background:var(--ok);font-size:19px;">📷</button>
     </div>
     <div class="td-code" id="tdCode" style="display:none;"></div>
     <div class="td-state" id="tdState" style="display:none;"></div>
-    <div class="mp-tabs" id="tdTabs" style="margin-bottom:8px;"></div>
-    <div class="mp-tabs" id="tdZoom" style="margin-bottom:8px;">
-      <button class="mp-tab on" id="tdZAll">全体</button>
-      <button class="mp-tab" id="tdZMark" style="display:none;">📍 マークの場所</button>
+    <div class="mp-tabs" id="tdBar" style="margin-bottom:8px;">
+      <button class="mp-tab on" id="tdZAll" style="flex:0 0 auto;">全体</button>
+      <button class="mp-pt c-r" id="tdTr" style="display:none;">🔴 定位置</button>
+      <button class="mp-pt c-p" id="tdTp" style="display:none;">🟣 仮置き</button>
+      <button class="mp-pt c-b" id="tdTb" style="display:none;">🔵 引越し</button>
+      <button class="mp-pt" id="tdDone" style="display:none;background:var(--ok);color:#fff;border-color:var(--ok);">✔ 完了</button>
     </div>
+    <div class="mp-tabs" id="tdTabs" style="margin-bottom:8px;"></div>
     <div id="tdStage">
       <div id="tdWorld">
         <div id="tdFrame"></div>
         <svg id="tdGrid"></svg>
       </div>
-    </div>
-    <div class="td-legend" id="tdLegend">
-      <span><i style="background:rgba(230,77,77,.85);"></i>定位置</span>
-      <span><i style="background:rgba(167,93,209,.85);"></i>仮置き</span>
-      <span><i style="background:rgba(77,163,230,.85);"></i>引越し</span>
-    </div>
-    <div class="td-paint" id="tdPaint">
-      <button class="mp-pt c-r on" id="tdTr">🔴 定位置</button>
-      <button class="mp-pt c-p" id="tdTp">🟣 仮置き</button>
-      <button class="mp-pt c-b" id="tdTb">🔵 引越し</button>
-      <button class="mp-pt" id="tdTe">⬜ 消す</button>
-      <button class="mp-pt" id="tdTh">✋ 動かす</button>
-      <button class="mp-pt" id="tdDone" style="background:var(--ok);color:#fff;border-color:var(--ok);">✔ 保存して完了</button>
-    </div>
-    <div class="td-paint" id="tdView" style="display:none;">
-      <button class="mp-pt" id="tdEdit">✏️ 塗り直す</button>
     </div>
   </div>
 </section>
@@ -1620,17 +1607,16 @@
     }
   }
   /* ===== 部品の場所（現場用のシンプル画面） =====
-     読み取り or 検索 → 塗られた地図が出る。新規なら塗って登録。 */
-  let tdCodeCur=null, tdTool='r', tdEditing=false, tdF=0;
+     読み取り or 検索 → 塗られた地図が出る。
+     色を選んでマスをタップ＝塗る／同じ色をもう一回タップ＝消える。
+     通路（区画の外）は塗れない。ドラッグ＝移動、ピンチ＝ズーム。 */
+  let tdCodeCur=null, tdTool=null, tdF=0;
   let tdScale=1, tdTx=0, tdTy=0;
   function tdApply(){ $('tdWorld').style.transform='translate('+tdTx+'px,'+tdTy+'px) scale('+tdScale+')'; }
-  let tdZone='all';   // all=全体 / mark=マークの周りを拡大
-  // どんな操作をしても地図の外（灰色）が映らないように縛る
   function tdClamp(){
     const st=$('tdStage').getBoundingClientRect();
     const f=DB.maps.floors[tdF];
     const W=f.cols*MP_CELL, H=f.rows*MP_CELL;
-    // これ以上引いたら地図全体より小さくなる、の下限
     const minS=Math.min(st.width/(W+16), st.height/(H+16));
     tdScale=Math.max(minS, Math.min(6, tdScale));
     const fw=W*tdScale, fh=H*tdScale;
@@ -1641,65 +1627,31 @@
   }
   function tdFit(){
     const st=$('tdStage').getBoundingClientRect();
-    if(st.width<10 || st.height<10){ requestAnimationFrame(tdFit); return; }   // 枠が確定するまで待つ
-    const f=DB.maps.floors[tdF];
-    const W=f.cols*MP_CELL, H=f.rows*MP_CELL;
-    let rx=0, ry=0, rw=W, rh=H;
-    if(tdZone==='mark' && tdCodeCur && DB.spots[tdCodeCur]){
-      // マークのある範囲＋まわり3マスに寄る
-      const cs=DB.spots[tdCodeCur].cells.filter(c=>c.f===tdF);
-      if(cs.length){
-        const xs=cs.map(c=>c.x), ys=cs.map(c=>c.y);
-        const pad=3;
-        const x0=Math.max(0,Math.min(...xs)-pad), y0=Math.max(0,Math.min(...ys)-pad);
-        const x1=Math.min(f.cols,Math.max(...xs)+2+pad), y1=Math.min(f.rows,Math.max(...ys)+2+pad);
-        rx=x0*MP_CELL; ry=y0*MP_CELL; rw=(x1-x0)*MP_CELL; rh=(y1-y0)*MP_CELL;
-      }
-    }
-    tdScale=Math.min(st.width/(rw+16), st.height/(rh+16));
-    tdTx=(st.width-rw*tdScale)/2 - rx*tdScale;
-    tdTy=(st.height-rh*tdScale)/2 - ry*tdScale;
-    // 地図の外（灰色）は絶対に映さない：端に寄ってるマークは端に揃える
-    const fullW=W*tdScale, fullH=H*tdScale;
-    if(fullW>=st.width) tdTx=Math.max(st.width-fullW, Math.min(0, tdTx));
-    else tdTx=(st.width-fullW)/2;
-    if(fullH>=st.height) tdTy=Math.max(st.height-fullH, Math.min(0, tdTy));
-    else tdTy=(st.height-fullH)/2;
+    if(st.width<10 || st.height<10){ requestAnimationFrame(tdFit); return; }
+    const f=DB.maps.floors[tdF], W=f.cols*MP_CELL, H=f.rows*MP_CELL;
+    tdScale=Math.min(st.width/(W+16), st.height/(H+16));
+    tdTx=(st.width-W*tdScale)/2; tdTy=(st.height-H*tdScale)/2;
     tdApply();
   }
-  function tdSetZone(z){
-    tdZone=z;
-    $('tdZAll').classList.toggle('on', z==='all');
-    $('tdZMark').classList.toggle('on', z==='mark');
-    tdFit();
-  }
-  $('tdZAll').onclick=()=> tdSetZone('all');
-  $('tdZMark').onclick=()=> tdSetZone('mark');
-  window.addEventListener('resize', ()=>{ if($('tidy').classList.contains('on')) tdFit(); });
-  // 枠のサイズが確定・変化したら必ず配置し直す（開いた直後の計算ミスを根絶）
-  if(typeof ResizeObserver!=='undefined'){
-    new ResizeObserver(()=>{ if($('tidy').classList.contains('on')) tdFit(); }).observe($('tdStage'));
-  } else {
-    // 古い環境向けの保険：開いてから1秒間は毎フレーム合わせ直す
-    let tdWatch=0;
-    const origShow=$('tidyBtn').onclick;
-    $('tidyBtn').addEventListener('click', ()=>{
-      tdWatch=Date.now();
-      (function loop(){ if(Date.now()-tdWatch<1000){ tdFit(); requestAnimationFrame(loop); } })();
-    });
+  function tdDefaultView(){
+    const st=$('tdStage').getBoundingClientRect();
+    if(st.width<10 || st.height<10){ requestAnimationFrame(tdDefaultView); return; }
+    const f=DB.maps.floors[tdF], W=f.cols*MP_CELL, H=f.rows*MP_CELL;
+    const fit=Math.min(st.width/(W+16), st.height/(H+16));
+    tdScale=Math.max(fit, 34/MP_CELL);
+    tdTx=(st.width-W*tdScale)/2; tdTy=(st.height-H*tdScale)/2;
+    tdClamp(); tdApply();
   }
   function tdRender(){
-    // 枠の形を地図の縦横比に合わせる（余白防止）
     const fl0=DB.maps.floors[tdF];
     $('tdStage').style.aspectRatio = fl0.cols+' / '+fl0.rows;
-    // 地図の切替タブ（1枚目=全体、2枚目以降=拡大図など）
     const tabs=$('tdTabs'); tabs.innerHTML='';
     if(DB.maps.floors.length>1){
       DB.maps.floors.forEach((flr,i)=>{
         const b=document.createElement('button');
         b.className='mp-tab'+(i===tdF?' on':'');
         b.textContent=flr.name;
-        b.onclick=()=>{ tdF=i; tdRender(); requestAnimationFrame(tdFit); };
+        b.onclick=()=>{ tdF=i; tdRender(); requestAnimationFrame(tdDefaultView); };
         tabs.appendChild(b);
       });
     }
@@ -1716,7 +1668,7 @@
     g.innerHTML=lines;
     $('tdWorld').querySelectorAll('.mp-rect,.mp-spot').forEach(n=>n.remove());
     f.rects.forEach(r=>{
-      if(r.type==='load') return;   // 荷物ブロックは特定部品の情報やから現場画面には出さない
+      if(r.type==='load') return;
       const d=document.createElement('div');
       d.className='mp-rect'+(r.type?' t-'+r.type:'')+(r.h>r.w?' vert':'');
       d.style.left=(r.x*MP_CELL)+'px'; d.style.top=(r.y*MP_CELL)+'px';
@@ -1733,98 +1685,8 @@
       d.innerHTML=corners+'<div class="lbl">'+String(r.label||'').replace(/</g,'&lt;')+'</div>';
       $('tdWorld').appendChild(d);
     });
-    // この部品の塗りマス
-    if(tdCodeCur && DB.spots[tdCodeCur]){
-      DB.spots[tdCodeCur].cells.forEach(c=>{
-        if(c.f!==tdF) return;
-        const d=document.createElement('div');
-        d.className='mp-spot s-'+c.s;
-        d.style.left=(c.x*MP_CELL)+'px'; d.style.top=(c.y*MP_CELL)+'px';
-        d.style.width=(MP_CELL*2)+'px'; d.style.height=(MP_CELL*2)+'px';
-        $('tdWorld').appendChild(d);
-      });
-    }
+    tdRenderSpots();
   }
-  function tdStateText(){
-    const cells=(DB.spots[tdCodeCur]&&DB.spots[tdCodeCur].cells)||[];
-    const n={r:0,p:0,b:0};
-    cells.forEach(c=>n[c.s]++);
-    const parts=[];
-    if(n.r) parts.push('🔴定位置'+n.r);
-    if(n.p) parts.push('🟣仮置き'+n.p);
-    if(n.b) parts.push('🔵引越し'+n.b);
-    return parts.length? parts.join('　') : 'まだ塗られてへん';
-  }
-  function tdReset(){
-    // 部品表示を全部片付けて、まっさらの地図に戻す
-    if(tdCodeCur && DB.spots[tdCodeCur] && !DB.spots[tdCodeCur].cells.length) delete DB.spots[tdCodeCur];
-    tdCodeCur=null; tdEditing=false;
-    $('tdCode').style.display='none';
-    $('tdState').style.display='none';
-    $('tdPaint').classList.remove('on');
-    $('tdView').classList.remove('on');
-    $('tdView').style.display='none';
-    $('tdQ').value='';
-    $('tdZMark').style.display='none';
-    tdSetZone('all');
-    tdRender();
-    requestAnimationFrame(tdFit);
-  }
-  function tdOpen(code, editNow){
-    if(!code || typeof code!=='string' || code.length<2){ return; }   // nullや空は開かない
-    tdCodeCur=code;
-    if(!DB.spots[code]) DB.spots[code]={cells:[]};
-    const first=DB.spots[code].cells[0];
-    tdF = (first && DB.maps.floors[first.f]) ? first.f : DB.maps.cur;
-    tdEditing = !!editNow || !DB.spots[code].cells.length;
-    tdTool='r';
-    $('tdCode').textContent='📦 '+code;
-    $('tdCode').style.display='block';
-    $('tdState').textContent=tdStateText();
-    $('tdState').style.display='block';
-    $('tdStage').classList.add('on');
-    $('tdLegend').classList.add('on');
-    $('tdPaint').classList.toggle('on', tdEditing);
-    $('tdView').style.display = tdEditing ? 'none' : 'flex';
-    $('tdView').classList.toggle('on', !tdEditing);
-    tdToolBtns();
-    tdRender();
-    const hasCells=DB.spots[code].cells.length>0;
-    $('tdZMark').style.display = hasCells ? 'block' : 'none';
-    tdZone = hasCells ? 'mark' : 'all';   // 登録済みならマークに自動で寄る
-    $('tdZAll').classList.toggle('on', tdZone==='all');
-    $('tdZMark').classList.toggle('on', tdZone==='mark');
-    requestAnimationFrame(()=>tdFit());
-  }
-  function tdToolBtns(){
-    const m={r:'tdTr',p:'tdTp',b:'tdTb',e:'tdTe',hand:'tdTh'};
-    Object.keys(m).forEach(k=> $(m[k]).classList.toggle('on', tdTool===k));
-  }
-  $('tdTr').onclick=()=>{ tdTool='r'; tdToolBtns(); };
-  $('tdTp').onclick=()=>{ tdTool='p'; tdToolBtns(); };
-  $('tdTb').onclick=()=>{ tdTool='b'; tdToolBtns(); };
-  $('tdTe').onclick=()=>{ tdTool='e'; tdToolBtns(); };
-  $('tdTh').onclick=()=>{ tdTool='hand'; tdToolBtns(); };
-  $('tdDone').onclick=()=>{
-    if(DB.spots[tdCodeCur] && !DB.spots[tdCodeCur].cells.length){
-      alert('まだ1マスも塗られてへんで。塗ってから保存してな（やめる時は←）');
-      return;
-    }
-    const saved=tdCodeCur;
-    saveDB();
-    tdReset();                    // デフォルトの地図に戻る
-    tdToast('✅ '+saved+' を保存した');
-  };
-  // 画面上部にふわっと出る保存メッセージ
-  function tdToast(msg){
-    const t=document.createElement('div');
-    t.textContent=msg;
-    t.style.cssText='position:fixed;top:14px;left:50%;transform:translateX(-50%);background:var(--ok);color:#fff;font-weight:900;font-size:15px;padding:12px 20px;border-radius:12px;z-index:500;box-shadow:0 3px 12px rgba(0,0,0,.3);';
-    document.body.appendChild(t);
-    setTimeout(()=>{ t.style.transition='opacity .4s'; t.style.opacity='0'; setTimeout(()=>t.remove(), 450); }, 1800);
-  }
-  $('tdEdit').onclick=()=> tdOpen(tdCodeCur, true);
-  // 塗りマスだけを描き直す（地図全体は再描画しないからガタつかない）
   function tdRenderSpots(){
     $('tdWorld').querySelectorAll('.mp-spot').forEach(n=>n.remove());
     if(!tdCodeCur || !DB.spots[tdCodeCur]) return;
@@ -1837,29 +1699,95 @@
       $('tdWorld').appendChild(d);
     });
   }
-  function tdPaintCell(clientX, clientY){
-    if(!tdCodeCur || !DB.spots[tdCodeCur]) return;
+  function tdStateText(){
+    const cells=(DB.spots[tdCodeCur]&&DB.spots[tdCodeCur].cells)||[];
+    const n={r:0,p:0,b:0};
+    cells.forEach(c=>n[c.s]++);
+    const parts=[];
+    if(n.r) parts.push('🔴定位置'+n.r);
+    if(n.p) parts.push('🟣仮置き'+n.p);
+    if(n.b) parts.push('🔵引越し'+n.b);
+    return parts.length? parts.join('　') : '色を選んでマスをタップしてな';
+  }
+  function tdChipUI(){
+    [['r','tdTr'],['p','tdTp'],['b','tdTb']].forEach(([k,id])=> $(id).classList.toggle('on', tdTool===k));
+  }
+  function tdOpen(code, editNow){
+    if(!code || typeof code!=='string' || code.length<2){ return; }
+    tdCodeCur=code;
+    if(!DB.spots[code]) DB.spots[code]={cells:[]};
+    const first=DB.spots[code].cells[0];
+    tdF = (first && DB.maps.floors[first.f]) ? first.f : DB.maps.cur;
+    $('tdCode').textContent='📦 '+code;
+    $('tdCode').style.display='block';
+    $('tdState').textContent=tdStateText();
+    $('tdState').style.display='block';
+    $('tdStage').classList.add('on');
+    ['tdTr','tdTp','tdTb','tdDone'].forEach(id=> $(id).style.display='block');
+    tdTool = DB.spots[code].cells.length ? null : 'r';
+    tdChipUI();
+    tdRender();
+    requestAnimationFrame(tdDefaultView);
+  }
+  function tdReset(){
+    if(tdCodeCur && DB.spots[tdCodeCur] && !DB.spots[tdCodeCur].cells.length) delete DB.spots[tdCodeCur];
+    tdCodeCur=null; tdTool=null;
+    $('tdCode').style.display='none';
+    $('tdState').style.display='none';
+    ['tdTr','tdTp','tdTb','tdDone'].forEach(id=> $(id).style.display='none');
+    $('tdQ').value='';
+    tdRender();
+    requestAnimationFrame(tdDefaultView);
+  }
+  [['tdTr','r'],['tdTp','p'],['tdTb','b']].forEach(([id,k])=>{
+    $(id).onclick=()=>{ tdTool = (tdTool===k) ? null : k; tdChipUI(); };
+  });
+  $('tdZAll').onclick=()=> tdFit();
+  $('tdDone').onclick=()=>{
+    const saved=tdCodeCur;
+    const had=DB.spots[saved] && DB.spots[saved].cells.length;
+    saveDB();
+    tdReset();
+    if(had) tdToast('✅ '+saved+' を保存した');
+  };
+  function tdToast(msg){
+    const t=document.createElement('div');
+    t.textContent=msg;
+    t.style.cssText='position:fixed;top:14px;left:50%;transform:translateX(-50%);background:var(--ok);color:#fff;font-weight:900;font-size:15px;padding:12px 20px;border-radius:12px;z-index:500;box-shadow:0 3px 12px rgba(0,0,0,.3);';
+    document.body.appendChild(t);
+    setTimeout(()=>{ t.style.transition='opacity .4s'; t.style.opacity='0'; setTimeout(()=>t.remove(), 450); }, 1800);
+  }
+  function tdTapPaint(clientX, clientY){
+    if(!tdCodeCur || !tdTool || !DB.spots[tdCodeCur]) return false;
     const fr=$('tdFrame').getBoundingClientRect();
     const f=DB.maps.floors[tdF];
-    const p=palSnap(f, (clientX-fr.left)/fr.width*f.cols, (clientY-fr.top)/fr.height*f.rows);
-    const x=p.x, y=p.y;
-    if(x<0||y<0||x>=f.cols||y>=f.rows) return;
-    const cells=DB.spots[tdCodeCur].cells;
-    const i=cells.findIndex(c=> c.f===tdF && c.x===x && c.y===y);
-    let changed=false;
-    if(tdTool==='e'){
-      if(i>=0){ cells.splice(i,1); changed=true; }
-    } else {
-      if(i>=0){ if(cells[i].s!==tdTool){ cells[i].s=tdTool; changed=true; } }
-      else { cells.push({f:tdF, x, y, s:tdTool}); changed=true; }
+    const gx=(clientX-fr.left)/fr.width*f.cols;
+    const gy=(clientY-fr.top )/fr.height*f.rows;
+    let ok=false;
+    for(let i=f.rects.length-1;i>=0;i--){
+      const r=f.rects[i];
+      if(r.type) continue;
+      if(gx>=r.x && gx<r.x+r.w && gy>=r.y && gy<r.y+r.h){ ok=true; break; }
     }
-    if(changed){ tdRenderSpots(); $('tdState').textContent=tdStateText(); }
+    if(!ok) return false;
+    const p=palSnap(f, gx, gy);
+    const cells=DB.spots[tdCodeCur].cells;
+    const i=cells.findIndex(c=> c.f===tdF && c.x===p.x && c.y===p.y);
+    if(i>=0){
+      if(cells[i].s===tdTool) cells.splice(i,1);
+      else cells[i].s=tdTool;
+    } else {
+      cells.push({f:tdF, x:p.x, y:p.y, s:tdTool});
+    }
+    tdRenderSpots();
+    $('tdState').textContent=tdStateText();
+    saveDB();
+    return true;
   }
-  // タッチ：塗り or パン・ピンチ
   (function(){
     const st=$('tdStage');
     const ptrs=new Map();
-    let mode=null, start=null, pinch0=null;
+    let start=null, pinch0=null, tapped=null;
     const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
     const mid=(a,b)=>({x:(a.x+b.x)/2,y:(a.y+b.y)/2});
     st.addEventListener('pointerdown', e=>{
@@ -1868,21 +1796,16 @@
       if(ptrs.size===2){
         const [a,b]=[...ptrs.values()];
         pinch0={d:dist(a,b), m:mid(a,b), scale:tdScale, tx:tdTx, ty:tdTy};
-        mode='pinch';
+        tapped=null;
         return;
       }
-      if(tdEditing && tdTool!=='hand'){
-        mode='paint';
-        tdPaintCell(e.clientX, e.clientY);
-      } else {
-        mode='pan';
-        start={x:e.clientX,y:e.clientY,tx:tdTx,ty:tdTy};
-      }
+      tapped={x:e.clientX, y:e.clientY, t:Date.now()};
+      start={x:e.clientX, y:e.clientY, tx:tdTx, ty:tdTy};
     });
     st.addEventListener('pointermove', e=>{
       if(!ptrs.has(e.pointerId)) return;
       ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
-      if(mode==='pinch' && pinch0 && ptrs.size===2){
+      if(pinch0 && ptrs.size===2){
         const [a,b]=[...ptrs.values()];
         const r=st.getBoundingClientRect();
         const ns=Math.max(.15,Math.min(6, pinch0.scale*dist(a,b)/pinch0.d));
@@ -1890,41 +1813,39 @@
         const px=(pinch0.m.x-r.left-pinch0.tx)/pinch0.scale;
         const py=(pinch0.m.y-r.top -pinch0.ty)/pinch0.scale;
         tdTx=(m.x-r.left)-px*ns; tdTy=(m.y-r.top)-py*ns; tdScale=ns;
-        tdClamp();   // 地図の外・引きすぎ禁止
-        tdApply();
-      } else if(mode==='paint'){
-        tdPaintCell(e.clientX, e.clientY);
-      } else if(mode==='pan'){
+        tdClamp(); tdApply();
+        return;
+      }
+      if(tapped && Math.hypot(e.clientX-tapped.x, e.clientY-tapped.y)>14) tapped=null;
+      if(!tapped && start && ptrs.size===1){
         tdTx=start.tx+(e.clientX-start.x);
         tdTy=start.ty+(e.clientY-start.y);
-        tdClamp();   // 地図の外には行けない
-        tdApply();
+        tdClamp(); tdApply();
       }
     });
     function up(e){
       ptrs.delete(e.pointerId);
-      if(mode==='pinch' && ptrs.size<2){ mode=null; pinch0=null; }
+      if(ptrs.size<2) pinch0=null;
       if(ptrs.size===0){
-        if(mode==='paint') saveDB();
-        mode=null; start=null;
+        if(tapped && Date.now()-tapped.t<600){
+          tdTapPaint(tapped.x, tapped.y);
+        }
+        tapped=null; start=null;
       }
     }
     st.addEventListener('pointerup', up);
     st.addEventListener('pointercancel', up);
   })();
-  // 画面の出入り
   $('tidyBtn').onclick=()=>{
     show('tidy');
     if(!tdCodeCur){
-      // 部品未選択でもまっさらの地図をデフォルト表示
       tdF=DB.maps.cur;
       $('tdStage').classList.add('on');
       tdRender();
-      requestAnimationFrame(()=>{ tdFit(); requestAnimationFrame(()=>tdFit()); });
+      requestAnimationFrame(tdDefaultView);
     }
   };
   $('tidyBack').onclick=()=>{ tdReset(); saveDB(); show('home'); };
-  // 検索
   function tdSearch(){
     const q=$('tdQ').value.trim().toUpperCase();
     if(!q) return;
@@ -1935,8 +1856,11 @@
   }
   $('tdQBtn').onclick=tdSearch;
   $('tdQ').addEventListener('keydown', e=>{ if(e.key==='Enter') tdSearch(); });
-  // 読み取り（スキャナはマップと共用。読んだ結果をこの画面に返す）
   $('tdScan').onclick=()=>{ mpsTarget='tidy'; startMapScan(); };
+  window.addEventListener('resize', ()=>{ if($('tidy').classList.contains('on')){ tdClamp(); tdApply(); } });
+  if(typeof ResizeObserver!=='undefined'){
+    new ResizeObserver(()=>{ if($('tidy').classList.contains('on')){ tdClamp(); tdApply(); } }).observe($('tdStage'));
+  }
 
   /* ===== バーコード読み取り（現品票 → 部品の地図を開く） ===== */
   let mpsReader=null;
