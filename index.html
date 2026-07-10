@@ -408,7 +408,7 @@
   <div class="wrap">
     <div class="home-title">
       <h1>ピッキング補助</h1>
-      <div class="ver-tag">ver17（7/9 現場画面を大改修）</div>
+      <div class="ver-tag">ver18（7/9 全削除ボタン・古い塗りも消せるように）</div>
     </div>
     <div class="home-btns">
       <button class="home-btn go" id="goBtn">GO</button>
@@ -468,6 +468,7 @@
       <button class="mp-pt c-r" id="tdTr" style="display:none;">🔴 定位置</button>
       <button class="mp-pt c-p" id="tdTp" style="display:none;">🟣 仮置き</button>
       <button class="mp-pt c-b" id="tdTb" style="display:none;">🔵 引越し</button>
+      <button class="mp-pt" id="tdClear" style="display:none;color:var(--warn);">🗑 全削除</button>
       <button class="mp-pt" id="tdDone" style="display:none;background:var(--ok);color:#fff;border-color:var(--ok);">✔ 完了</button>
     </div>
     <div class="mp-tabs" id="tdTabs" style="margin-bottom:8px;"></div>
@@ -1635,7 +1636,7 @@
   }
   function tdDefaultView(){
     const st=$('tdStage').getBoundingClientRect();
-    if(st.width<10 || st.height<10){ requestAnimationFrame(tdDefaultView); return; }
+    if(st.width<10 || st.height<10){ requestAnimationFrame(tdFit); return; }
     const f=DB.maps.floors[tdF], W=f.cols*MP_CELL, H=f.rows*MP_CELL;
     const fit=Math.min(st.width/(W+16), st.height/(H+16));
     tdScale=Math.max(fit, 34/MP_CELL);
@@ -1651,7 +1652,7 @@
         const b=document.createElement('button');
         b.className='mp-tab'+(i===tdF?' on':'');
         b.textContent=flr.name;
-        b.onclick=()=>{ tdF=i; tdRender(); requestAnimationFrame(tdDefaultView); };
+        b.onclick=()=>{ tdF=i; tdRender(); requestAnimationFrame(tdFit); };
         tabs.appendChild(b);
       });
     }
@@ -1723,26 +1724,36 @@
     $('tdState').textContent=tdStateText();
     $('tdState').style.display='block';
     $('tdStage').classList.add('on');
-    ['tdTr','tdTp','tdTb','tdDone'].forEach(id=> $(id).style.display='block');
+    ['tdTr','tdTp','tdTb','tdClear','tdDone'].forEach(id=> $(id).style.display='block');
     tdTool = DB.spots[code].cells.length ? null : 'r';
     tdChipUI();
     tdRender();
-    requestAnimationFrame(tdDefaultView);
+    requestAnimationFrame(tdFit);
   }
   function tdReset(){
     if(tdCodeCur && DB.spots[tdCodeCur] && !DB.spots[tdCodeCur].cells.length) delete DB.spots[tdCodeCur];
     tdCodeCur=null; tdTool=null;
     $('tdCode').style.display='none';
     $('tdState').style.display='none';
-    ['tdTr','tdTp','tdTb','tdDone'].forEach(id=> $(id).style.display='none');
+    ['tdTr','tdTp','tdTb','tdClear','tdDone'].forEach(id=> $(id).style.display='none');
     $('tdQ').value='';
     tdRender();
-    requestAnimationFrame(tdDefaultView);
+    requestAnimationFrame(tdFit);
   }
   [['tdTr','r'],['tdTp','p'],['tdTb','b']].forEach(([id,k])=>{
     $(id).onclick=()=>{ tdTool = (tdTool===k) ? null : k; tdChipUI(); };
   });
   $('tdZAll').onclick=()=> tdFit();
+  $('tdClear').onclick=()=>{
+    if(!tdCodeCur || !DB.spots[tdCodeCur]) return;
+    const n=DB.spots[tdCodeCur].cells.length;
+    if(!n){ return; }
+    if(!confirm(tdCodeCur+' の色マスを全部（'+n+'個）消す？')) return;
+    DB.spots[tdCodeCur].cells=[];
+    tdRenderSpots();
+    $('tdState').textContent=tdStateText();
+    saveDB();
+  };
   $('tdDone').onclick=()=>{
     const saved=tdCodeCur;
     const had=DB.spots[saved] && DB.spots[saved].cells.length;
@@ -1772,10 +1783,11 @@
     if(!ok) return false;
     const p=palSnap(f, gx, gy);
     const cells=DB.spots[tdCodeCur].cells;
-    const i=cells.findIndex(c=> c.f===tdF && c.x===p.x && c.y===p.y);
+    // タップ位置と重なるマスを探す（昔の位置ズレデータも拾えるように±2未満で判定）
+    const i=cells.findIndex(c=> c.f===tdF && Math.abs(c.x-p.x)<2 && Math.abs(c.y-p.y)<2);
     if(i>=0){
-      if(cells[i].s===tdTool) cells.splice(i,1);
-      else cells[i].s=tdTool;
+      if(cells[i].s===tdTool) cells.splice(i,1);       // 同じ色＝消す
+      else { cells[i].s=tdTool; cells[i].x=p.x; cells[i].y=p.y; }   // 違う色＝塗り替え（位置も揃え直す）
     } else {
       cells.push({f:tdF, x:p.x, y:p.y, s:tdTool});
     }
@@ -1842,7 +1854,7 @@
       tdF=DB.maps.cur;
       $('tdStage').classList.add('on');
       tdRender();
-      requestAnimationFrame(tdDefaultView);
+      requestAnimationFrame(tdFit);
     }
   };
   $('tidyBack').onclick=()=>{ tdReset(); saveDB(); show('home'); };
