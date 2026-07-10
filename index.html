@@ -143,7 +143,8 @@
   .td-search button { padding:0 20px; border-radius:12px; border:none; background:var(--accent); color:#fff; font-size:15px; font-weight:800; }
   .td-code { text-align:center; font-size:18px; font-weight:900; margin-bottom:8px; }
   .td-state { text-align:center; font-size:13px; color:var(--muted); font-weight:700; margin-bottom:8px; }
-  #tdStage { position:relative; height:48vh; overflow:hidden; touch-action:none; background:#dfe5ea; border-radius:12px; border:1px solid var(--line); display:none; }
+  #tdStage { position:relative; width:100%; height:auto; aspect-ratio:30/34; max-height:60vh; overflow:hidden; touch-action:none; background:#dfe5ea; border-radius:12px; border:1px solid var(--line); display:none; }
+  #tdStage.on { display:block; }
   #tdStage.on { display:block; }
   #tdWorld { position:absolute; left:0; top:0; transform-origin:0 0; }
   #tdFrame { position:absolute; left:0; top:0; background:#fff; border:3px solid #3a4654; }
@@ -407,7 +408,7 @@
   <div class="wrap">
     <div class="home-title">
       <h1>ピッキング補助</h1>
-      <div class="ver-tag">ver10</div>
+      <div class="ver-tag">ver13（7/9 ズーム時のはみ出し修正）</div>
     </div>
     <div class="home-btns">
       <button class="home-btn go" id="goBtn">GO</button>
@@ -1624,17 +1625,9 @@
   let tdScale=1, tdTx=0, tdTy=0;
   function tdApply(){ $('tdWorld').style.transform='translate('+tdTx+'px,'+tdTy+'px) scale('+tdScale+')'; }
   let tdZone='all';   // all=全体 / mark=マークの周りを拡大
-  function tdFit(smooth){
-    // ステージの高さを地図の縦横比に合わせる（外側の無駄な余白をなくす）
-    const stEl=$('tdStage');
-    const f0=DB.maps.floors[tdF];
-    const stW=stEl.getBoundingClientRect().width;
-    if(stW>10){
-      const idealH=stW * (f0.rows/f0.cols);
-      stEl.style.height=Math.min(idealH, window.innerHeight*0.62)+'px';
-    }
-    const st=stEl.getBoundingClientRect();
-    if(st.width<10) return;
+  function tdFit(){
+    const st=$('tdStage').getBoundingClientRect();
+    if(st.width<10 || st.height<10){ requestAnimationFrame(tdFit); return; }   // 枠が確定するまで待つ
     const f=DB.maps.floors[tdF];
     const W=f.cols*MP_CELL, H=f.rows*MP_CELL;
     let rx=0, ry=0, rw=W, rh=H;
@@ -1652,22 +1645,27 @@
     tdScale=Math.min(st.width/(rw+16), st.height/(rh+16));
     tdTx=(st.width-rw*tdScale)/2 - rx*tdScale;
     tdTy=(st.height-rh*tdScale)/2 - ry*tdScale;
-    // 切替の時だけスッと動く（普段の指操作は即時）
-    if(smooth){
-      $('tdWorld').style.transition='transform .28s ease';
-      setTimeout(()=>{ $('tdWorld').style.transition=''; }, 320);
-    }
+    // 地図の外（灰色）は絶対に映さない：端に寄ってるマークは端に揃える
+    const fullW=W*tdScale, fullH=H*tdScale;
+    if(fullW>=st.width) tdTx=Math.max(st.width-fullW, Math.min(0, tdTx));
+    else tdTx=(st.width-fullW)/2;
+    if(fullH>=st.height) tdTy=Math.max(st.height-fullH, Math.min(0, tdTy));
+    else tdTy=(st.height-fullH)/2;
     tdApply();
   }
   function tdSetZone(z){
     tdZone=z;
     $('tdZAll').classList.toggle('on', z==='all');
     $('tdZMark').classList.toggle('on', z==='mark');
-    tdFit(true);
+    tdFit();
   }
   $('tdZAll').onclick=()=> tdSetZone('all');
   $('tdZMark').onclick=()=> tdSetZone('mark');
+  window.addEventListener('resize', ()=>{ if($('map')&&$('tidy').classList.contains('on')) tdFit(); });
   function tdRender(){
+    // 枠の形を地図の縦横比に合わせる（余白防止）
+    const fl0=DB.maps.floors[tdF];
+    $('tdStage').style.aspectRatio = fl0.cols+' / '+fl0.rows;
     // 地図の切替タブ（1枚目=全体、2枚目以降=拡大図など）
     const tabs=$('tdTabs'); tabs.innerHTML='';
     if(DB.maps.floors.length>1){
@@ -1770,7 +1768,7 @@
     tdZone = hasCells ? 'mark' : 'all';   // 登録済みならマークに自動で寄る
     $('tdZAll').classList.toggle('on', tdZone==='all');
     $('tdZMark').classList.toggle('on', tdZone==='mark');
-    requestAnimationFrame(()=>tdFit(true));
+    requestAnimationFrame(()=>tdFit());
   }
   function tdToolBtns(){
     const m={r:'tdTr',p:'tdTp',b:'tdTb',e:'tdTe',hand:'tdTh'};
