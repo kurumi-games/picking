@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>床QRコード 印刷</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:"Hiragino Sans","Yu Gothic","Meiryo",sans-serif; background:#f3f5f7; color:#1d2a38; padding:16px; }
+  h1 { font-size:18px; margin-bottom:8px; }
+  .ctrl { background:#fff; border-radius:12px; padding:14px; margin-bottom:14px; }
+  .ctrl p { font-size:13px; color:#64748b; line-height:1.7; margin-bottom:8px; }
+  textarea { width:100%; height:80px; border:1.5px solid #d5dce3; border-radius:10px; padding:10px; font-size:11px; font-family:monospace; }
+  button { padding:12px 18px; border-radius:10px; border:none; background:#1a73d9; color:#fff; font-size:15px; font-weight:800; cursor:pointer; margin:6px 6px 0 0; }
+  button.g { background:#188a4e; }
+  .floor-h { font-size:16px; font-weight:900; margin:18px 0 8px; padding:8px 12px; background:#e3e8ee; border-radius:8px; }
+  .zone-h { font-size:14px; font-weight:800; margin:12px 0 6px; color:#3a4654; }
+  .grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; }
+  .qr { background:#fff; border:2px solid #1d2a38; border-radius:10px; padding:12px; text-align:center; page-break-inside:avoid; }
+  .qr .lbl { font-size:20px; font-weight:900; margin-top:8px; }
+  .qr .sub { font-size:10px; color:#64748b; margin-top:2px; font-family:monospace; }
+  .qr img, .qr canvas { margin:0 auto; }
+  @media print {
+    body { background:#fff; padding:0; }
+    .ctrl, h1 { display:none; }
+    .grid { grid-template-columns:repeat(3, 1fr); gap:6mm; }
+    .qr { border:1.5px solid #000; }
+  }
+</style>
+</head>
+<body>
+<h1>床QRコード 印刷（パレット置き場ごと）</h1>
+<div class="ctrl">
+  <p>同じサイト（GitHub Pages）でピッキングアプリを使ってる端末なら、そのまま「QRを作る」でOK。<br>
+     PCで印刷する時は、アプリの 倉庫マップ（編集用）→「書き出し」でコピーしたデータを下に貼り付けてから「QRを作る」。</p>
+  <textarea id="paste" placeholder="（必要な時だけ）書き出したデータをここに貼り付け"></textarea>
+  <div>
+    <button class="g" id="genBtn">QRを作る</button>
+    <button id="printBtn">🖨 印刷</button>
+  </div>
+</div>
+<div id="out"></div>
+<script>
+  const $ = id=>document.getElementById(id);
+  function getMaps(){
+    const t=$('paste').value.trim();
+    if(t){
+      try{ const o=JSON.parse(t); if(o && o.floors) return o; }catch(e){}
+      alert('貼り付けたデータの形が読めんかった');
+      return null;
+    }
+    try{
+      const db=JSON.parse(localStorage.getItem('pickingDB_v1')||'{}');
+      if(db.maps && db.maps.floors) return db.maps;
+    }catch(e){}
+    alert('地図データが見つからん。アプリの「書き出し」からコピーして貼り付けてな');
+    return null;
+  }
+  function gen(){
+    const maps=getMaps();
+    if(!maps) return;
+    const out=$('out'); out.innerHTML='';
+    maps.floors.forEach((f,fi)=>{
+      const fh=document.createElement('div');
+      fh.className='floor-h';
+      fh.textContent='🗺 '+(f.name||('地図'+(fi+1)));
+      out.appendChild(fh);
+      // 普通の区画ごとに、パレット1枠（2×2）ずつQRを作る
+      f.rects.forEach((r,ri)=>{
+        if(r.type) return;
+        const zoneName=(r.label&&r.label.trim())||('区画'+(ri+1));
+        const zh=document.createElement('div');
+        zh.className='zone-h';
+        const grid=document.createElement('div');
+        grid.className='grid';
+        let n=0;
+        for(let by=0; by+2<=r.h; by+=2){
+          for(let bx=0; bx+2<=r.w; bx+=2){
+            n++;
+            const x=r.x+bx, y=r.y+by;
+            const cell=document.createElement('div');
+            cell.className='qr';
+            const holder=document.createElement('div');
+            cell.appendChild(holder);
+            const lbl=document.createElement('div');
+            lbl.className='lbl';
+            lbl.textContent=zoneName+'-'+n;
+            const sub=document.createElement('div');
+            sub.className='sub';
+            sub.textContent='LOC:'+fi+','+x+','+y;
+            cell.appendChild(lbl); cell.appendChild(sub);
+            grid.appendChild(cell);
+            new QRCode(holder, { text:'LOC:'+fi+','+x+','+y, width:132, height:132, correctLevel:QRCode.CorrectLevel.M });
+          }
+        }
+        if(n>0){
+          zh.textContent='📦 '+zoneName+'（'+n+'枠）';
+          out.appendChild(zh);
+          out.appendChild(grid);
+        }
+      });
+    });
+    if(!out.children.length) alert('QRにできる区画がなかった');
+  }
+  $('genBtn').onclick=gen;
+  $('printBtn').onclick=()=>window.print();
+</script>
+</body>
+</html>

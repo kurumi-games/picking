@@ -124,7 +124,7 @@
   .mp-paint { display:none; gap:7px; overflow-x:auto; padding:8px 0 2px; align-items:center; }
   .mp-paint.on { display:flex; }
   .mp-pcode { flex:0 0 auto; font-size:13px; font-weight:900; background:var(--panel-2); border:1px solid var(--line); border-radius:8px; padding:8px 10px; max-width:130px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .mp-pt { flex:0 0 auto; padding:10px 12px; border-radius:10px; border:2px solid var(--line); background:#fff; font-size:13px; font-weight:800; cursor:pointer; white-space:nowrap; }
+  .mp-pt { flex:0 0 auto; padding:10px 10px; border-radius:10px; border:2px solid var(--line); background:#fff; font-size:12.5px; font-weight:800; cursor:pointer; white-space:nowrap; }
   .mp-pt.on { border-color:var(--txt); box-shadow:0 0 0 2px rgba(29,42,56,.2); }
   .mp-pt.c-r { background:#f5b9b9; }
   .mp-pt.c-p { background:#dcc2ee; }
@@ -140,7 +140,7 @@
   .td-search { display:flex; gap:8px; margin-bottom:12px; }
   .td-search input { flex:1; border:1.5px solid var(--line); border-radius:12px; padding:14px; font-size:16px; }
   .td-search input:focus { outline:none; border-color:var(--accent); }
-  .td-search button { padding:0 20px; border-radius:12px; border:none; background:var(--accent); color:#fff; font-size:15px; font-weight:800; }
+  .td-search button { flex:0 0 auto; padding:0 18px; border-radius:12px; border:none; background:var(--accent); color:#fff; font-size:15px; font-weight:800; white-space:nowrap; }
   .td-code { text-align:center; font-size:18px; font-weight:900; margin-bottom:8px; }
   .td-state { text-align:center; font-size:13px; color:var(--muted); font-weight:700; margin-bottom:8px; }
   #tdStage { position:relative; width:100%; height:auto; aspect-ratio:1/1; max-height:60vh; overflow:hidden; touch-action:none; background:#dfe5ea; border-radius:12px; border:1px solid var(--line); display:none; }
@@ -408,7 +408,7 @@
   <div class="wrap">
     <div class="home-title">
       <h1>ピッキング補助</h1>
-      <div class="ver-tag">ver18（7/9 全削除ボタン・古い塗りも消せるように）</div>
+      <div class="ver-tag">ver21（7/9 床QRの2連スキャン片付け）</div>
     </div>
     <div class="home-btns">
       <button class="home-btn go" id="goBtn">GO</button>
@@ -463,8 +463,10 @@
     </div>
     <div class="td-code" id="tdCode" style="display:none;"></div>
     <div class="td-state" id="tdState" style="display:none;"></div>
-    <div class="mp-tabs" id="tdBar" style="margin-bottom:8px;">
-      <button class="mp-tab on" id="tdZAll" style="flex:0 0 auto;">全体</button>
+    <div class="mp-tabs" id="tdBar" style="margin-bottom:8px; flex-wrap:wrap; row-gap:7px;">
+      <button class="mp-tab on" id="tdZAll" style="flex:0 0 auto; padding:10px 14px;">全体</button>
+      <button class="mp-tab" id="tdZL" style="flex:0 0 auto; padding:10px 14px;">左</button>
+      <button class="mp-tab" id="tdZR" style="flex:0 0 auto; padding:10px 14px;">右</button>
       <button class="mp-pt c-r" id="tdTr" style="display:none;">🔴 定位置</button>
       <button class="mp-pt c-p" id="tdTp" style="display:none;">🟣 仮置き</button>
       <button class="mp-pt c-b" id="tdTb" style="display:none;">🔵 引越し</button>
@@ -532,6 +534,7 @@
       <button class="mp-tb" id="mpFloorC">床色</button>
       <button class="mp-tb" id="mpSize">外枠</button>
       <button class="mp-tb" id="mpImport">モック取込</button>
+      <button class="mp-tb" id="mpExport">書き出し</button>
       <button class="mp-tb" id="mpFloorAdd">＋地図追加</button>
       <button class="mp-tb warn" id="mpFloorDel">フロア削除</button>
     </div>
@@ -1743,7 +1746,25 @@
   [['tdTr','r'],['tdTp','p'],['tdTb','b']].forEach(([id,k])=>{
     $(id).onclick=()=>{ tdTool = (tdTool===k) ? null : k; tdChipUI(); };
   });
-  $('tdZAll').onclick=()=> tdFit();
+  function tdZoneUI(z){
+    $('tdZAll').classList.toggle('on', z==='all');
+    $('tdZL').classList.toggle('on', z==='l');
+    $('tdZR').classList.toggle('on', z==='r');
+  }
+  // 左右半分ずつの拡大表示（境目の見落とし防止にちょい重ねる）
+  function tdFitHalf(side){
+    const st=$('tdStage').getBoundingClientRect();
+    const f=DB.maps.floors[tdF], W=f.cols*MP_CELL, H=f.rows*MP_CELL;
+    const rw=W*0.55;
+    const rx=(side==='l')? 0 : W-rw;
+    tdScale=st.width/(rw+12);
+    tdTx=-rx*tdScale + (side==='l'? 6 : st.width-rw*tdScale-6);
+    tdTy=0;
+    tdClamp(); tdApply();
+  }
+  $('tdZAll').onclick=()=>{ tdZoneUI('all'); tdFit(); };
+  $('tdZL').onclick=()=>{ tdZoneUI('l'); tdFitHalf('l'); };
+  $('tdZR').onclick=()=>{ tdZoneUI('r'); tdFitHalf('r'); };
   $('tdClear').onclick=()=>{
     if(!tdCodeCur || !DB.spots[tdCodeCur]) return;
     const n=DB.spots[tdCodeCur].cells.length;
@@ -1774,14 +1795,17 @@
     const f=DB.maps.floors[tdF];
     const gx=(clientX-fr.left)/fr.width*f.cols;
     const gy=(clientY-fr.top )/fr.height*f.rows;
-    let ok=false;
+    let host=null;
     for(let i=f.rects.length-1;i>=0;i--){
       const r=f.rects[i];
       if(r.type) continue;
-      if(gx>=r.x && gx<r.x+r.w && gy>=r.y && gy<r.y+r.h){ ok=true; break; }
+      if(gx>=r.x && gx<r.x+r.w && gy>=r.y && gy<r.y+r.h){ host=r; break; }
     }
-    if(!ok) return false;
+    if(!host) return false;
     const p=palSnap(f, gx, gy);
+    // 2×2ブロックが区画からはみ出さないように収める
+    p.x=Math.max(host.x, Math.min(host.x+host.w-2, p.x));
+    p.y=Math.max(host.y, Math.min(host.y+host.h-2, p.y));
     const cells=DB.spots[tdCodeCur].cells;
     // タップ位置と重なるマスを探す（昔の位置ズレデータも拾えるように±2未満で判定）
     const i=cells.findIndex(c=> c.f===tdF && Math.abs(c.x-p.x)<2 && Math.abs(c.y-p.y)<2);
@@ -1866,6 +1890,66 @@
     if(codes.length){ tdOpen(codes[0], false); return; }
     if(confirm('「'+q+'」はまだ場所が登録されてへん。今から塗って登録する？')) tdOpen(q, true);
   }
+  // 現品票を読んだ直後に「床QRも読む？」の案内ボタンを出す
+  function tdAskLoc(){
+    if(!tdCodeCur) return;
+    tdToast('つぎに置き場の床QRを読んでな');
+    setTimeout(()=>{ if(tdCodeCur){ mpsTarget='tidy'; startMapScan(); } }, 900);
+  }
+  // 床QRを読んだ時の判定
+  function tdLocScanned(f, x, y){
+    if(!tdCodeCur || !DB.spots[tdCodeCur]){
+      tdToast('先に現品票を読んでな');
+      return;
+    }
+    const cells=DB.spots[tdCodeCur].cells;
+    const hit=cells.find(c=> c.f===f && Math.abs(c.x-x)<2 && Math.abs(c.y-y)<2);
+    if(!cells.length){
+      // 初回＝定位置として登録
+      cells.push({f, x, y, s:'r'});
+      saveDB();
+      if(f===tdF) tdRenderSpots();
+      $('tdState').textContent=tdStateText();
+      tdBigResult('reg', '📍 定位置として登録した', tdCodeCur+' の定位置はここで覚えたで');
+    } else if(hit){
+      const nm={r:'定位置',p:'仮置き',b:'引越し'}[hit.s];
+      tdBigResult('ok', '✅ '+nm+'で合ってる', 'ここに置いてOK！');
+    } else {
+      // 登録と違う場所：仮置き/引越しか、純粋な間違いか
+      tdBigResult('warn', '⚠ 登録された場所とちがう', 'わざとなら下から選んでな。間違いなら「場所を確認」で正しい場所が見える', [
+        ['🟣 仮置きとして登録', ()=>{ cells.push({f,x,y,s:'p'}); saveDB(); if(f===tdF)tdRenderSpots(); $('tdState').textContent=tdStateText(); tdToast('🟣 仮置きを追加した'); }],
+        ['🔵 引越しとして登録', ()=>{ cells.push({f,x,y,s:'b'}); saveDB(); if(f===tdF)tdRenderSpots(); $('tdState').textContent=tdStateText(); tdToast('🔵 引越しを追加した'); }],
+        ['🗺 場所を確認（置き直す）', ()=>{ tdFit(); }]
+      ]);
+    }
+  }
+  // 大きい結果演出（色つきフルスクリーン）
+  function tdBigResult(kind, title, sub, buttons){
+    const colors={ reg:'#1a73d9', ok:'#188a4e', warn:'#c98a12' };
+    const ov=document.createElement('div');
+    ov.style.cssText='position:fixed;inset:0;z-index:600;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;background:'+colors[kind]+'ee;';
+    const h=document.createElement('div');
+    h.textContent=title;
+    h.style.cssText='color:#fff;font-size:26px;font-weight:900;text-align:center;';
+    const s=document.createElement('div');
+    s.textContent=sub||'';
+    s.style.cssText='color:#fff;font-size:15px;font-weight:700;text-align:center;line-height:1.6;';
+    ov.appendChild(h); ov.appendChild(s);
+    (buttons||[]).forEach(([label,fn])=>{
+      const b=document.createElement('button');
+      b.textContent=label;
+      b.style.cssText='width:100%;max-width:340px;padding:15px;border-radius:12px;border:none;background:#fff;font-size:16px;font-weight:800;';
+      b.onclick=()=>{ fn(); ov.remove(); };
+      ov.appendChild(b);
+    });
+    const cls=document.createElement('button');
+    cls.textContent=buttons?'とじる':'OK';
+    cls.style.cssText='width:100%;max-width:340px;padding:14px;border-radius:12px;border:2px solid #fff;background:transparent;color:#fff;font-size:15px;font-weight:800;';
+    cls.onclick=()=>ov.remove();
+    ov.appendChild(cls);
+    document.body.appendChild(ov);
+    if(!buttons) setTimeout(()=>{ if(ov.parentNode) ov.remove(); }, 3000);   // ✅系は3秒で自動で消える
+  }
   $('tdQBtn').onclick=tdSearch;
   $('tdQ').addEventListener('keydown', e=>{ if(e.key==='Enter') tdSearch(); });
   $('tdScan').onclick=()=>{ mpsTarget='tidy'; startMapScan(); };
@@ -1887,10 +1971,16 @@
         const code=String(result.getText()).toUpperCase().replace(/[^A-Z0-9-]/g,'');
         if(!code) return;
         stopMapScan();
+        // 床QR（LOC:フロア,x,y）なら片付け判定へ
+        const loc = String(result.getText()).toUpperCase().match(/^LOC:(\d+),(\d+),(\d+)$/);
+        if(loc && mpsTarget!=='map'){
+          tdLocScanned(parseInt(loc[1],10), parseInt(loc[2],10), parseInt(loc[3],10));
+          return;
+        }
         const reg = DB.spots[code] && DB.spots[code].cells.length;
         if(mpsTarget==='tidy'){
-          if(reg) tdOpen(code, false);
-          else if(confirm('「'+code+'」はまだ場所が登録されてへん。今から塗って登録する？')) tdOpen(code, true);
+          if(reg){ tdOpen(code, false); tdAskLoc(); }
+          else if(confirm('「'+code+'」はまだ場所が登録されてへん。置き場の床QRを読むか、地図を塗って登録してな')){ tdOpen(code, true); tdAskLoc(); }
         } else {
           if(reg) mpOpenPart(code);
           else if(confirm('「'+code+'」はまだ場所が登録されてへん。今から塗って登録する？')) mpOpenPart(code);
@@ -1995,6 +2085,31 @@
     DB.maps.floors.push({ name:(name.trim()||(DB.maps.floors.length+1)+'枚目'), cols:30, rows:34, floor:'green', rects:[] });
     DB.maps.cur=DB.maps.floors.length-1;
     mpSel=null; saveDB(); mpRender(); mpFit();
+  };
+  // 地図データの書き出し（QR印刷ページやPCへコピーする用）
+  $('mpExport').onclick = ()=>{
+    const data=JSON.stringify(DB.maps);
+    const ov=document.createElement('div');
+    ov.style.cssText='position:fixed;inset:0;background:rgba(15,25,38,.75);z-index:500;display:flex;flex-direction:column;padding:16px;gap:10px;';
+    const ta=document.createElement('textarea');
+    ta.value=data;
+    ta.style.cssText='flex:1;border-radius:12px;border:none;padding:12px;font-size:11px;font-family:monospace;';
+    const btn=document.createElement('button');
+    btn.textContent='📋 全部コピー';
+    btn.style.cssText='padding:14px;border-radius:12px;border:none;background:var(--ok);color:#fff;font-size:16px;font-weight:800;';
+    const cls=document.createElement('button');
+    cls.textContent='とじる';
+    cls.style.cssText='padding:12px;border-radius:12px;border:none;background:#fff;font-size:15px;font-weight:800;';
+    btn.onclick=async()=>{
+      ta.select(); ta.setSelectionRange(0, ta.value.length);
+      let ok=false;
+      try{ await navigator.clipboard.writeText(data); ok=true; }catch(e){}
+      if(!ok){ try{ ok=document.execCommand('copy'); }catch(e){} }
+      btn.textContent = ok ? '✅ コピーした！QR印刷ページに貼り付けてな' : '⚠ 全選択したから手動で長押しコピーしてな';
+    };
+    cls.onclick=()=>ov.remove();
+    ov.appendChild(ta); ov.appendChild(btn); ov.appendChild(cls);
+    document.body.appendChild(ov);
   };
   // フロア削除（最後の1枚は消せない）
   $('mpFloorDel').onclick = ()=>{
