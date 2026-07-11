@@ -142,6 +142,12 @@
   .td-search input { flex:1; border:1.5px solid var(--line); border-radius:12px; padding:14px; font-size:16px; }
   .td-search input:focus { outline:none; border-color:var(--accent); }
   .td-search button { flex:0 0 auto; padding:0 18px; border-radius:12px; border:none; background:var(--accent); color:#fff; font-size:15px; font-weight:800; white-space:nowrap; }
+  .tdk { height:58px; padding:0; border-radius:12px; border:1.5px solid var(--line); background:var(--panel); font-size:20px; font-weight:900; color:var(--txt); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:3px; }
+  .tdk:active { background:var(--panel-2); }
+  .tdk-c { background:#e7f0fb; color:#1a5fb0; }
+  .tdk-b { background:#fdf1e2; color:#b06a12; }
+  .tdk-x { background:#fdeaea; color:var(--warn); font-size:14.5px; }
+  .tdk-go { background:var(--accent); border-color:var(--accent); color:#fff; font-size:17px; }
   .td-code { text-align:center; font-size:18px; font-weight:900; margin-bottom:8px; }
   .td-state { text-align:center; font-size:13px; color:var(--muted); font-weight:700; margin-bottom:8px; }
   #tdStage { position:relative; width:100%; height:auto; aspect-ratio:1/1; max-height:60vh; overflow:hidden; touch-action:none; background:#dfe5ea; border-radius:12px; border:1px solid var(--line); display:none; }
@@ -433,9 +439,9 @@
 <!-- ============ INPUT (GO) ============ -->
 <section class="screen" id="input">
   <div class="wrap">
-    <div class="topbar" style="justify-content:center; flex-direction:column; gap:2px;">
-      <h2 style="font-size:20px;">ピッキング補助</h2>
-      <div class="ver-tag" style="margin:0;">ver23（7/10 下タブに大改装）</div>
+    <div style="text-align:center; padding:14px 0 16px;">
+      <h2 style="font-size:22px; font-weight:900;">ピッキング補助</h2>
+      <div class="ver-tag" style="margin:4px 0 0;">ver31（7/10 タップで潜る地図ナビ）</div>
     </div>
 
     <!-- 機種から選ぶ -->
@@ -474,16 +480,28 @@
       <h2>部品の場所</h2>
     </div>
     <div class="td-search">
-      <input id="tdQ" placeholder="部品コードで検索（例: C7300）">
+      <input id="tdQ" placeholder="部品コードで検索（例: C7300）" autocomplete="off">
       <button id="tdQBtn">検索</button>
-      <button id="tdScan" style="background:var(--ok);font-size:19px;">📷</button>
+      <button id="tdScan" style="background:var(--ok); display:flex; align-items:center; justify-content:center;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <rect x="2" y="2" width="8" height="8" rx="1.5" stroke="#fff" stroke-width="2"/>
+          <rect x="5" y="5" width="2" height="2" fill="#fff"/>
+          <rect x="14" y="2" width="8" height="8" rx="1.5" stroke="#fff" stroke-width="2"/>
+          <rect x="17" y="5" width="2" height="2" fill="#fff"/>
+          <rect x="2" y="14" width="8" height="8" rx="1.5" stroke="#fff" stroke-width="2"/>
+          <rect x="5" y="17" width="2" height="2" fill="#fff"/>
+          <rect x="14" y="14" width="3" height="3" fill="#fff"/>
+          <rect x="19" y="14" width="3" height="3" fill="#fff"/>
+          <rect x="14" y="19" width="3" height="3" fill="#fff"/>
+          <rect x="19" y="19" width="3" height="3" fill="#fff"/>
+        </svg>
+      </button>
     </div>
+
     <div class="td-code" id="tdCode" style="display:none;"></div>
     <div class="td-state" id="tdState" style="display:none;"></div>
     <div class="mp-tabs" id="tdBar" style="margin-bottom:8px; flex-wrap:wrap; row-gap:7px;">
       <button class="mp-tab on" id="tdZAll" style="flex:0 0 auto; padding:10px 14px;">全体</button>
-      <button class="mp-tab" id="tdZL" style="flex:0 0 auto; padding:10px 14px;">左</button>
-      <button class="mp-tab" id="tdZR" style="flex:0 0 auto; padding:10px 14px;">右</button>
       <button class="mp-pt c-r" id="tdTr" style="display:none;">🔴 定位置</button>
       <button class="mp-pt c-p" id="tdTp" style="display:none;">🟣 仮置き</button>
       <button class="mp-pt c-b" id="tdTb" style="display:none;">🔵 引越し</button>
@@ -497,6 +515,7 @@
         <svg id="tdGrid"></svg>
       </div>
     </div>
+    <div id="tdInfo" style="display:none; background:var(--panel); border:1.5px solid var(--line); border-radius:12px; padding:12px 14px; margin-top:8px; font-size:14px; line-height:1.7;"></div>
   </div>
 </section>
 
@@ -534,6 +553,7 @@
         <svg id="mpGrid"></svg>
       </div>
     </div>
+    <!-- 置くもの（いつも表示） -->
     <div class="mp-tools">
       <button class="mp-tb main" id="mpAdd">＋ 四角</button>
       <button class="mp-tb" id="mpAddWall">＋ 柱・壁</button>
@@ -541,19 +561,25 @@
       <button class="mp-tb" id="mpAddShut">＋ シャッター</button>
       <button class="mp-tb" id="mpAddNest">＋ ネステナー</button>
       <button class="mp-tb" id="mpAddLoad">＋ 荷物</button>
-      <button class="mp-tb" id="mpName" disabled>名前</button>
-      <button class="mp-tb" id="mpParts" disabled>部品</button>
-      <button class="mp-tb" id="mpColor" disabled>色</button>
-      <button class="mp-tb" id="mpPal" disabled>切り込み</button>
-      <button class="mp-tb" id="mpRot" disabled>回転</button>
-      <button class="mp-tb" id="mpDup" disabled>複製</button>
-      <button class="mp-tb warn" id="mpDel" disabled>削除</button>
+    </div>
+    <!-- 選択中だけ出る操作 -->
+    <div class="mp-tools" id="mpSelTools" style="display:none; background:var(--panel-2); border-radius:10px; padding:8px;">
+      <button class="mp-tb" id="mpName">名前</button>
+      <button class="mp-tb" id="mpColor">色</button>
+      <button class="mp-tb" id="mpPal">切り込み</button>
+      <button class="mp-tb" id="mpRot">回転</button>
+      <button class="mp-tb" id="mpDup">複製</button>
+      <button class="mp-tb" id="mpParts">部品</button>
+      <button class="mp-tb warn" id="mpDel">削除</button>
+    </div>
+    <!-- 地図の設定（何も選んでない時だけ出る） -->
+    <div class="mp-tools" id="mpCfgTools">
       <button class="mp-tb" id="mpFloorC">床色</button>
       <button class="mp-tb" id="mpSize">外枠</button>
-      <button class="mp-tb" id="mpImport">モック取込</button>
-      <button class="mp-tb" id="mpExport">書き出し</button>
       <button class="mp-tb" id="mpFloorAdd">＋地図追加</button>
       <button class="mp-tb warn" id="mpFloorDel">フロア削除</button>
+      <button class="mp-tb" id="mpImport">モック取込</button>
+      <button class="mp-tb" id="mpExport">書き出し</button>
     </div>
   </div>
 </section>
@@ -1664,7 +1690,8 @@
       });
     }
     const on = mpSel!=null;
-    ['mpName','mpParts','mpColor','mpPal','mpRot','mpDup','mpDel'].forEach(id=> $(id).disabled=!on);
+    $('mpSelTools').style.display = on ? 'flex' : 'none';
+    $('mpCfgTools').style.display = on ? 'none' : 'flex';
   }
   /* ===== 部品モード：1部品＝1枚の塗り絵。定位置🔴・仮置き🟣・引越し🔵 ===== */
   let mpPart=null;    // 表示中の部品コード（nullなら通常編集）
@@ -1678,7 +1705,7 @@
     mpSel=null; mpTool = DB.spots[code].cells.length ? 'hand' : 'r';   // 登録済みなら見るだけモードから
     $('mpPCode').textContent='📦 '+code;
     $('mpPaint').classList.add('on');
-    document.querySelector('#map .mp-tools').style.display='none';   // 塗り中はレイアウト編集を隠す
+    document.querySelectorAll('#map .mp-tools').forEach(el=> el.style.display='none');   // 塗り中はレイアウト編集を隠す
     mpToolBtns();
     mpRender(); mpFit();
   }
@@ -1687,7 +1714,8 @@
     if(mpPart && DB.spots[mpPart] && !DB.spots[mpPart].cells.length) delete DB.spots[mpPart];
     mpPart=null;
     $('mpPaint').classList.remove('on');
-    document.querySelector('#map .mp-tools').style.display='flex';
+    document.querySelectorAll('#map .mp-tools').forEach(el=> el.style.display='');
+    mpRender();   // 選択状態に応じた行の出し分けを復元
     saveDB(); mpRender();
   }
   function mpToolBtns(){
@@ -1826,7 +1854,7 @@
     if(n.r) parts.push('🔴定位置'+n.r);
     if(n.p) parts.push('🟣仮置き'+n.p);
     if(n.b) parts.push('🔵引越し'+n.b);
-    return parts.length? parts.join('　') : '色を選んでマスをタップしてな';
+    return parts.length? parts.join('　') : '未登録。置き場の床QRを読んで登録してな';
   }
   function tdChipUI(){
     [['r','tdTr'],['p','tdTp'],['b','tdTb']].forEach(([k,id])=> $(id).classList.toggle('on', tdTool===k));
@@ -1841,9 +1869,14 @@
     $('tdCode').style.display='block';
     $('tdState').textContent=tdStateText();
     $('tdState').style.display='block';
+    tdBrowse=null; tdClearSel();
+    $('tdBar').style.display='flex';
+    $('tdTabs').style.display='flex';
     $('tdStage').classList.add('on');
-    ['tdTr','tdTp','tdTb','tdClear','tdDone'].forEach(id=> $(id).style.display='block');
-    tdTool = DB.spots[code].cells.length ? null : 'r';
+    // 登録済みの部品だけ色ボタン（修正用）を出す。新規は床QRでしか登録できない
+    const hasReg = DB.spots[code].cells.length > 0;
+    ['tdTr','tdTp','tdTb','tdClear','tdDone'].forEach(id=> $(id).style.display = hasReg ? 'block' : 'none');
+    tdTool = null;
     tdChipUI();
     tdRender();
     requestAnimationFrame(tdFit);
@@ -1855,31 +1888,102 @@
     $('tdState').style.display='none';
     ['tdTr','tdTp','tdTb','tdClear','tdDone'].forEach(id=> $(id).style.display='none');
     $('tdQ').value='';
+    tdBrowse=null; tdClearSel();
+    $('tdBar').style.display='none';
+    // デフォルトでも地図とフロアタブは見せる
+    $('tdStage').classList.add('on');
+    $('tdTabs').style.display='flex';
     tdRender();
     requestAnimationFrame(tdFit);
   }
   [['tdTr','r'],['tdTp','p'],['tdTb','b']].forEach(([id,k])=>{
     $(id).onclick=()=>{ tdTool = (tdTool===k) ? null : k; tdChipUI(); };
   });
-  function tdZoneUI(z){
-    $('tdZAll').classList.toggle('on', z==='all');
-    $('tdZL').classList.toggle('on', z==='l');
-    $('tdZR').classList.toggle('on', z==='r');
+  // ===== ブラウズナビ：全体 → 区画タップで拡大 → パレットタップで品名 → 床タップで全体へ =====
+  let tdBrowse=null;   // 拡大表示中の区画id（nullなら全体）
+  // 品名の逆引き（機種登録データから探す。ゼロ埋め違いも吸収）
+  function partName(code){
+    const n=mpNorm(code);
+    let found='';
+    Object.keys(DB.products||{}).some(pn=>
+      (DB.products[pn]||[]).some(p=>{
+        if(p.code===code || mpNorm(p.code||'')===n){ found=p.name||''; return true; }
+        return false;
+      })
+    );
+    return found;
   }
-  // 左右半分ずつの拡大表示（境目の見落とし防止にちょい重ねる）
-  function tdFitHalf(side){
+  function tdFitRect(r){
     const st=$('tdStage').getBoundingClientRect();
-    const f=DB.maps.floors[tdF], W=f.cols*MP_CELL, H=f.rows*MP_CELL;
-    const rw=W*0.55;
-    const rx=(side==='l')? 0 : W-rw;
-    tdScale=st.width/(rw+12);
-    tdTx=-rx*tdScale + (side==='l'? 6 : st.width-rw*tdScale-6);
-    tdTy=0;
+    const pad=MP_CELL*1.5;
+    const rx=r.x*MP_CELL-pad, ry=r.y*MP_CELL-pad;
+    const rw=r.w*MP_CELL+pad*2, rh=r.h*MP_CELL+pad*2;
+    tdScale=Math.min(st.width/rw, st.height/rh, 6);
+    tdTx=(st.width-rw*tdScale)/2 - rx*tdScale;
+    tdTy=(st.height-rh*tdScale)/2 - ry*tdScale;
     tdClamp(); tdApply();
   }
-  $('tdZAll').onclick=()=>{ tdZoneUI('all'); tdFit(); };
-  $('tdZL').onclick=()=>{ tdZoneUI('l'); tdFitHalf('l'); };
-  $('tdZR').onclick=()=>{ tdZoneUI('r'); tdFitHalf('r'); };
+  function tdShowSel(x,y){
+    $('tdWorld').querySelectorAll('.td-sel').forEach(n=>n.remove());
+    const d=document.createElement('div');
+    d.className='td-sel';
+    d.style.cssText='position:absolute; pointer-events:none; z-index:8; outline:3px dashed var(--accent); outline-offset:2px; left:'+(x*MP_CELL)+'px; top:'+(y*MP_CELL)+'px; width:'+(MP_CELL*2)+'px; height:'+(MP_CELL*2)+'px;';
+    $('tdWorld').appendChild(d);
+  }
+  function tdClearSel(){
+    $('tdWorld').querySelectorAll('.td-sel').forEach(n=>n.remove());
+    $('tdInfo').style.display='none';
+  }
+  function tdPalletInfo(f, p){
+    // このパレット枠に登録されとる部品を全部探す
+    const hits=[];
+    Object.keys(DB.spots).forEach(code=>{
+      (DB.spots[code].cells||[]).forEach(c=>{
+        if(c.f===tdF && Math.abs(c.x-p.x)<2 && Math.abs(c.y-p.y)<2) hits.push({code, s:c.s});
+      });
+    });
+    const icon={r:'🔴', p:'🟣', b:'🔵'};
+    const box=$('tdInfo');
+    if(!hits.length){
+      box.innerHTML='<span style="color:var(--muted); font-weight:700;">ここにはまだ何も登録されてへん</span>';
+    } else {
+      box.innerHTML=hits.map(h=>{
+        const nm=partName(h.code);
+        return '<div>'+icon[h.s]+' <b>'+(nm||h.code)+'</b>'+(nm?' <span style="color:var(--muted); font-size:12px;">'+h.code+'</span>':'')+'</div>';
+      }).join('');
+    }
+    box.style.display='block';
+    tdShowSel(p.x, p.y);
+  }
+  $('tdZAll').onclick=()=>{ tdBrowse=null; tdClearSel(); tdFit(); };
+  function tdBrowseTap(clientX, clientY){
+    const fr=$('tdFrame').getBoundingClientRect();
+    const f=DB.maps.floors[tdF];
+    const gx=(clientX-fr.left)/fr.width*f.cols;
+    const gy=(clientY-fr.top )/fr.height*f.rows;
+    // タップ地点の区画（普通の四角）を探す
+    let host=null;
+    for(let i=f.rects.length-1;i>=0;i--){
+      const r=f.rects[i];
+      if(r.type) continue;
+      if(gx>=r.x && gx<r.x+r.w && gy>=r.y && gy<r.y+r.h){ host=r; break; }
+    }
+    if(!host){
+      // 床（緑）タップ＝全体に戻る
+      tdBrowse=null; tdClearSel(); tdFit();
+      return;
+    }
+    if(tdBrowse!==host.id){
+      // 区画タップ＝そこを拡大
+      tdBrowse=host.id; tdClearSel(); tdFitRect(host);
+      return;
+    }
+    // 拡大中の区画の中＝パレット枠の詳細
+    const p=palSnap(f, gx, gy);
+    p.x=Math.max(host.x, Math.min(host.x+host.w-2, p.x));
+    p.y=Math.max(host.y, Math.min(host.y+host.h-2, p.y));
+    tdPalletInfo(f, p);
+  }
   $('tdClear').onclick=()=>{
     if(!tdCodeCur || !DB.spots[tdCodeCur]) return;
     const n=DB.spots[tdCodeCur].cells.length;
@@ -1979,7 +2083,8 @@
       if(ptrs.size<2) pinch0=null;
       if(ptrs.size===0){
         if(tapped && Date.now()-tapped.t<600){
-          tdTapPaint(tapped.x, tapped.y);
+          if(tdCodeCur) tdTapPaint(tapped.x, tapped.y);   // 部品を開いてる時＝塗り
+          else tdBrowseTap(tapped.x, tapped.y);            // 開いてない時＝タップで潜るナビ
         }
         tapped=null; start=null;
       }
@@ -1989,12 +2094,7 @@
   })();
   $('tidyBtn').onclick=()=>{
     show('tidy');
-    if(!tdCodeCur){
-      tdF=DB.maps.cur;
-      $('tdStage').classList.add('on');
-      tdRender();
-      requestAnimationFrame(tdFit);
-    }
+    if(!tdCodeCur) tdReset();
   };
   $('tidyBack').onclick=()=>{ tdReset(); saveDB(); show('home'); };
   function tdSearch(){
@@ -2003,7 +2103,10 @@
     const nq=mpNorm(q);
     const codes=Object.keys(DB.spots).filter(c=> DB.spots[c].cells.length && (c.indexOf(q)>=0 || mpNorm(c).indexOf(nq)>=0));
     if(codes.length){ tdOpen(codes[0], false); return; }
-    if(confirm('「'+q+'」はまだ場所が登録されてへん。今から塗って登録する？')) tdOpen(q, true);
+    if(confirm('「'+q+'」はまだ場所が登録されてへん。置き場の床QRを読んで登録する？（部品の現物がある場所で）')){
+      tdOpen(q, false);
+      setTimeout(()=>{ mpsTarget='tidy'; startMapScan(); }, 300);
+    }
   }
   // 現品票を読んだ直後に「床QRも読む？」の案内ボタンを出す
   function tdAskLoc(){
@@ -2025,6 +2128,7 @@
       saveDB();
       if(f===tdF) tdRenderSpots();
       $('tdState').textContent=tdStateText();
+      ['tdTr','tdTp','tdTb','tdClear','tdDone'].forEach(id=> $(id).style.display='block');   // 登録できたから修正ボタンを開放
       tdBigResult('reg', '📍 定位置として登録した', tdCodeCur+' の定位置はここで覚えたで');
     } else if(hit){
       const nm={r:'定位置',p:'仮置き',b:'引越し'}[hit.s];
@@ -2067,6 +2171,7 @@
   }
   $('tdQBtn').onclick=tdSearch;
   $('tdQ').addEventListener('keydown', e=>{ if(e.key==='Enter') tdSearch(); });
+
   $('tdScan').onclick=()=>{ mpsTarget='tidy'; startMapScan(); };
   window.addEventListener('resize', ()=>{ if($('tidy').classList.contains('on')){ tdClamp(); tdApply(); } });
   if(typeof ResizeObserver!=='undefined'){
@@ -2095,7 +2200,12 @@
         const reg = DB.spots[code] && DB.spots[code].cells.length;
         if(mpsTarget==='tidy'){
           if(reg){ tdOpen(code, false); tdAskLoc(); }
-          else if(confirm('「'+code+'」はまだ場所が登録されてへん。置き場の床QRを読むか、地図を塗って登録してな')){ tdOpen(code, true); tdAskLoc(); }
+          else {
+            // 新規は地点QRを読まないと登録できない（指塗りでの新規登録はなし）
+            tdOpen(code, false);
+            tdToast('🆕 '+code+' は未登録。置き場の床QRを読んで登録してな');
+            setTimeout(()=>{ if(tdCodeCur){ mpsTarget='tidy'; startMapScan(); } }, 1100);
+          }
         } else {
           if(reg) mpOpenPart(code);
           else if(confirm('「'+code+'」はまだ場所が登録されてへん。今から塗って登録する？')) mpOpenPart(code);
