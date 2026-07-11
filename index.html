@@ -121,6 +121,7 @@
   .mp-spot.s-r { background:rgba(230,77,77,.72); box-shadow:inset 0 0 0 1.5px #b32626; }
   .mp-spot.s-p { background:rgba(167,93,209,.72); box-shadow:inset 0 0 0 1.5px #7c3fa3; }
   .mp-spot.s-b { background:rgba(77,163,230,.72); box-shadow:inset 0 0 0 1.5px #2a72ad; }
+  .mp-spot.glow { outline:4px solid #f5c518; outline-offset:2px; animation:mpblink .6s ease-in-out infinite alternate; }
   .mp-paint { display:none; gap:7px; overflow-x:auto; padding:8px 0 2px; align-items:center; }
   .mp-paint.on { display:flex; }
   .mp-pcode { flex:0 0 auto; font-size:13px; font-weight:900; background:var(--panel-2); border:1px solid var(--line); border-radius:8px; padding:8px 10px; max-width:130px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -172,6 +173,15 @@
   #w3World div { transform-style:preserve-3d; }
   .w3f { position:absolute; box-sizing:border-box; display:flex; align-items:center; justify-content:center; overflow:hidden; }
   .w3-hint { text-align:center; color:#c9d4de; font-size:12px; padding:7px; }
+
+  /* ===== 下タブナビ（Retain方式） ===== */
+  #bnav { position:fixed; left:0; right:0; bottom:0; z-index:300; display:none; background:var(--panel); border-top:1px solid var(--line); padding:6px 4px calc(6px + env(safe-area-inset-bottom)); }
+  #bnav.on { display:flex; }
+  #bnav button { flex:1; background:none; border:none; display:flex; flex-direction:column; align-items:center; gap:2px; padding:6px 2px; cursor:pointer; color:var(--muted); font-weight:800; }
+  #bnav button .bi { font-size:21px; line-height:1; }
+  #bnav button .bl { font-size:11px; }
+  #bnav button.on { color:var(--ok); }
+  .screen .wrap { padding-bottom:86px; }
 
   /* ===== topbar ===== */
   .topbar { display:flex; align-items:center; gap:12px; margin-bottom:14px; }
@@ -408,11 +418,10 @@
   <div class="wrap">
     <div class="home-title">
       <h1>ピッキング補助</h1>
-      <div class="ver-tag">ver21（7/9 床QRの2連スキャン片付け）</div>
+      <div class="ver-tag">ver22（7/9 ピッキング中に📍で場所が光る）</div>
     </div>
     <div class="home-btns">
       <button class="home-btn go" id="goBtn">GO</button>
-      <button class="home-btn shop" id="shopBtn">🛒 お買い物モード（お試し）</button>
       <button class="home-btn" id="prodBtn">製品登録</button>
       <button class="home-btn" id="regBtn">部品登録（場所・意味）</button>
       <button class="home-btn" id="tidyBtn">📍 部品の場所（読み取り・検索）</button>
@@ -424,9 +433,9 @@
 <!-- ============ INPUT (GO) ============ -->
 <section class="screen" id="input">
   <div class="wrap">
-    <div class="topbar">
-      <button class="back" data-home>←</button>
-      <h2>GO</h2>
+    <div class="topbar" style="justify-content:center; flex-direction:column; gap:2px;">
+      <h2 style="font-size:20px;">ピッキング補助</h2>
+      <div class="ver-tag" style="margin:0;">ver23（7/10 下タブに大改装）</div>
     </div>
 
     <!-- 機種から選ぶ -->
@@ -448,6 +457,14 @@
     <p class="status ng" id="inputErr"></p>
   </div>
 </section>
+
+<!-- ============ 下タブナビ ============ -->
+<nav id="bnav">
+  <button id="bnHome"><span class="bi">🏠</span><span class="bl">ホーム</span></button>
+  <button id="bnProd"><span class="bi">📦</span><span class="bl">製品登録</span></button>
+  <button id="bnTidy"><span class="bi">📍</span><span class="bl">場所</span></button>
+  <button id="bnMap"><span class="bi">🗺</span><span class="bl">マップ</span></button>
+</nav>
 
 <!-- ============ 部品の場所（現場用） ============ -->
 <section class="screen" id="tidy">
@@ -540,6 +557,22 @@
     </div>
   </div>
 </section>
+
+<!-- ============ ピッキング中の場所モーダル ============ -->
+<div class="v3-modal" id="wmModal">
+  <div class="tc-card" style="max-width:440px;">
+    <div class="v3-title" id="wmTitle"></div>
+    <div class="v3-sub" id="wmSub"></div>
+    <div id="wmStage" style="position:relative; width:100%; aspect-ratio:1/1; overflow:hidden; background:#dfe5ea; border-radius:12px; border:1px solid var(--line);">
+      <div id="wmWorld" style="position:absolute; left:0; top:0; transform-origin:0 0;">
+        <div id="wmFrame" style="position:absolute; left:0; top:0; border:3px solid #3a4654;"></div>
+        <svg id="wmGrid" style="position:absolute; left:0; top:0; pointer-events:none;"></svg>
+      </div>
+    </div>
+    <p class="v3-hint" id="wmEmpty" style="display:none; color:var(--warn); font-weight:800;">この部品はまだ場所が登録されてへん（「部品の場所」で登録できる）</p>
+    <button class="btn ok sm" id="wmClose" style="margin-top:10px;">とじる</button>
+  </div>
+</div>
 
 <!-- ============ マップ用バーコード読み取り ============ -->
 <div class="mps-modal" id="mpsModal">
@@ -939,18 +972,33 @@
     try{ stopShopScan(); }catch(e){}
     try{ stopQtyOcr(); }catch(e){}
     try{ stopMapScan(); }catch(e){}
+    if(id==='home') id='input';   // 旧ホームはもう無い。ホーム＝入力画面
     $$('.screen').forEach(s=>s.classList.remove('on')); $(id).classList.add('on');
+    // 下タブ：4つのメイン画面でだけ表示。作業中は隠す（誤タップ防止）
+    const tabMap={ input:'bnHome', product:'bnProd', tidy:'bnTidy', map:'bnMap' };
+    const isTop = !!tabMap[id];
+    $('bnav').classList.toggle('on', isTop);
+    ['bnHome','bnProd','bnTidy','bnMap'].forEach(b=> $(b).classList.remove('on'));
+    if(isTop) $(tabMap[id]).classList.add('on');
   }
   $$('[data-home]').forEach(b => b.onclick = () => { stopScan(); show('home'); });
-  $('goBtn').onclick = () => {
+  // ホームタブ＝旧GOの中身（機種選択＋手入力）
+  function openHome(){
     renderHomeMachines();
-    // 登録機種が無ければ「機種から選ぶ」エリアは隠して手打ちだけ表示
     const names = Object.keys(DB.products||{});
     $('goMachines').style.display = names.length ? 'block' : 'none';
     show('input');
     if(!$('rows').children.length){ addRow(); addRow(); }
-  };
-  $('homeBtn2').onclick = () => show('home');
+  }
+  $('goBtn').onclick = openHome;   // 旧ボタン（画面ごと非表示やけど念のため）
+  $('homeBtn2').onclick = openHome;
+  // 下タブ
+  $('bnHome').onclick = openHome;
+  $('bnProd').onclick = ()=> $('prodBtn').onclick();
+  $('bnTidy').onclick = ()=> $('tidyBtn').onclick();
+  $('bnMap').onclick  = ()=> $('mapBtn').onclick();
+  // 起動時はホーム（入力画面）から
+  window.addEventListener('load', ()=>{ try{ openHome(); }catch(e){} });
 
   /* ===== INPUT (A) ===== */
   function circled(n){ const c=['①','②','③','④','⑤','⑥','⑦','⑧','⑨','⑩','⑪','⑫','⑬','⑭','⑮','⑯','⑰','⑱','⑲','⑳']; return n<=20?c[n-1]:('('+n+')'); }
@@ -1201,15 +1249,82 @@
     if(!matched) $('camArea').style.display='block';
   };
 
-  // 地図ボタン → 地図パネル開閉（開いてる間はカメラ枠を消す）
-  $('mapBadge').onclick = ()=>{
-    const box=$('placeBox');
-    const opening = box.style.display==='none';
-    box.style.display = opening ? 'block' : 'none';
-    $('shelfPanel').style.display='none';  // 棚番入力は閉じる
-    if(opening){ drawWorkMap(); $('camArea').style.display='none'; }
-    else { if(!matched) $('camArea').style.display='block'; }
-  };
+  // 地図ボタン → この部品の場所（塗り絵）をモーダルで表示
+  $('mapBadge').onclick = ()=> openWorkMap();
+  function openWorkMap(){
+    const code=curWorkCode;
+    if(!code) return;
+    // 塗り絵データを探す（ゼロ埋め違いも吸収）
+    let key=null;
+    const nq=mpNorm(code);
+    Object.keys(DB.spots).forEach(k=>{
+      if(!key && DB.spots[k].cells && DB.spots[k].cells.length && (k===code || mpNorm(k)===nq)) key=k;
+    });
+    const fIdx = (key && DB.spots[key].cells[0] && DB.maps.floors[DB.spots[key].cells[0].f]) ? DB.spots[key].cells[0].f : DB.maps.cur;
+    $('wmTitle').textContent='📦 '+code;
+    // 状態の内訳
+    let sub='';
+    if(key){
+      const n={r:0,p:0,b:0};
+      DB.spots[key].cells.forEach(c=>n[c.s]++);
+      const parts=[];
+      if(n.r) parts.push('🔴定位置'+n.r);
+      if(n.p) parts.push('🟣仮置き'+n.p);
+      if(n.b) parts.push('🔵引越し'+n.b);
+      sub=parts.join('　');
+    }
+    $('wmSub').textContent=sub;
+    $('wmEmpty').style.display = key ? 'none' : 'block';
+    wmRender(fIdx, key);
+    $('wmModal').classList.add('on');
+  }
+  // モーダル内のミニ地図描画（全体フィット・光るマス付き）
+  function wmRender(fIdx, key){
+    const f=DB.maps.floors[fIdx];
+    const W=f.cols*MP_CELL, H=f.rows*MP_CELL;
+    const fl=MP_FLOORS[f.floor]||MP_FLOORS.green;
+    $('wmStage').style.aspectRatio = f.cols+' / '+f.rows;
+    const fr=$('wmFrame'); fr.style.width=W+'px'; fr.style.height=H+'px'; fr.style.background=fl.bg;
+    const g=$('wmGrid');
+    g.setAttribute('width',W); g.setAttribute('height',H);
+    g.style.width=W+'px'; g.style.height=H+'px';
+    let lines='';
+    for(let x=1;x<f.cols;x++) lines+='<line x1="'+(x*MP_CELL)+'" y1="0" x2="'+(x*MP_CELL)+'" y2="'+H+'" stroke="'+fl.grid+'" stroke-width="1"/>';
+    for(let y=1;y<f.rows;y++) lines+='<line x1="0" y1="'+(y*MP_CELL)+'" x2="'+W+'" y2="'+(y*MP_CELL)+'" stroke="'+fl.grid+'" stroke-width="1"/>';
+    g.innerHTML=lines;
+    $('wmWorld').querySelectorAll('.mp-rect,.mp-spot').forEach(n=>n.remove());
+    f.rects.forEach(r=>{
+      if(r.type==='load') return;
+      const d=document.createElement('div');
+      d.className='mp-rect'+(r.type?' t-'+r.type:'')+(r.h>r.w?' vert':'');
+      d.style.left=(r.x*MP_CELL)+'px'; d.style.top=(r.y*MP_CELL)+'px';
+      d.style.width=(r.w*MP_CELL)+'px'; d.style.height=(r.h*MP_CELL)+'px';
+      d.style.background=r.color||MP_COLORS[0];
+      d.style.fontSize=Math.max(9, Math.min(15, r.h*MP_CELL*0.3))+'px';
+      const corners=(r.type==='nest')?'<span class="nu">上</span><span class="nd">下</span>':'';
+      d.innerHTML=corners+'<div class="lbl">'+String(r.label||'').replace(/</g,'&lt;')+'</div>';
+      $('wmWorld').appendChild(d);
+    });
+    if(key){
+      DB.spots[key].cells.forEach(c=>{
+        if(c.f!==fIdx) return;
+        const d=document.createElement('div');
+        d.className='mp-spot s-'+c.s+' glow';
+        d.style.left=(c.x*MP_CELL)+'px'; d.style.top=(c.y*MP_CELL)+'px';
+        d.style.width=(MP_CELL*2)+'px'; d.style.height=(MP_CELL*2)+'px';
+        $('wmWorld').appendChild(d);
+      });
+    }
+    // 枠にフィット
+    requestAnimationFrame(()=>{
+      const st=$('wmStage').getBoundingClientRect();
+      if(st.width<10){ return; }
+      const s=Math.min(st.width/(W+12), st.height/(H+12));
+      $('wmWorld').style.transform='translate('+((st.width-W*s)/2)+'px,'+((st.height-H*s)/2)+'px) scale('+s+')';
+    });
+  }
+  $('wmClose').onclick=()=> $('wmModal').classList.remove('on');
+  $('wmModal').onclick=(e)=>{ if(e.target===$('wmModal')) $('wmModal').classList.remove('on'); };
 
   // 一致後：場所まわりをまるごと隠す
   function hidePlaceBox(){
@@ -3087,7 +3202,7 @@
   let shopList = [];   // [{code, qty, done}]
   let shopReader=null, shopRunning=false;
 
-  $('shopBtn').onclick = ()=>{
+  if($('shopBtn')) $('shopBtn').onclick = ()=>{
     show('shopInput');
     if(!$('shopRows').children.length){ shopAddRow('C00006230','300'); shopAddRow('C00006230','300'); }
   };
