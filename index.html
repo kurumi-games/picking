@@ -441,7 +441,7 @@
   <div class="wrap">
     <div style="text-align:center; padding:14px 0 16px;">
       <h2 style="font-size:22px; font-weight:900;">ピッキング補助</h2>
-      <div class="ver-tag" style="margin:4px 0 0;">ver31（7/10 タップで潜る地図ナビ）</div>
+      <div class="ver-tag" style="margin:4px 0 0;">ver32（7/10 横長ブロックの拡大率を保証）</div>
     </div>
 
     <!-- 機種から選ぶ -->
@@ -1919,8 +1919,14 @@
     const rx=r.x*MP_CELL-pad, ry=r.y*MP_CELL-pad;
     const rw=r.w*MP_CELL+pad*2, rh=r.h*MP_CELL+pad*2;
     tdScale=Math.min(st.width/rw, st.height/rh, 6);
-    tdTx=(st.width-rw*tdScale)/2 - rx*tdScale;
-    tdTy=(st.height-rh*tdScale)/2 - ry*tdScale;
+    // 横長・縦長の区画でも1マスがちゃんとデカくなる最低拡大率を保証
+    const minCell=34;   // 1マス34px以上
+    if(tdScale*MP_CELL < minCell) tdScale = minCell/MP_CELL;
+    // 区画全体が入らん時は左上寄せ（残りはドラッグで見る）
+    if(rw*tdScale > st.width) tdTx = -rx*tdScale;
+    else tdTx=(st.width-rw*tdScale)/2 - rx*tdScale;
+    if(rh*tdScale > st.height) tdTy = -ry*tdScale;
+    else tdTy=(st.height-rh*tdScale)/2 - ry*tdScale;
     tdClamp(); tdApply();
   }
   function tdShowSel(x,y){
