@@ -424,7 +424,7 @@
   <div class="wrap">
     <div class="home-title">
       <h1>ピッキング補助</h1>
-      <div class="ver-tag">ver22（7/9 ピッキング中に📍で場所が光る）</div>
+      <div class="ver-tag">ver34（9/25 床QR廃止・地図タップで場所を登録）</div>
     </div>
     <div class="home-btns">
       <button class="home-btn go" id="goBtn">GO</button>
@@ -441,7 +441,7 @@
   <div class="wrap">
     <div style="text-align:center; padding:14px 0 16px;">
       <h2 style="font-size:22px; font-weight:900;">ピッキング補助</h2>
-      <div class="ver-tag" style="margin:4px 0 0;">ver33（7/10 ブロック全体が必ず収まるように）</div>
+      <div class="ver-tag" style="margin:4px 0 0;">ver34（9/25 床QR廃止・地図タップで場所を登録）</div>
     </div>
 
     <!-- 機種から選ぶ -->
@@ -1854,7 +1854,7 @@
     if(n.r) parts.push('🔴定位置'+n.r);
     if(n.p) parts.push('🟣仮置き'+n.p);
     if(n.b) parts.push('🔵引越し'+n.b);
-    return parts.length? parts.join('　') : '未登録。置き場の床QRを読んで登録してな';
+    return parts.length? parts.join('　') : '未登録。地図をタップして場所を塗ってな';
   }
   function tdChipUI(){
     [['r','tdTr'],['p','tdTp'],['b','tdTb']].forEach(([k,id])=> $(id).classList.toggle('on', tdTool===k));
@@ -1873,10 +1873,10 @@
     $('tdBar').style.display='flex';
     $('tdTabs').style.display='flex';
     $('tdStage').classList.add('on');
-    // 登録済みの部品だけ色ボタン（修正用）を出す。新規は床QRでしか登録できない
+    // ver34 床QR廃止：新規も地図タップで登録。色ボタンはいつも出す。未登録なら最初から🔴定位置を選んだ状態
     const hasReg = DB.spots[code].cells.length > 0;
-    ['tdTr','tdTp','tdTb','tdClear','tdDone'].forEach(id=> $(id).style.display = hasReg ? 'block' : 'none');
-    tdTool = null;
+    ['tdTr','tdTp','tdTb','tdClear','tdDone'].forEach(id=> $(id).style.display = 'block');
+    tdTool = hasReg ? null : 'r';
     tdChipUI();
     tdRender();
     requestAnimationFrame(tdFit);
@@ -2104,16 +2104,13 @@
     const nq=mpNorm(q);
     const codes=Object.keys(DB.spots).filter(c=> DB.spots[c].cells.length && (c.indexOf(q)>=0 || mpNorm(c).indexOf(nq)>=0));
     if(codes.length){ tdOpen(codes[0], false); return; }
-    if(confirm('「'+q+'」はまだ場所が登録されてへん。置き場の床QRを読んで登録する？（部品の現物がある場所で）')){
-      tdOpen(q, false);
-      setTimeout(()=>{ mpsTarget='tidy'; startMapScan(); }, 300);
-    }
+    tdOpen(q, false);
+    tdToast('🆕 '+q+' は未登録。地図をタップして場所を塗ってな');
   }
   // 現品票を読んだ直後に「床QRも読む？」の案内ボタンを出す
   function tdAskLoc(){
     if(!tdCodeCur) return;
-    tdToast('つぎに置き場の床QRを読んでな');
-    setTimeout(()=>{ if(tdCodeCur){ mpsTarget='tidy'; startMapScan(); } }, 900);
+    tdToast('場所を直すときは、色ボタンを選んで地図をタップしてな');
   }
   // 床QRを読んだ時の判定
   function tdLocScanned(f, x, y){
@@ -2202,10 +2199,9 @@
         if(mpsTarget==='tidy'){
           if(reg){ tdOpen(code, false); tdAskLoc(); }
           else {
-            // 新規は地点QRを読まないと登録できない（指塗りでの新規登録はなし）
+            // ver34 床QR廃止：新規は地図タップで登録
             tdOpen(code, false);
-            tdToast('🆕 '+code+' は未登録。置き場の床QRを読んで登録してな');
-            setTimeout(()=>{ if(tdCodeCur){ mpsTarget='tidy'; startMapScan(); } }, 1100);
+            tdToast('🆕 '+code+' は未登録。地図をタップして場所を塗ってな');
           }
         } else {
           if(reg) mpOpenPart(code);
