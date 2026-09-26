@@ -205,6 +205,39 @@
   .wk-pad-keys { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:6px; }
   .wk-pad-keys button { height:58px; border-radius:12px; border:1px solid #cfd8e2; background:#fff; font:800 26px/1 system-ui,sans-serif; color:#14263a; }
   .wk-pad-keys button:active { background:#e6edf4; } .wk-pad-keys .go { background:#1c6fe0; color:#fff; border-color:#1c6fe0; font-size:20px; }
+
+  /* ver40 天井番号 */
+  .home-btn.ad-home { display:flex; flex-direction:column; align-items:center; gap:2px; font-size:20px; padding:16px 10px; color:#fff; border:none; }
+  .home-btn.ad-home small { font-size:12px; font-weight:700; opacity:.9; }
+  .home-btn.ad-home.put { background:#1f8a5a; } .home-btn.ad-home.find { background:#1c6fe0; }
+  .ad-modal { position:fixed; inset:0; z-index:430; display:none; flex-direction:column; background:#15202b; color:#fff; user-select:none; -webkit-user-select:none; }
+  .ad-modal.on { display:flex; }
+  .ad-top { display:flex; align-items:center; padding:12px 14px; font-weight:800; font-size:16px; }
+  .ad-top span { flex:1; opacity:.85; } .ad-top button { border:none; background:#fff2; color:#fff; font-size:20px; width:44px; height:44px; border-radius:12px; }
+  .ad-step { flex:1; display:none; flex-direction:column; align-items:center; justify-content:center; gap:18px; }
+  .ad-step.on { display:flex; }
+  .ad-hint { font-size:18px; font-weight:800; opacity:.9; } .ad-hint.small { font-size:13px; opacity:.7; }
+  .ad-strip-wrap { position:relative; width:100%; }
+  .ad-center { position:absolute; left:50%; top:-8px; bottom:-8px; width:112px; margin-left:-56px; border:3px solid #ffe941; border-radius:18px; pointer-events:none; }
+  .ad-strip { display:flex; overflow-x:auto; scroll-snap-type:x mandatory; padding:0 calc(50% - 50px); scrollbar-width:none; -webkit-overflow-scrolling:touch; }
+  .ad-strip::-webkit-scrollbar { display:none; }
+  .ad-strip button { flex:0 0 92px; height:120px; margin:0 4px; scroll-snap-align:center; border:none; border-radius:14px; background:#26394b; color:#fff; font:900 44px/1 system-ui,sans-serif; }
+  .ad-strip button.used { background:#2f4a63; }
+  .ad-strip button.armed { background:#ffe941; color:#15202b; transform:scale(1.08); box-shadow:0 0 24px #ffe94199; }
+  .ad-big { font:900 84px/1 system-ui,sans-serif; }
+  .ad-colors { display:flex; flex-direction:column; gap:16px; width:min(80vw,320px); }
+  .ad-colors button { height:92px; border:none; border-radius:18px; transition:transform .12s; }
+  .ad-colors .c-r { background:#e53935; } .ad-colors .c-b { background:#1e6fe0; } .ad-colors .c-g { background:#2e9e5b; }
+  .ad-colors button.armed { transform:scale(1.06); box-shadow:0 0 0 6px #fff, 0 0 30px #fff8; }
+  .ad-colors.has-armed button:not(.armed) { opacity:.35; }
+  .ad-done { display:flex; align-items:center; gap:18px; font:900 84px/1 system-ui,sans-serif; }
+  .ad-done i { width:84px; height:84px; border-radius:18px; display:inline-block; }
+  .af-result { display:none; flex-direction:column; gap:10px; margin-top:8px; }
+  .af-result .row { display:flex; align-items:center; gap:14px; padding:10px 14px; border-radius:14px; background:#fff; border:1px solid #cfd8e2; }
+  .af-result .row b { font:900 44px/1 system-ui,sans-serif; color:#14263a; } .af-result .row i { width:40px; height:40px; border-radius:10px; }
+  .af-result .row small { margin-left:auto; color:#5b6b7b; font-weight:700; font-size:12px; }
+  .af-result .none { text-align:center; font-weight:800; color:#c33; padding:14px; }
+  .af-result .again { height:48px; border-radius:12px; border:none; background:#eef2f6; font-weight:800; font-size:15px; }
   .wk-kind { display:none; grid-template-columns:1fr; gap:8px; margin-top:6px; }
   .wk-kind button { width:100%; display:flex; align-items:center; gap:12px; height:62px; padding:0 14px; border-radius:12px; border:1px solid #cfd8e2; background:#fff; font:800 18px/1 system-ui,sans-serif; color:#14263a; text-align:left; }
   .wk-kind button b { width:40px; height:40px; border-radius:10px; background:#1c6fe0; color:#fff; display:flex; align-items:center; justify-content:center; font-size:22px; }
@@ -459,12 +492,14 @@
   <div class="wrap">
     <div class="home-title">
       <h1>ピッキング補助</h1>
-      <div class="ver-tag">ver39（9/26 登録場所と連動する3D倉庫ナビ）</div>
+      <div class="ver-tag">ver40（9/26 天井の番号で片付け・探す）</div>
     </div>
     <div class="home-btns">
       <button class="home-btn go" id="goBtn">GO</button>
       <button class="home-btn" id="prodBtn">製品登録</button>
       <button class="home-btn" id="regBtn">部品登録（場所・意味）</button>
+      <button class="home-btn ad-home put" id="adPutBtn">📦 片付ける<small>現品票を読む → 天井の番号 → 色</small></button>
+      <button class="home-btn ad-home find" id="adFindBtn">🔍 部品を探す<small>番号を打つ → 天井の番号が出る</small></button>
       <button class="home-btn" id="walkBtn">🚶 倉庫を歩く（部品を探す）</button>
       <button class="home-btn" id="tidyBtn">📍 部品の場所（読み取り・検索）</button>
       <button class="home-btn" id="mapBtn">🗺 倉庫マップ（編集用）</button>
@@ -477,7 +512,7 @@
   <div class="wrap">
     <div style="text-align:center; padding:14px 0 16px;">
       <h2 style="font-size:22px; font-weight:900;">ピッキング補助</h2>
-      <div class="ver-tag" style="margin:4px 0 0;">ver39（9/26 登録場所と連動する3D倉庫ナビ）</div>
+      <div class="ver-tag" style="margin:4px 0 0;">ver40（9/26 天井の番号で片付け・探す）</div>
     </div>
 
     <!-- 機種から選ぶ -->
@@ -649,6 +684,29 @@
 </div>
 
 <!-- ============ 倉庫3D（おまけ） ============ -->
+
+<!-- ver40 天井番号：片付け・探す -->
+<div class="ad-modal" id="adModal">
+  <div class="ad-top"><span id="adCode"></span><button id="adX">✕</button></div>
+  <div class="ad-step" id="adStepN">
+    <div class="ad-hint">天井の番号</div>
+    <div class="ad-strip-wrap"><div class="ad-center"></div><div class="ad-strip" id="adStrip"></div></div>
+    <div class="ad-hint small" id="adNHint">タップで選ぶ → もう1回タップで決定</div>
+  </div>
+  <div class="ad-step" id="adStepC">
+    <div class="ad-big" id="adBigN"></div>
+    <div class="ad-colors"><button data-s="r" class="c-r" aria-label="定位置"></button><button data-s="b" class="c-b" aria-label="仮置き"></button><button data-s="g" class="c-g" aria-label="引越し"></button></div>
+    <div class="ad-hint small">もう1回タップで決定</div>
+  </div>
+  <div class="ad-step" id="adStepD"><div class="ad-done" id="adDone"></div></div>
+</div>
+<div class="wk-pad ad-find" id="afModal"><div class="wk-pad-box">
+  <div class="wk-pad-head"><b id="afTitle">番号を入力</b><button id="afX">✕</button></div>
+  <div class="wk-pad-code" id="afCode"> </div><div class="wk-pad-note" id="afNote"></div>
+  <div class="wk-kind" id="afKind"><button data-p="C"><b>C</b>部品<small></small></button><button data-p="B"><b>B</b>中間品<small></small></button><button data-p="A"><b>A</b>完成品<small></small></button><button id="afBack" class="back">← 番号を直す</button></div>
+  <div class="af-result" id="afResult"></div>
+  <div class="wk-pad-keys" id="afKeys"><button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button><button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button><button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button><button data-k="del">⌫</button><button data-k="0">0</button><button data-k="go" class="go">決定</button></div>
+</div></div>
 <div class="wk-modal" id="wkModal"><div id="wkStage"></div><div class="wk-load" id="wkLoad">読み込み中…</div><div class="wk-top"><button id="wkFind" class="wk-find">🔍 部品</button><span id="wkTitle">🚶 倉庫を歩く</span><button id="wkOverview">全体</button><button id="wkClose">とじる</button></div><div class="wk-bar" id="wkBar"><span id="wkBarTxt"></span><button id="wkBarBtn">移動する</button></div><div class="wk-msg" id="wkMsg"></div><div id="wkStick"><i></i></div><p class="wk-hint">左側で歩く・右側で見回す<br>立体マーカーは登録場所。実物・数量の再現ではありません。</p><div class="wk-pad" id="wkPad"><div class="wk-pad-box"><div class="wk-pad-head"><b id="wkPadTitle">番号を入力</b><button id="wkPadX">✕</button></div><div class="wk-pad-code" id="wkPadCode"> </div><div class="wk-pad-note" id="wkPadNote"></div><div class="wk-kind" id="wkKind"><button data-p="C"><b>C</b>部品<small></small></button><button data-p="B"><b>B</b>中間品<small></small></button><button data-p="A"><b>A</b>完成品<small></small></button><button id="wkKindBack" class="back">← 番号を直す</button></div><div class="wk-pad-keys" id="wkPadKeys"><button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button><button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button><button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button><button data-k="del">⌫</button><button data-k="0">0</button><button data-k="go" class="go">決定</button></div></div></div></div>
 <div class="w3-modal" id="w3Modal">
   <div class="w3-head"><h2>倉庫ナビ</h2><button class="w3-walk" id="w3Walk">歩く</button><button class="w3-close" id="w3Close">とじる</button></div>
@@ -1131,7 +1189,8 @@
     if(!obj.products|| typeof obj.products!=='object')obj.products= {};
     if(!obj.count   || typeof obj.count!=='object')   obj.count   = {};
     if(!obj.maps    || typeof obj.maps!=='object')    obj.maps    = defaultMaps();
-    if(!obj.spots   || typeof obj.spots!=='object')   obj.spots   = {};   // 部品ごとの塗り絵 {CODE:{cells:[{f,x,y,s}]}}
+    if(!obj.spots   || typeof obj.spots!=='object')   obj.spots   = {};
+    if(!obj.addr    || typeof obj.addr!=='object')    obj.addr    = {};   // ver40 天井番号 {CODE:[{n,s,t}]} s=r定位置/b仮置き/g引越し   // 部品ごとの塗り絵 {CODE:{cells:[{f,x,y,s}]}}
     delete obj.spots['null']; delete obj.spots['NULL']; delete obj.spots['undefined']; delete obj.spots[''];
     // 重複マスの掃除
     Object.keys(obj.spots).forEach(k=>{
@@ -2249,6 +2308,7 @@
         const code=String(result.getText()).toUpperCase().replace(/[^A-Z0-9-]/g,'');
         if(!code) return;
         stopMapScan();
+        if(mpsTarget==='addr'){ adOpen(code); return; }
         if(mpsTarget==='remove'){const resolved=DB.meaning[code]?DB.meaning[code].code:code;const exact=Warehouse3D.locations(DB).find(c=>Warehouse3D.norm(c.code)===Warehouse3D.norm(resolved));if(exact)n3Manage(exact.code,true);else tdToast('この現品票の場所登録はありません');return;}
         // 床QR（LOC:フロア,x,y）なら片付け判定へ
         const loc = String(result.getText()).toUpperCase().match(/^LOC:(\d+),(\d+),(\d+)$/);
@@ -2841,6 +2901,67 @@
     document.querySelectorAll('#wkKind [data-p]').forEach(b=>b.onclick=()=>wkPickKind(b.dataset.p));
     $('wkKindBack').onclick=()=>wkPadShow();
   })();
+
+  /* ===== ver40 天井番号：片付ける（読む→番号→色）・探す（番号→C/B/A→天井の番号） ===== */
+  const AD_COL={r:'#e53935',b:'#1e6fe0',g:'#2e9e5b'}, AD_NAME={r:'定位置',b:'仮置き',g:'引越し'};
+  let adCodeCur=null, adN=null, adArmedN=null, adArmedS=null, adArmT=0;
+  function adKey(code){ const k=Object.keys(DB.addr).find(c=>mpNorm(c)===mpNorm(code)); return k||code; }
+  function adStep(id){ ['adStepN','adStepC','adStepD'].forEach(x=>$(x).classList.toggle('on',x===id)); }
+  function adOpen(code){
+    const resolved=(DB.meaning[code]&&DB.meaning[code].code)?DB.meaning[code].code:code;
+    adCodeCur=adKey(String(resolved).toUpperCase()); adArmedN=adArmedS=null;
+    $('adCode').textContent='📦 '+adCodeCur; $('adModal').classList.add('on'); adStep('adStepN');
+    const used=new Set(); Object.values(DB.addr).forEach(l=>l.forEach(e=>used.add(e.n)));
+    const max=Math.max(300,...[...used].map(n=>n+60)); const st=$('adStrip'); let h='';
+    for(let n=1;n<=max;n++) h+='<button data-n="'+n+'"'+(used.has(n)?' class="used"':'')+'>'+n+'</button>';
+    st.innerHTML=h;
+    const last=+(localStorage.getItem('adLast')||1); requestAnimationFrame(()=>{ const b=st.querySelector('[data-n="'+last+'"]'); if(b) st.scrollLeft=b.offsetLeft-(st.clientWidth-b.offsetWidth)/2; });
+  }
+  function adClose(){ $('adModal').classList.remove('on'); adCodeCur=null; }
+  $('adStrip').addEventListener('click',e=>{
+    const b=e.target.closest('button[data-n]'); if(!b) return; const n=+b.dataset.n, st=$('adStrip');
+    if(adArmedN===n && performance.now()-adArmT<4000){ adN=n; localStorage.setItem('adLast',n); $('adBigN').textContent=n; adArmedS=null; $('.ad-colors')&&0;
+      document.querySelectorAll('.ad-colors button').forEach(x=>x.classList.remove('armed')); document.querySelector('.ad-colors').classList.remove('has-armed'); adStep('adStepC'); return; }
+    st.querySelectorAll('.armed').forEach(x=>x.classList.remove('armed')); b.classList.add('armed'); adArmedN=n; adArmT=performance.now();
+    st.scrollTo({left:b.offsetLeft-(st.clientWidth-b.offsetWidth)/2,behavior:'smooth'});
+  });
+  document.querySelectorAll('.ad-colors button').forEach(b=>b.onclick=()=>{
+    const sv=b.dataset.s, box=document.querySelector('.ad-colors');
+    if(adArmedS===sv && performance.now()-adArmT<4000){
+      const key=adCodeCur, before=JSON.parse(JSON.stringify(DB.addr[key]||null));
+      const list=(DB.addr[key]||[]).filter(x=>x.n!==adN); list.push({n:adN,s:sv,t:Date.now()}); DB.addr[key]=list; saveDB();
+      $('adDone').innerHTML=adN+'<i style="background:'+AD_COL[sv]+'"></i>'; adStep('adStepD');
+      showUndo(key+' を '+adN+'（'+AD_NAME[sv]+'）に登録',()=>{ if(before) DB.addr[key]=before; else delete DB.addr[key]; saveDB(); });
+      setTimeout(adClose,1300); return;
+    }
+    box.querySelectorAll('button').forEach(x=>x.classList.remove('armed')); b.classList.add('armed'); box.classList.add('has-armed'); adArmedS=sv; adArmT=performance.now();
+  });
+  $('adX').onclick=adClose;
+  $('adPutBtn').onclick=()=>{ mpsTarget='addr'; startMapScan(); };
+  // 探す
+  let afCode='';
+  function afShow(){ $('afCode').textContent=afCode||' '; $('afKeys').style.display=''; $('afKind').style.display='none'; $('afResult').style.display='none'; $('afTitle').textContent='番号を入力'; $('afNote').textContent=''; }
+  function afFind(q){ const k=Object.keys(DB.addr).find(c=>mpNorm(c)===mpNorm(q)&&DB.addr[c].length); return k?{code:k,list:DB.addr[k]}:null; }
+  function afKey(k){
+    if(k==='del') afCode=afCode.slice(0,-1);
+    else if(k==='go'){ if(!afCode){ $('afNote').textContent='番号を入れてな'; return; }
+      $('afTitle').textContent='どれを探す？'; $('afKeys').style.display='none'; $('afKind').style.display='grid';
+      document.querySelectorAll('#afKind [data-p]').forEach(b=>{ const r=afFind(b.dataset.p+afCode); b.classList.toggle('none',!r); b.querySelector('small').textContent=r?r.list.map(e=>e.n).join('・'):'未登録'; }); return; }
+    else if(afCode.length<12) afCode+=k;
+    $('afNote').textContent=''; $('afCode').textContent=afCode||' ';
+  }
+  function afPick(pf){
+    const r=afFind(pf+afCode), box=$('afResult'); $('afKind').style.display='none'; box.style.display='flex';
+    $('afTitle').textContent=pf+afCode;
+    if(!r){ box.innerHTML='<div class="none">まだ登録されてへん</div><button class="again">もう一度さがす</button>'; }
+    else { const order={r:0,b:1,g:2}; box.innerHTML=r.list.slice().sort((a,b)=>order[a.s]-order[b.s]).map(e=>'<div class="row"><b>'+e.n+'</b><i style="background:'+AD_COL[e.s]+'"></i><small>'+AD_NAME[e.s]+'</small></div>').join('')+'<button class="again">もう一度さがす</button>'; $('afTitle').textContent=r.code; }
+    box.querySelector('.again').onclick=()=>{ afCode=''; afShow(); };
+  }
+  $('adFindBtn').onclick=()=>{ afCode=''; afShow(); $('afModal').classList.add('on'); };
+  $('afX').onclick=()=>$('afModal').classList.remove('on');
+  document.querySelectorAll('#afKeys [data-k]').forEach(b=>b.onclick=()=>afKey(b.dataset.k));
+  document.querySelectorAll('#afKind [data-p]').forEach(b=>b.onclick=()=>afPick(b.dataset.p));
+  $('afBack').onclick=afShow;
 
   /* ===== タップ検数（📸）：写真を撮って部品を1個ずつタップして数える =====
      タップ＝赤丸マーク追加／マークをタップ＝削除／1本指ドラッグ＝移動／2本指＝ズーム */
