@@ -256,7 +256,9 @@
   .td-old-btn { display:block; margin:18px auto 10px; border:none; background:none; color:#5b6b7b; font-weight:700; font-size:13px; text-decoration:underline; }
   .ta-intro { padding:14px; border-radius:14px; background:#fff; border:1.5px solid #dfe5eb; font-size:14px; line-height:1.9; color:#33475b; }
   .ta-card { padding:12px; border-radius:16px; background:#fff; border:1.5px solid #dfe5eb; margin-bottom:10px; }
-  .ta-code { font-weight:900; font-size:16px; color:#14263a; margin-bottom:8px; }
+  .ta-code { font-weight:900; font-size:16px; color:#14263a; }
+  .ta-name { font-weight:800; font-size:18px; color:#14263a; margin:2px 0 8px; } .ta-name.none { font-size:13px; color:#9aa7b3; font-weight:700; }
+  .ad-name { display:block; font-style:normal; font-size:18px; color:#fff; margin-top:2px; } .ad-name.none { font-size:12px; color:#ffffff88; }
   .ta-row { display:flex; align-items:center; gap:14px; padding:6px 4px; } .ta-row b { font:900 48px/1 system-ui,sans-serif; color:#14263a; min-width:84px; }
   .ta-row i { width:44px; height:44px; border-radius:10px; } .ta-row small { margin-left:auto; color:#5b6b7b; font-weight:700; }
   .ta-add { width:100%; margin-top:8px; height:44px; border-radius:12px; border:1.5px dashed #9fb0c0; background:#f6f9fb; font-weight:800; color:#33475b; }
@@ -516,7 +518,7 @@
   <div class="wrap">
     <div class="home-title">
       <h1>ピッキング補助</h1>
-      <div class="ver-tag">ver43（9/26 登録ずみを読んだら場所を表示）</div>
+      <div class="ver-tag">ver44（9/26 天井の番号の画面に品名を表示）</div>
     </div>
     <div class="home-btns">
       <button class="home-btn go" id="goBtn">GO</button>
@@ -534,7 +536,7 @@
   <div class="wrap">
     <div style="text-align:center; padding:14px 0 16px;">
       <h2 style="font-size:22px; font-weight:900;">ピッキング補助</h2>
-      <div class="ver-tag" style="margin:4px 0 0;">ver43（9/26 登録ずみを読んだら場所を表示）</div>
+      <div class="ver-tag" style="margin:4px 0 0;">ver44（9/26 天井の番号の画面に品名を表示）</div>
     </div>
 
     <!-- 機種から選ぶ -->
@@ -2324,7 +2326,7 @@
     if(!ms.length){
       const digits=/^[0-9]+$/.test(q);
       box.innerHTML='<div class="ta-none">'+q+' はまだ天井の番号が登録されてへん</div>'+(digits?'<div class="ta-reg">'+['C','B','A'].map(p=>'<button data-c="'+p+q+'">'+p+q+' を登録</button>').join('')+'</div>':'<div class="ta-reg"><button data-c="'+q+'">番号を登録する</button></div>');
-    } else box.innerHTML=ms.map(k=>'<div class="ta-card"><div class="ta-code">'+k+'</div>'+DB.addr[k].slice().sort((a,b)=>order[a.s]-order[b.s]).map(e=>'<div class="ta-row"><b>'+e.n+'</b><i style="background:'+AD_COL[e.s]+'"></i><small>'+AD_NAME[e.s]+'</small></div>').join('')+'<button class="ta-add" data-c="'+k+'">＋ 別の番号にも片付ける</button></div>').join('');
+    } else box.innerHTML=ms.map(k=>'<div class="ta-card"><div class="ta-code">'+k+'</div><div class="ta-name'+(partName(k)?'':' none')+'">'+(partName(k)||'品名の登録なし').replace(/</g,'&lt;')+'</div>'+DB.addr[k].slice().sort((a,b)=>order[a.s]-order[b.s]).map(e=>'<div class="ta-row"><b>'+e.n+'</b><i style="background:'+AD_COL[e.s]+'"></i><small>'+AD_NAME[e.s]+'</small></div>').join('')+'<button class="ta-add" data-c="'+k+'">＋ 別の番号にも片付ける</button></div>').join('');
     box.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{ adForcePut=true; adOpen(b.dataset.c); });
   }
   function tdAddrIntro(){ $('tdAddr').innerHTML='<div class="ta-intro"><b>片付ける</b>：緑のボタンで現品票を読む → 天井の番号 → 色<br><b>探す</b>：コードを入れて「検索」→ 天井の番号が出る</div>'; }
@@ -2966,7 +2968,7 @@
   function adOpen(code){
     const resolved=(DB.meaning[code]&&DB.meaning[code].code)?DB.meaning[code].code:code;
     adCodeCur=adKey(String(resolved).toUpperCase()); adArmedN=adArmedS=null;
-    $('adCode').textContent='📦 '+adCodeCur; $('adModal').classList.add('on'); adStep('adStepN');
+    { const nm=partName(adCodeCur); $('adCode').innerHTML='📦 '+adCodeCur+(nm?'<em class="ad-name">'+nm.replace(/</g,'&lt;')+'</em>':'<em class="ad-name none">品名の登録なし</em>'); } $('adModal').classList.add('on'); adStep('adStepN');
     // ver43 もう登録ずみなら、まず場所を見せる（片付け直す時だけ番号選びへ）
     const reg=(DB.addr[adCodeCur]||[]).slice().sort((a,b)=>({r:0,b:1,g:2}[a.s]-{r:0,b:1,g:2}[b.s]));
     if(reg.length && !adForcePut){ $('adFound').innerHTML=reg.map(e=>'<div class="ad-f-row"><b>'+e.n+'</b><i style="background:'+AD_COL[e.s]+'"></i></div>').join(''); adStep('adStepF'); adSnd('pop'); }
