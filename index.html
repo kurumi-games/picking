@@ -457,7 +457,7 @@
   <div class="wrap">
     <div class="home-title">
       <h1>ピッキング補助</h1>
-      <div class="ver-tag">ver37（9/25 🔍番号を打って決定→C部品／B中間品／A完成品を選ぶ）</div>
+      <div class="ver-tag">ver38（9/26 歩くビューのパレットを1枚ずつ区切って表示）</div>
     </div>
     <div class="home-btns">
       <button class="home-btn go" id="goBtn">GO</button>
@@ -475,7 +475,7 @@
   <div class="wrap">
     <div style="text-align:center; padding:14px 0 16px;">
       <h2 style="font-size:22px; font-weight:900;">ピッキング補助</h2>
-      <div class="ver-tag" style="margin:4px 0 0;">ver37（9/25 🔍番号を打って決定→C部品／B中間品／A完成品を選ぶ）</div>
+      <div class="ver-tag" style="margin:4px 0 0;">ver38（9/26 歩くビューのパレットを1枚ずつ区切って表示）</div>
     </div>
 
     <!-- 機種から選ぶ -->
@@ -2727,7 +2727,10 @@
       else if(r.type==='nest'){ box(x+w*.07,z+d*.07,w*.86,d*.86,0,2.7,'#d8b98a',true); box(x,z,w,d,3.4,0.35,'#c93a3a',false); box(x+w*.07,z+d*.07,w*.86,d*.86,3.75,2.8,'#d8b98a',false);
         [[0,0],[1,0],[0,1],[1,1]].forEach(p=>box(x+p[0]*(w-0.3),z+p[1]*(d-0.3),0.3,0.3,0,3.4,'#c93a3a',false,false)); }
       else if(r.type==='load') box(x+w*.03,z+d*.03,w*.94,d*.94,0,2.4,'#5d92d6',true);
-      else if(r.pal){ box(x,z,w,d,0,0.8,'#c9b08a',true); }
+      else if(r.pal){ // パレット置き場：2×2マスごとに1枚ずつ、すき間をあけて並べる（地図の区切りと同じ）
+        cols.push([x,z,x+w,z+d]);
+        for(let py=0;py<r.h;py+=2) for(let px=0;px<r.w;px+=2){ const pw=Math.min(2,r.w-px), ph=Math.min(2,r.h-py);
+          box(r.x*S+px*S+0.12, r.y*S+py*S+0.12, pw*S-0.24, ph*S-0.24, 0, 0.8, '#c9b08a', false); } }
       else box(x,z,w,d,0,3.5,'#c3ccd5',true);
       if(r.label){ const sp=wkLabel(r.label); const hh=r.type==='wall'?HALL-1:r.pal?1.9:r.type==='load'?3.3:4.5; sp.position.set((r.x+r.w/2)*S,hh,(r.y+r.h/2)*S); scene.add(sp); }
     });
