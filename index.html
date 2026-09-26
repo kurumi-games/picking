@@ -253,6 +253,21 @@
   .af-result .row small { margin-left:auto; color:#5b6b7b; font-weight:700; font-size:12px; }
   .af-result .none { text-align:center; font-weight:800; color:#c33; padding:14px; }
   .af-result .again { height:48px; border-radius:12px; border:none; background:#eef2f6; font-weight:800; font-size:15px; }
+
+  /* ver47 チャッピー素材（img/ceiling） */
+  html body .ad-center { width:118px; margin-left:-59px; top:-12px; bottom:-12px; border:none; border-radius:0; background:url('img/ceiling/center-frame.webp') center/contain no-repeat; }
+  html body .ad-strip button { flex:0 0 96px; height:112px; margin:0 2px; background:url('img/ceiling/tile-normal.webp') center/contain no-repeat !important; color:#15202b; font-size:42px; box-shadow:none !important; }
+  html body .ad-strip button.used { color:#0b3a5c; }
+  html body .ad-strip button.mid:not(.armed) { background-image:url('img/ceiling/tile-center.webp') !important; transform:scale(1.1); }
+  html body .ad-strip button.armed { background-image:url('img/ceiling/tile-selected.webp') !important; color:#15202b; transform:scale(1.12); }
+  html body .ad-colors { flex-direction:column; align-items:center; gap:14px; width:auto; }
+  html body .ad-colors button { width:150px; height:150px; border-radius:0; background-color:transparent !important; background-position:center; background-size:contain; background-repeat:no-repeat; filter:drop-shadow(0 6px 12px #0006); }
+  html body .ad-colors .c-r { background:url('img/ceiling/mark-red.webp') center/contain no-repeat; }  html body .ad-colors .c-b { background:url('img/ceiling/mark-blue.webp') center/contain no-repeat; }  html body .ad-colors .c-g { background:url('img/ceiling/mark-green.webp') center/contain no-repeat; }
+  html body .ad-colors button.armed { box-shadow:none; filter:drop-shadow(0 0 18px #fff) drop-shadow(0 0 4px #fff); }
+  html body .ad-stamp { border:none; box-shadow:none; background:url('img/ceiling/stamp-frame.webp') center/100% 100% no-repeat; width:230px; height:233px; padding:0; display:flex; align-items:center; justify-content:center; }
+  html body .ad-done { flex-direction:column; gap:18px; }  html body .ad-done-mk { width:84px; height:auto; filter:drop-shadow(0 0 0 3px #fff); }
+  html body .ad-found { gap:14px; }  html body .ad-f-row { width:min(84vw,340px); aspect-ratio:1.785; justify-content:center; gap:22px; background:url('img/ceiling/found-card.webp') center/100% 100% no-repeat; }  html body .ad-f-row b { color:#15202b; font-size:96px; }  html body .ad-f-mk { width:78px; height:auto; }
+  html body .ta-mk { width:46px; height:auto; }  html body .af-mk { width:42px; height:auto; }
   .td-old-btn { display:block; margin:18px auto 10px; border:none; background:none; color:#5b6b7b; font-weight:700; font-size:13px; text-decoration:underline; }
   .ta-intro { padding:14px; border-radius:14px; background:#fff; border:1.5px solid #dfe5eb; font-size:14px; line-height:1.9; color:#33475b; }
   .ta-card { padding:12px; border-radius:16px; background:#fff; border:1.5px solid #dfe5eb; margin-bottom:10px; }
@@ -522,7 +537,7 @@
   <div class="wrap">
     <div class="home-title">
       <h1>ピッキング補助</h1>
-      <div class="ver-tag">ver46（9/26 ホームの一番下に「全部のデータを控える」）</div>
+      <div class="ver-tag">ver47（9/26 天井の番号の画面をチャッピー素材に：赤丸・青ひし形・緑三角）</div>
     </div>
     <div class="home-btns">
       <button class="home-btn go" id="goBtn">GO</button>
@@ -540,7 +555,7 @@
   <div class="wrap">
     <div style="text-align:center; padding:14px 0 16px;">
       <h2 style="font-size:22px; font-weight:900;">ピッキング補助</h2>
-      <div class="ver-tag" style="margin:4px 0 0;">ver46（9/26 ホームの一番下に「全部のデータを控える」）</div>
+      <div class="ver-tag" style="margin:4px 0 0;">ver47（9/26 天井の番号の画面をチャッピー素材に：赤丸・青ひし形・緑三角）</div>
     </div>
 
     <!-- 機種から選ぶ -->
@@ -2345,7 +2360,7 @@
     if(!ms.length){
       const digits=/^[0-9]+$/.test(q);
       box.innerHTML='<div class="ta-none">'+q+' はまだ天井の番号が登録されてへん</div>'+(digits?'<div class="ta-reg">'+['C','B','A'].map(p=>'<button data-c="'+p+q+'">'+p+q+' を登録</button>').join('')+'</div>':'<div class="ta-reg"><button data-c="'+q+'">番号を登録する</button></div>');
-    } else box.innerHTML=ms.map(k=>'<div class="ta-card"><div class="ta-code">'+k+'</div><div class="ta-name'+(partName(k)?'':' none')+'">'+(partName(k)||'品名の登録なし').replace(/</g,'&lt;')+'</div>'+DB.addr[k].slice().sort((a,b)=>order[a.s]-order[b.s]).map(e=>'<div class="ta-row"><b>'+e.n+'</b><i style="background:'+AD_COL[e.s]+'"></i><small>'+AD_NAME[e.s]+'</small></div>').join('')+'<button class="ta-add" data-c="'+k+'">＋ 別の番号にも片付ける</button></div>').join('');
+    } else box.innerHTML=ms.map(k=>'<div class="ta-card"><div class="ta-code">'+k+'</div><div class="ta-name'+(partName(k)?'':' none')+'">'+(partName(k)||'品名の登録なし').replace(/</g,'&lt;')+'</div>'+DB.addr[k].slice().sort((a,b)=>order[a.s]-order[b.s]).map(e=>'<div class="ta-row"><b>'+e.n+'</b>'+adMark(e.s,'ta-mk')+'<small>'+AD_NAME[e.s]+'</small></div>').join('')+'<button class="ta-add" data-c="'+k+'">＋ 別の番号にも片付ける</button></div>').join('');
     box.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{ adForcePut=true; adOpen(b.dataset.c); });
   }
   function tdAddrIntro(){ $('tdAddr').innerHTML='<div class="ta-intro"><b>片付ける</b>：緑のボタンで現品票を読む → 天井の番号 → 色<br><b>探す</b>：コードを入れて「検索」→ 天井の番号が出る</div>'; }
@@ -2968,7 +2983,7 @@
   })();
 
   /* ===== ver40 天井番号：片付ける（読む→番号→色）・探す（番号→C/B/A→天井の番号） ===== */
-  const AD_COL={r:'#e53935',b:'#1e6fe0',g:'#2e9e5b'}, AD_NAME={r:'定位置',b:'仮置き',g:'引越し'};
+  const AD_COL={r:'#F04E54',b:'#3687F4',g:'#19B879'}, AD_NAME={r:'定位置',b:'仮置き',g:'引越し'};
   // ver42 手応え：番号のカチカチ・ポンッ、決定のドンッ（音と振動だけ。手順と待ち時間は増やさない）
   let adAC=null;
   function adSnd(kind){ try{
@@ -2980,6 +2995,9 @@
       const n=adAC.createBufferSource(), b=adAC.createBuffer(1,adAC.sampleRate*.05,adAC.sampleRate), d=b.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,4);
       const ng=adAC.createGain(); ng.gain.value=.35; n.buffer=b; n.connect(ng); ng.connect(adAC.destination); n.start(t); }
   }catch(e){} }
+  // ver47 置き方の印（チャッピー素材）：定位置＝赤丸、仮置き＝青ひし形、引越し＝緑三角
+  const AD_MARK={r:'img/ceiling/mark-red-s.webp',b:'img/ceiling/mark-blue-s.webp',g:'img/ceiling/mark-green-s.webp'};
+  function adMark(sv,cls){ return '<img class="'+(cls||'ad-mk')+'" src="'+AD_MARK[sv]+'" alt="'+AD_NAME[sv]+'">'; }
   function adBuzz(ms){ try{ navigator.vibrate&&navigator.vibrate(ms); }catch(e){} }
   let adCodeCur=null, adN=null, adArmedN=null, adArmedS=null, adArmT=0;
   function adKey(code){ const k=Object.keys(DB.addr).find(c=>mpNorm(c)===mpNorm(code)); return k||code; }
@@ -2990,7 +3008,7 @@
     { const nm=partName(adCodeCur); $('adCode').innerHTML='📦 '+adCodeCur+(nm?'<em class="ad-name">'+nm.replace(/</g,'&lt;')+'</em>':'<em class="ad-name none">品名の登録なし</em>'); } $('adModal').classList.add('on'); adStep('adStepN');
     // ver43 もう登録ずみなら、まず場所を見せる（片付け直す時だけ番号選びへ）
     const reg=(DB.addr[adCodeCur]||[]).slice().sort((a,b)=>({r:0,b:1,g:2}[a.s]-{r:0,b:1,g:2}[b.s]));
-    if(reg.length && !adForcePut){ $('adFound').innerHTML=reg.map(e=>'<div class="ad-f-row"><b>'+e.n+'</b><i style="background:'+AD_COL[e.s]+'"></i></div>').join(''); adStep('adStepF'); adSnd('pop'); }
+    if(reg.length && !adForcePut){ $('adFound').innerHTML=reg.map(e=>'<div class="ad-f-row"><b>'+e.n+'</b>'+adMark(e.s,'ad-f-mk')+'</div>').join(''); adStep('adStepF'); adSnd('pop'); }
     adForcePut=false;
     const used=new Set(); Object.values(DB.addr).forEach(l=>l.forEach(e=>used.add(e.n)));
     const max=Math.max(300,...[...used].map(n=>n+60)); const st=$('adStrip'); let h='';
@@ -3017,7 +3035,7 @@
       const key=adCodeCur, before=JSON.parse(JSON.stringify(DB.addr[key]||null));
       const list=(DB.addr[key]||[]).filter(x=>x.n!==adN); list.push({n:adN,s:sv,t:Date.now()}); DB.addr[key]=list; saveDB();
       const r=b.getBoundingClientRect(), fl=$('adFlood'); fl.style.background=AD_COL[sv]; fl.style.left=(r.left+r.width/2)+'px'; fl.style.top=(r.top+r.height/2)+'px'; fl.classList.remove('go'); void fl.offsetWidth; fl.classList.add('go');
-      $('adDone').innerHTML='<div class="ad-stamp">'+adN+'</div>'; adStep('adStepD'); setTimeout(()=>{ adSnd('thud'); adBuzz([30,20,50]); },170);
+      $('adDone').innerHTML='<div class="ad-stamp">'+adN+'</div>'+adMark(sv,'ad-done-mk'); adStep('adStepD'); setTimeout(()=>{ adSnd('thud'); adBuzz([30,20,50]); },170);
       showUndo(key+' を '+adN+'（'+AD_NAME[sv]+'）に登録',()=>{ if(before) DB.addr[key]=before; else delete DB.addr[key]; saveDB(); });
       setTimeout(()=>{ adClose(); $('tdQ').value=key; tdAddrShow(key); },1300); return;
     }
@@ -3041,7 +3059,7 @@
     const r=afFind(pf+afCode), box=$('afResult'); $('afKind').style.display='none'; box.style.display='flex';
     $('afTitle').textContent=pf+afCode;
     if(!r){ box.innerHTML='<div class="none">まだ登録されてへん</div><button class="again">もう一度さがす</button>'; }
-    else { const order={r:0,b:1,g:2}; box.innerHTML=r.list.slice().sort((a,b)=>order[a.s]-order[b.s]).map(e=>'<div class="row"><b>'+e.n+'</b><i style="background:'+AD_COL[e.s]+'"></i><small>'+AD_NAME[e.s]+'</small></div>').join('')+'<button class="again">もう一度さがす</button>'; $('afTitle').textContent=r.code; }
+    else { const order={r:0,b:1,g:2}; box.innerHTML=r.list.slice().sort((a,b)=>order[a.s]-order[b.s]).map(e=>'<div class="row"><b>'+e.n+'</b>'+adMark(e.s,'af-mk')+'<small>'+AD_NAME[e.s]+'</small></div>').join('')+'<button class="again">もう一度さがす</button>'; $('afTitle').textContent=r.code; }
     box.querySelector('.again').onclick=()=>{ afCode=''; afShow(); };
   }
   $('afX').onclick=()=>$('afModal').classList.remove('on');
