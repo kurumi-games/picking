@@ -264,6 +264,10 @@
   .ta-add { width:100%; margin-top:8px; height:44px; border-radius:12px; border:1.5px dashed #9fb0c0; background:#f6f9fb; font-weight:800; color:#33475b; }
   .ta-none { text-align:center; font-weight:800; color:#c33; padding:14px 6px; }
   .ta-reg { display:grid; gap:8px; } .ta-reg button { height:50px; border-radius:12px; border:none; background:#1f8a5a; color:#fff; font-weight:800; font-size:16px; }
+  .bk-home { margin:26px 0 10px; padding-top:16px; border-top:1px solid #dfe5eb; display:grid; gap:8px; }
+  .bk-home button { display:flex; flex-direction:column; align-items:center; gap:2px; padding:14px; border-radius:14px; border:2px solid #1f8a5a; background:#eef8f2; color:#1f6b47; font-weight:900; font-size:17px; }
+  .bk-home button small { font-size:11.5px; font-weight:700; opacity:.8; }
+  .bk-home button.sub { border:1.5px solid #cfd8e2; background:#fff; color:#33475b; font-size:14px; padding:10px; }
   .wk-kind { display:none; grid-template-columns:1fr; gap:8px; margin-top:6px; }
   .wk-kind button { width:100%; display:flex; align-items:center; gap:12px; height:62px; padding:0 14px; border-radius:12px; border:1px solid #cfd8e2; background:#fff; font:800 18px/1 system-ui,sans-serif; color:#14263a; text-align:left; }
   .wk-kind button b { width:40px; height:40px; border-radius:10px; background:#1c6fe0; color:#fff; display:flex; align-items:center; justify-content:center; font-size:22px; }
@@ -518,7 +522,7 @@
   <div class="wrap">
     <div class="home-title">
       <h1>ピッキング補助</h1>
-      <div class="ver-tag">ver45（9/26 全部の登録をファイルで控え・復元）</div>
+      <div class="ver-tag">ver46（9/26 ホームの一番下に「全部のデータを控える」）</div>
     </div>
     <div class="home-btns">
       <button class="home-btn go" id="goBtn">GO</button>
@@ -536,7 +540,7 @@
   <div class="wrap">
     <div style="text-align:center; padding:14px 0 16px;">
       <h2 style="font-size:22px; font-weight:900;">ピッキング補助</h2>
-      <div class="ver-tag" style="margin:4px 0 0;">ver45（9/26 全部の登録をファイルで控え・復元）</div>
+      <div class="ver-tag" style="margin:4px 0 0;">ver46（9/26 ホームの一番下に「全部のデータを控える」）</div>
     </div>
 
     <!-- 機種から選ぶ -->
@@ -556,6 +560,10 @@
       <button class="btn ok" id="startBtn">手入力でスタート</button>
     </div>
     <p class="status ng" id="inputErr"></p>
+    <div class="bk-home">
+      <button id="bkHomeSave">💾 全部のデータを控える<small>地図・場所・天井の番号・製品登録を1つのファイルに</small></button>
+      <button id="bkHomeOpen" class="sub">📤 控えから元に戻す</button>
+    </div>
   </div>
 </section>
 
@@ -4042,6 +4050,8 @@
     }catch(err){ $('backupStatus').className='status ng'; $('backupStatus').textContent='このファイルは読めんかった。保存した控えファイルを選んでな'; }
   };
   bkLastShow();
+  $('bkHomeSave').onclick=()=>$('bkFileSave').click();
+  $('bkHomeOpen').onclick=()=>{ $('regBtn').onclick(); $('toBackup').onclick(); };
 
   $('exportBtn').onclick = ()=>{ $('backupText').value = JSON.stringify(DB); $('backupStatus').className='status'; $('backupStatus').textContent='この内容をコピーして保存しとくと安心や'; };
   $('copyBackup').onclick = async ()=>{ try{ await navigator.clipboard.writeText($('backupText').value); }catch(e){ $('backupText').select(); document.execCommand('copy'); } $('backupStatus').className='status ok'; $('backupStatus').textContent='✓ コピーした'; };
