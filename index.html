@@ -238,6 +238,15 @@
   .af-result .row small { margin-left:auto; color:#5b6b7b; font-weight:700; font-size:12px; }
   .af-result .none { text-align:center; font-weight:800; color:#c33; padding:14px; }
   .af-result .again { height:48px; border-radius:12px; border:none; background:#eef2f6; font-weight:800; font-size:15px; }
+  .td-old-btn { display:block; margin:18px auto 10px; border:none; background:none; color:#5b6b7b; font-weight:700; font-size:13px; text-decoration:underline; }
+  .ta-intro { padding:14px; border-radius:14px; background:#fff; border:1.5px solid #dfe5eb; font-size:14px; line-height:1.9; color:#33475b; }
+  .ta-card { padding:12px; border-radius:16px; background:#fff; border:1.5px solid #dfe5eb; margin-bottom:10px; }
+  .ta-code { font-weight:900; font-size:16px; color:#14263a; margin-bottom:8px; }
+  .ta-row { display:flex; align-items:center; gap:14px; padding:6px 4px; } .ta-row b { font:900 48px/1 system-ui,sans-serif; color:#14263a; min-width:84px; }
+  .ta-row i { width:44px; height:44px; border-radius:10px; } .ta-row small { margin-left:auto; color:#5b6b7b; font-weight:700; }
+  .ta-add { width:100%; margin-top:8px; height:44px; border-radius:12px; border:1.5px dashed #9fb0c0; background:#f6f9fb; font-weight:800; color:#33475b; }
+  .ta-none { text-align:center; font-weight:800; color:#c33; padding:14px 6px; }
+  .ta-reg { display:grid; gap:8px; } .ta-reg button { height:50px; border-radius:12px; border:none; background:#1f8a5a; color:#fff; font-weight:800; font-size:16px; }
   .wk-kind { display:none; grid-template-columns:1fr; gap:8px; margin-top:6px; }
   .wk-kind button { width:100%; display:flex; align-items:center; gap:12px; height:62px; padding:0 14px; border-radius:12px; border:1px solid #cfd8e2; background:#fff; font:800 18px/1 system-ui,sans-serif; color:#14263a; text-align:left; }
   .wk-kind button b { width:40px; height:40px; border-radius:10px; background:#1c6fe0; color:#fff; display:flex; align-items:center; justify-content:center; font-size:22px; }
@@ -492,14 +501,12 @@
   <div class="wrap">
     <div class="home-title">
       <h1>ピッキング補助</h1>
-      <div class="ver-tag">ver40（9/26 天井の番号で片付け・探す）</div>
+      <div class="ver-tag">ver41（9/26 場所画面を天井の番号に：緑ボタンで片付け・検索で番号）</div>
     </div>
     <div class="home-btns">
       <button class="home-btn go" id="goBtn">GO</button>
       <button class="home-btn" id="prodBtn">製品登録</button>
       <button class="home-btn" id="regBtn">部品登録（場所・意味）</button>
-      <button class="home-btn ad-home put" id="adPutBtn">📦 片付ける<small>現品票を読む → 天井の番号 → 色</small></button>
-      <button class="home-btn ad-home find" id="adFindBtn">🔍 部品を探す<small>番号を打つ → 天井の番号が出る</small></button>
       <button class="home-btn" id="walkBtn">🚶 倉庫を歩く（部品を探す）</button>
       <button class="home-btn" id="tidyBtn">📍 部品の場所（読み取り・検索）</button>
       <button class="home-btn" id="mapBtn">🗺 倉庫マップ（編集用）</button>
@@ -512,7 +519,7 @@
   <div class="wrap">
     <div style="text-align:center; padding:14px 0 16px;">
       <h2 style="font-size:22px; font-weight:900;">ピッキング補助</h2>
-      <div class="ver-tag" style="margin:4px 0 0;">ver40（9/26 天井の番号で片付け・探す）</div>
+      <div class="ver-tag" style="margin:4px 0 0;">ver41（9/26 場所画面を天井の番号に：緑ボタンで片付け・検索で番号）</div>
     </div>
 
     <!-- 機種から選ぶ -->
@@ -569,6 +576,9 @@
       </button>
     </div>
 
+    <div id="tdAddr"></div>
+    <button class="td-old-btn" id="tdOldBtn">🗺 地図で見る（前のやり方）</button>
+    <div id="tdOld" style="display:none;">
     <button class="btn ghost sm" id="tdEmptyScan" style="margin-bottom:10px;">空になった現品票を読む</button>
     <div id="tdMoveHint"></div>
     <div class="td-code" id="tdCode" style="display:none;"></div>
@@ -589,6 +599,7 @@
       </div>
     </div>
     <div id="tdInfo" style="display:none; background:var(--panel); border:1.5px solid var(--line); border-radius:12px; padding:12px 14px; margin-top:8px; font-size:14px; line-height:1.7;"></div>
+    </div>
   </div>
 </section>
 
@@ -2286,10 +2297,26 @@
     document.body.appendChild(ov);
     if(!buttons) setTimeout(()=>{ if(ov.parentNode) ov.remove(); }, 3000);   // ✅系は3秒で自動で消える
   }
-  $('tdQBtn').onclick=tdSearch;
-  $('tdQ').addEventListener('keydown', e=>{ if(e.key==='Enter') tdSearch(); });
+  // ver41 場所画面＝天井の番号。緑ボタン＝片付け（読む→番号→色）、検索＝天井の番号を表示。地図は「前のやり方」に
+  function tdAddrMatches(q){ q=String(q).toUpperCase().trim(); if(!q) return [];
+    const digits=/^[0-9]+$/.test(q), nq=mpNorm(q);
+    return Object.keys(DB.addr).filter(k=>DB.addr[k].length&&(digits? mpNorm(k).replace(/^[A-Z]+/,'')===String(+q) : mpNorm(k)===nq)); }
+  function tdAddrShow(q){
+    const box=$('tdAddr'); q=String(q||'').toUpperCase().trim(); if(!q){ tdAddrIntro(); return; }
+    const ms=tdAddrMatches(q), order={r:0,b:1,g:2};
+    if(!ms.length){
+      const digits=/^[0-9]+$/.test(q);
+      box.innerHTML='<div class="ta-none">'+q+' はまだ天井の番号が登録されてへん</div>'+(digits?'<div class="ta-reg">'+['C','B','A'].map(p=>'<button data-c="'+p+q+'">'+p+q+' を登録</button>').join('')+'</div>':'<div class="ta-reg"><button data-c="'+q+'">番号を登録する</button></div>');
+    } else box.innerHTML=ms.map(k=>'<div class="ta-card"><div class="ta-code">'+k+'</div>'+DB.addr[k].slice().sort((a,b)=>order[a.s]-order[b.s]).map(e=>'<div class="ta-row"><b>'+e.n+'</b><i style="background:'+AD_COL[e.s]+'"></i><small>'+AD_NAME[e.s]+'</small></div>').join('')+'<button class="ta-add" data-c="'+k+'">＋ 別の番号にも片付ける</button></div>').join('');
+    box.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>adOpen(b.dataset.c));
+  }
+  function tdAddrIntro(){ $('tdAddr').innerHTML='<div class="ta-intro"><b>片付ける</b>：緑のボタンで現品票を読む → 天井の番号 → 色<br><b>探す</b>：コードを入れて「検索」→ 天井の番号が出る</div>'; }
+  $('tdQBtn').onclick=()=>tdAddrShow($('tdQ').value);
+  $('tdQ').addEventListener('keydown', e=>{ if(e.key==='Enter') tdAddrShow($('tdQ').value); });
+  $('tdOldBtn').onclick=()=>{ const o=$('tdOld'), on=o.style.display==='none'; o.style.display=on?'':'none'; $('tdOldBtn').textContent=on?'🗺 地図をしまう':'🗺 地図で見る（前のやり方）'; if(on) setTimeout(()=>{ try{ tdRender&&tdRender(); }catch(e){} },30); };
+  tdAddrIntro();
 
-  $('tdScan').onclick=()=>{ mpsTarget='tidy'; startMapScan(); };
+  $('tdScan').onclick=()=>{ mpsTarget='addr'; startMapScan(); };
   window.addEventListener('resize', ()=>{ if($('tidy').classList.contains('on')){ tdClamp(); tdApply(); } });
   if(typeof ResizeObserver!=='undefined'){
     new ResizeObserver(()=>{ if($('tidy').classList.contains('on')){ tdClamp(); tdApply(); } }).observe($('tdStage'));
@@ -2932,12 +2959,11 @@
       const list=(DB.addr[key]||[]).filter(x=>x.n!==adN); list.push({n:adN,s:sv,t:Date.now()}); DB.addr[key]=list; saveDB();
       $('adDone').innerHTML=adN+'<i style="background:'+AD_COL[sv]+'"></i>'; adStep('adStepD');
       showUndo(key+' を '+adN+'（'+AD_NAME[sv]+'）に登録',()=>{ if(before) DB.addr[key]=before; else delete DB.addr[key]; saveDB(); });
-      setTimeout(adClose,1300); return;
+      setTimeout(()=>{ adClose(); $('tdQ').value=key; tdAddrShow(key); },1300); return;
     }
     box.querySelectorAll('button').forEach(x=>x.classList.remove('armed')); b.classList.add('armed'); box.classList.add('has-armed'); adArmedS=sv; adArmT=performance.now();
   });
   $('adX').onclick=adClose;
-  $('adPutBtn').onclick=()=>{ mpsTarget='addr'; startMapScan(); };
   // 探す
   let afCode='';
   function afShow(){ $('afCode').textContent=afCode||' '; $('afKeys').style.display=''; $('afKind').style.display='none'; $('afResult').style.display='none'; $('afTitle').textContent='番号を入力'; $('afNote').textContent=''; }
@@ -2957,7 +2983,6 @@
     else { const order={r:0,b:1,g:2}; box.innerHTML=r.list.slice().sort((a,b)=>order[a.s]-order[b.s]).map(e=>'<div class="row"><b>'+e.n+'</b><i style="background:'+AD_COL[e.s]+'"></i><small>'+AD_NAME[e.s]+'</small></div>').join('')+'<button class="again">もう一度さがす</button>'; $('afTitle').textContent=r.code; }
     box.querySelector('.again').onclick=()=>{ afCode=''; afShow(); };
   }
-  $('adFindBtn').onclick=()=>{ afCode=''; afShow(); $('afModal').classList.add('on'); };
   $('afX').onclick=()=>$('afModal').classList.remove('on');
   document.querySelectorAll('#afKeys [data-k]').forEach(b=>b.onclick=()=>afKey(b.dataset.k));
   document.querySelectorAll('#afKind [data-p]').forEach(b=>b.onclick=()=>afPick(b.dataset.p));
