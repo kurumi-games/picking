@@ -225,6 +225,9 @@
   .ad-strip button.used { background:#2f4a63; }
   .ad-strip button.armed { background:#ffe941; color:#15202b; transform:scale(1.08); box-shadow:0 0 24px #ffe94199; }
   .ad-big { font:900 84px/1 system-ui,sans-serif; }
+  .ad-found { display:flex; flex-direction:column; gap:16px; align-items:center; }
+  .ad-f-row { display:flex; align-items:center; gap:22px; } .ad-f-row b { font:900 110px/1 system-ui,sans-serif; } .ad-f-row i { width:90px; height:90px; border-radius:20px; }
+  .ad-reput { margin-top:10px; height:52px; padding:0 22px; border-radius:14px; border:2px dashed #ffffff66; background:none; color:#fff; font-weight:800; font-size:16px; }
   .ad-strip button { transition:transform .12s, background .12s; }
   .ad-strip button.mid:not(.armed) { transform:scale(1.1); background:#35536f; }
   .ad-strip button.armed { animation:adPop .25s cubic-bezier(.2,1.6,.4,1); }
@@ -513,7 +516,7 @@
   <div class="wrap">
     <div class="home-title">
       <h1>ピッキング補助</h1>
-      <div class="ver-tag">ver42（9/26 片付けに手応え：番号カチカチ・決定でハンコ）</div>
+      <div class="ver-tag">ver43（9/26 登録ずみを読んだら場所を表示）</div>
     </div>
     <div class="home-btns">
       <button class="home-btn go" id="goBtn">GO</button>
@@ -531,7 +534,7 @@
   <div class="wrap">
     <div style="text-align:center; padding:14px 0 16px;">
       <h2 style="font-size:22px; font-weight:900;">ピッキング補助</h2>
-      <div class="ver-tag" style="margin:4px 0 0;">ver42（9/26 片付けに手応え：番号カチカチ・決定でハンコ）</div>
+      <div class="ver-tag" style="margin:4px 0 0;">ver43（9/26 登録ずみを読んだら場所を表示）</div>
     </div>
 
     <!-- 機種から選ぶ -->
@@ -711,6 +714,7 @@
 <!-- ver40 天井番号：片付け・探す -->
 <div class="ad-modal" id="adModal">
   <div class="ad-top"><span id="adCode"></span><button id="adX">✕</button></div>
+  <div class="ad-step" id="adStepF"><div class="ad-hint">天井の番号</div><div class="ad-found" id="adFound"></div><button class="ad-reput" id="adReput">＋ 別の番号に片付ける</button></div>
   <div class="ad-step" id="adStepN">
     <div class="ad-hint">天井の番号</div>
     <div class="ad-strip-wrap"><div class="ad-center"></div><div class="ad-strip" id="adStrip"></div></div>
@@ -2321,7 +2325,7 @@
       const digits=/^[0-9]+$/.test(q);
       box.innerHTML='<div class="ta-none">'+q+' はまだ天井の番号が登録されてへん</div>'+(digits?'<div class="ta-reg">'+['C','B','A'].map(p=>'<button data-c="'+p+q+'">'+p+q+' を登録</button>').join('')+'</div>':'<div class="ta-reg"><button data-c="'+q+'">番号を登録する</button></div>');
     } else box.innerHTML=ms.map(k=>'<div class="ta-card"><div class="ta-code">'+k+'</div>'+DB.addr[k].slice().sort((a,b)=>order[a.s]-order[b.s]).map(e=>'<div class="ta-row"><b>'+e.n+'</b><i style="background:'+AD_COL[e.s]+'"></i><small>'+AD_NAME[e.s]+'</small></div>').join('')+'<button class="ta-add" data-c="'+k+'">＋ 別の番号にも片付ける</button></div>').join('');
-    box.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>adOpen(b.dataset.c));
+    box.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{ adForcePut=true; adOpen(b.dataset.c); });
   }
   function tdAddrIntro(){ $('tdAddr').innerHTML='<div class="ta-intro"><b>片付ける</b>：緑のボタンで現品票を読む → 天井の番号 → 色<br><b>探す</b>：コードを入れて「検索」→ 天井の番号が出る</div>'; }
   $('tdQBtn').onclick=()=>tdAddrShow($('tdQ').value);
@@ -2958,17 +2962,22 @@
   function adBuzz(ms){ try{ navigator.vibrate&&navigator.vibrate(ms); }catch(e){} }
   let adCodeCur=null, adN=null, adArmedN=null, adArmedS=null, adArmT=0;
   function adKey(code){ const k=Object.keys(DB.addr).find(c=>mpNorm(c)===mpNorm(code)); return k||code; }
-  function adStep(id){ ['adStepN','adStepC','adStepD'].forEach(x=>$(x).classList.toggle('on',x===id)); }
+  function adStep(id){ ['adStepF','adStepN','adStepC','adStepD'].forEach(x=>$(x).classList.toggle('on',x===id)); }
   function adOpen(code){
     const resolved=(DB.meaning[code]&&DB.meaning[code].code)?DB.meaning[code].code:code;
     adCodeCur=adKey(String(resolved).toUpperCase()); adArmedN=adArmedS=null;
     $('adCode').textContent='📦 '+adCodeCur; $('adModal').classList.add('on'); adStep('adStepN');
+    // ver43 もう登録ずみなら、まず場所を見せる（片付け直す時だけ番号選びへ）
+    const reg=(DB.addr[adCodeCur]||[]).slice().sort((a,b)=>({r:0,b:1,g:2}[a.s]-{r:0,b:1,g:2}[b.s]));
+    if(reg.length && !adForcePut){ $('adFound').innerHTML=reg.map(e=>'<div class="ad-f-row"><b>'+e.n+'</b><i style="background:'+AD_COL[e.s]+'"></i></div>').join(''); adStep('adStepF'); adSnd('pop'); }
+    adForcePut=false;
     const used=new Set(); Object.values(DB.addr).forEach(l=>l.forEach(e=>used.add(e.n)));
     const max=Math.max(300,...[...used].map(n=>n+60)); const st=$('adStrip'); let h='';
     for(let n=1;n<=max;n++) h+='<button data-n="'+n+'"'+(used.has(n)?' class="used"':'')+'>'+n+'</button>';
     st.innerHTML=h;
     const last=+(localStorage.getItem('adLast')||1); requestAnimationFrame(()=>{ const b=st.querySelector('[data-n="'+last+'"]'); if(b) st.scrollLeft=b.offsetLeft-(st.clientWidth-b.offsetWidth)/2; });
   }
+  let adForcePut=false;
   function adClose(){ $('adModal').classList.remove('on'); adCodeCur=null; $('adFlood').classList.remove('go'); }
   let adMid=-1;
   $('adStrip').addEventListener('scroll',()=>{ const st=$('adStrip'), f=st.firstElementChild; if(!f) return;
@@ -2994,6 +3003,7 @@
     box.querySelectorAll('button').forEach(x=>x.classList.remove('armed')); b.classList.add('armed'); box.classList.add('has-armed'); adArmedS=sv; adArmT=performance.now(); adSnd('pop'); adBuzz(15);
   });
   $('adX').onclick=adClose;
+  $('adReput').onclick=()=>adStep('adStepN');
   // 探す
   let afCode='';
   function afShow(){ $('afCode').textContent=afCode||' '; $('afKeys').style.display=''; $('afKind').style.display='none'; $('afResult').style.display='none'; $('afTitle').textContent='番号を入力'; $('afNote').textContent=''; }
