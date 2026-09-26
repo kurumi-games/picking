@@ -1,0 +1,46 @@
+/* A bright, full-screen workspace: navigation and registration, not inventory imagery. */
+.w3-modal {background:#f5f7f8;padding:0;z-index:400;}
+.w3-head {padding:14px 16px 10px;gap:8px;background:white;}
+.w3-head h2 {color:#18343b;font-size:21px;letter-spacing:-.04em;}
+.w3-close {background:#eef2f4;color:#314a54;padding:10px 13px;}
+.w3-walk {background:#0b8278;}
+.n3-search {display:flex;gap:8px;padding:8px 14px 12px;background:#fff;}
+.n3-search input {min-width:0;flex:1;font-size:16px;padding:12px;border:1px solid #d1dce0;border-radius:12px;background:#f5f8f9;color:#203842;}
+.n3-search button,.n3-floors button {border:0;border-radius:10px;padding:10px 14px;background:#e8f0f1;color:#28434b;font-weight:800;cursor:pointer;}
+.n3-search button {background:#087f75;color:white;}
+.n3-floors {display:flex;gap:7px;overflow-x:auto;padding:0 14px 9px;background:white;flex-shrink:0;}
+.n3-floors button {white-space:nowrap;font-size:13px;}
+.n3-floors button.on {background:#203c47;color:#fff;}
+#w3Stage {border-radius:0;background:#e8edf0;min-height:180px;perspective:none;display:block;}
+#w3Stage canvas {display:block;width:100%;height:100%;}
+.n3-view {position:relative;display:flex;flex:1;min-height:0;}
+.n3-view #w3Stage {flex:1;}
+.n3-controls {position:absolute;right:12px;top:12px;display:grid;gap:5px;}
+.n3-controls button {border:1px solid #dbe3e5;background:#fffffff2;border-radius:12px;color:#26444d;width:44px;height:44px;font-size:22px;box-shadow:0 3px 10px #243d4710;}
+.n3-controls button:last-child {font-size:12px;}
+.n3-detail {background:white;padding:12px 16px;border-top:1px solid #dce5e7;max-height:26vh;overflow:auto;}
+.n3-detail:empty {display:none;}
+.n3-detail button {border:1px solid #c7ddda;border-radius:9px;padding:9px 12px;background:#f0f8f6;color:#166b63;font-weight:800;margin:4px 5px 0 0;}
+.n3-detail strong {font-size:16px;color:#1c3c43;}
+.n3-detail small {display:block;color:#607580;margin:3px 0;font-size:12px;}
+.w3-hint {color:#516b75;background:#fff;text-align:left;padding:9px 15px max(10px,env(safe-area-inset-bottom));font-size:12px;line-height:1.7;border-top:1px solid #e4e9eb;}
+.n3-dot {display:inline-block;width:9px;height:9px;border-radius:3px;background:#b56952;margin-right:5px;}
+.n3-dialog {position:fixed;inset:0;z-index:450;display:none;align-items:center;justify-content:center;background:#142e4266;padding:18px;}
+.n3-dialog.on {display:flex;}
+.n3-card {background:#fff;width:min(100%,440px);max-height:85dvh;overflow:auto;border-radius:20px;padding:20px;box-shadow:0 20px 80px #18344233;}
+.n3-card h2 {font-size:20px;margin-bottom:8px;}
+.n3-card p {font-size:14px;color:#536b76;line-height:1.6;margin-bottom:12px;}
+.n3-card button {border:1px solid #cedce0;border-radius:10px;padding:12px;font-size:15px;font-weight:750;background:#f0f6f6;color:#204c50;min-height:44px;cursor:pointer;}
+.n3-loc {padding:12px 0;border-bottom:1px solid #e1e9eb;}
+.n3-loc b {display:block;margin-bottom:8px;font-size:15px;}
+.n3-loc button {margin-right:6px;}
+.n3-loc button.danger {color:#a83838;background:#fff4f2;}
+.n3-actions {display:flex;gap:8px;margin-top:14px;}
+.n3-actions button {flex:1;}
+#tdMoveHint {padding:12px;border-radius:10px;background:#e3f3f0;color:#145f58;font-size:15px;font-weight:800;margin-bottom:10px;display:none;}
+.wk-top {background:linear-gradient(#173a48db,transparent);padding-top:max(12px,env(safe-area-inset-top));}
+.wk-hint {font-size:12px;bottom:max(14px,env(safe-area-inset-bottom));}
+#wkOverview {pointer-events:auto;white-space:nowrap;}
+
+.toast { z-index:480; }
+@media(max-width:380px){.wk-top{gap:5px;padding-left:8px;padding-right:8px;}.wk-top button{padding:9px 10px;}.wk-top span{font-size:12px;}}

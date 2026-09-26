@@ -449,6 +449,8 @@
   .part-row .pmv { background:var(--panel-2); border:1px solid var(--line); color:var(--code); border-radius:6px; width:30px; height:20px; font-size:13px; line-height:1; cursor:pointer; padding:0; display:flex; align-items:center; justify-content:center; }
   .part-row .pmv:disabled { opacity:.3; cursor:default; }
 </style>
+<link rel="stylesheet" href="warehouse3d.css?v=39">
+<script src="warehouse3d.js?v=39b"></script>
 </head>
 <body>
 
@@ -457,7 +459,7 @@
   <div class="wrap">
     <div class="home-title">
       <h1>ピッキング補助</h1>
-      <div class="ver-tag">ver38（9/26 歩くビューのパレットを1枚ずつ区切って表示）</div>
+      <div class="ver-tag">ver39（9/26 登録場所と連動する3D倉庫ナビ）</div>
     </div>
     <div class="home-btns">
       <button class="home-btn go" id="goBtn">GO</button>
@@ -475,7 +477,7 @@
   <div class="wrap">
     <div style="text-align:center; padding:14px 0 16px;">
       <h2 style="font-size:22px; font-weight:900;">ピッキング補助</h2>
-      <div class="ver-tag" style="margin:4px 0 0;">ver38（9/26 歩くビューのパレットを1枚ずつ区切って表示）</div>
+      <div class="ver-tag" style="margin:4px 0 0;">ver39（9/26 登録場所と連動する3D倉庫ナビ）</div>
     </div>
 
     <!-- 機種から選ぶ -->
@@ -532,6 +534,8 @@
       </button>
     </div>
 
+    <button class="btn ghost sm" id="tdEmptyScan" style="margin-bottom:10px;">空になった現品票を読む</button>
+    <div id="tdMoveHint"></div>
     <div class="td-code" id="tdCode" style="display:none;"></div>
     <div class="td-state" id="tdState" style="display:none;"></div>
     <div class="mp-tabs" id="tdBar" style="margin-bottom:8px; flex-wrap:wrap; row-gap:7px;">
@@ -604,6 +608,7 @@
       <button class="mp-tb" id="mpRot">回転</button>
       <button class="mp-tb" id="mpDup">複製</button>
       <button class="mp-tb" id="mpParts">部品</button>
+      <button class="mp-tb" id="mpShape">3D形状</button>
       <button class="mp-tb warn" id="mpDel">削除</button>
     </div>
     <!-- 地図の設定（何も選んでない時だけ出る） -->
@@ -644,12 +649,16 @@
 </div>
 
 <!-- ============ 倉庫3D（おまけ） ============ -->
-<div class="wk-modal" id="wkModal"><div id="wkStage"></div><div class="wk-load" id="wkLoad">読み込み中…</div><div class="wk-top"><button id="wkFind" class="wk-find">🔍 部品</button><span id="wkTitle">🚶 倉庫を歩く</span><button id="wkClose">とじる</button></div><div class="wk-bar" id="wkBar"><span id="wkBarTxt"></span><button id="wkBarBtn">移動する</button></div><div class="wk-msg" id="wkMsg"></div><div id="wkStick"><i></i></div><p class="wk-hint">左側をなぞって歩く・右側をなぞって見回す</p><div class="wk-pad" id="wkPad"><div class="wk-pad-box"><div class="wk-pad-head"><b id="wkPadTitle">番号を入力</b><button id="wkPadX">✕</button></div><div class="wk-pad-code" id="wkPadCode"> </div><div class="wk-pad-note" id="wkPadNote"></div><div class="wk-kind" id="wkKind"><button data-p="C"><b>C</b>部品<small></small></button><button data-p="B"><b>B</b>中間品<small></small></button><button data-p="A"><b>A</b>完成品<small></small></button><button id="wkKindBack" class="back">← 番号を直す</button></div><div class="wk-pad-keys" id="wkPadKeys"><button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button><button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button><button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button><button data-k="del">⌫</button><button data-k="0">0</button><button data-k="go" class="go">決定</button></div></div></div></div>
+<div class="wk-modal" id="wkModal"><div id="wkStage"></div><div class="wk-load" id="wkLoad">読み込み中…</div><div class="wk-top"><button id="wkFind" class="wk-find">🔍 部品</button><span id="wkTitle">🚶 倉庫を歩く</span><button id="wkOverview">全体</button><button id="wkClose">とじる</button></div><div class="wk-bar" id="wkBar"><span id="wkBarTxt"></span><button id="wkBarBtn">移動する</button></div><div class="wk-msg" id="wkMsg"></div><div id="wkStick"><i></i></div><p class="wk-hint">左側で歩く・右側で見回す<br>立体マーカーは登録場所。実物・数量の再現ではありません。</p><div class="wk-pad" id="wkPad"><div class="wk-pad-box"><div class="wk-pad-head"><b id="wkPadTitle">番号を入力</b><button id="wkPadX">✕</button></div><div class="wk-pad-code" id="wkPadCode"> </div><div class="wk-pad-note" id="wkPadNote"></div><div class="wk-kind" id="wkKind"><button data-p="C"><b>C</b>部品<small></small></button><button data-p="B"><b>B</b>中間品<small></small></button><button data-p="A"><b>A</b>完成品<small></small></button><button id="wkKindBack" class="back">← 番号を直す</button></div><div class="wk-pad-keys" id="wkPadKeys"><button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button><button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button><button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button><button data-k="del">⌫</button><button data-k="0">0</button><button data-k="go" class="go">決定</button></div></div></div></div>
 <div class="w3-modal" id="w3Modal">
-  <div class="w3-head"><h2>倉庫 3Dビュー（おまけ）</h2><button class="w3-walk" id="w3Walk">🚶 歩く</button><button class="w3-close" id="w3Close">とじる</button></div>
-  <div id="w3Stage"><div id="w3World"></div></div>
-  <p class="w3-hint">👆 指でドラッグして回せる</p>
+  <div class="w3-head"><h2>倉庫ナビ</h2><button class="w3-walk" id="w3Walk">歩く</button><button class="w3-close" id="w3Close">とじる</button></div>
+  <div class="n3-search"><input id="n3Query" placeholder="部品コードで検索" aria-label="部品コード"><button id="n3Search">検索</button></div>
+  <div class="n3-floors" id="n3Floors"></div>
+  <div class="n3-view"><div id="w3Stage"></div><div class="n3-controls"><button id="n3ZoomIn" aria-label="拡大">＋</button><button id="n3ZoomOut" aria-label="縮小">−</button><button id="n3Fit">全体</button></div></div>
+  <div class="n3-detail" id="n3Detail"></div>
+  <p class="w3-hint"><span class="n3-dot"></span>立体マーカー＝登録場所（実物・数量の再現ではありません）<br>1本指で回転・2本指で拡大／移動・区画をタップで詳細</p>
 </div>
+<div class="n3-dialog" id="n3Dialog" role="dialog" aria-modal="true" aria-labelledby="n3DialogTitle"><div class="n3-card"><h2 id="n3DialogTitle"></h2><p id="n3DialogDesc"></p><div id="n3DialogRows"></div><div class="n3-actions"><button id="n3DialogClose">とじる</button></div></div></div>
 
 <!-- ============ START SELECT ============ -->
 <section class="screen" id="startsel">
@@ -1708,7 +1717,8 @@
       d.style.fontSize=Math.max(9, Math.min(15, r.h*MP_CELL*0.3))+'px';
       d.dataset.id=r.id;
       const corners=(r.type==='nest')?'<span class="nu">上</span><span class="nd">下</span>':'';
-      const pn=(r.parts && r.parts.length)?'<span class="mp-pn">📦'+r.parts.length+'</span>':'';
+      const linked=Warehouse3D.locations(DB).filter(c=>c.f===DB.maps.cur&&c.x<r.x+r.w&&c.x+c.w>r.x&&c.y<r.y+r.h&&c.y+c.h>r.y);
+      const pn=linked.length?'<span class="mp-pn">📍'+new Set(linked.map(c=>c.code)).size+'</span>':'';
       d.innerHTML=corners+pn+'<div class="lbl">'+String(r.label||'').replace(/</g,'&lt;')+'</div><div class="mp-handle"></div>';
       $('mpWorld').appendChild(d);
     });
@@ -1732,6 +1742,7 @@
   let mpPart=null;    // 表示中の部品コード（nullなら通常編集）
   let mpTool='r';     // r=定位置 p=仮置き b=引越し e=消す hand=動かす
   function mpOpenPart(code){
+    code=Warehouse3D.materialize(DB,code);
     mpPart=code;
     if(!DB.spots[code]) DB.spots[code]={cells:[]};
     // 塗りがあるフロアに切替
@@ -1745,8 +1756,7 @@
     mpRender(); mpFit();
   }
   function mpClosePart(){
-    // 空っぽのまま閉じたら登録自体を消しとく
-    if(mpPart && DB.spots[mpPart] && !DB.spots[mpPart].cells.length) delete DB.spots[mpPart];
+    // Keep explicit empty records after removal; do not revive legacy shelf parts.
     mpPart=null;
     $('mpPaint').classList.remove('on');
     document.querySelectorAll('#map .mp-tools').forEach(el=> el.style.display='');
@@ -1895,7 +1905,9 @@
     [['r','tdTr'],['p','tdTp'],['b','tdTb']].forEach(([k,id])=> $(id).classList.toggle('on', tdTool===k));
   }
   function tdOpen(code, editNow){
+    tdMoveFrom=null; $('tdMoveHint').style.display='none';
     if(!code || typeof code!=='string' || code.length<2){ return; }
+    code=Warehouse3D.materialize(DB,code);
     tdCodeCur=code;
     if(!DB.spots[code]) DB.spots[code]={cells:[]};
     const first=DB.spots[code].cells[0];
@@ -1917,7 +1929,8 @@
     requestAnimationFrame(tdFit);
   }
   function tdReset(){
-    if(tdCodeCur && DB.spots[tdCodeCur] && !DB.spots[tdCodeCur].cells.length) delete DB.spots[tdCodeCur];
+    // Keep empty location records so removed legacy shelf assignments cannot reappear.
+    tdMoveFrom=null;n3Return=false; $('tdMoveHint').style.display='none';
     tdCodeCur=null; tdTool=null;
     $('tdCode').style.display='none';
     $('tdState').style.display='none';
@@ -2031,6 +2044,7 @@
     saveDB();
   };
   $('tdDone').onclick=()=>{
+    if(tdMoveFrom){tdMoveFrom=null;n3Return=false;$('tdMoveHint').style.display='none';tdToast('移動をキャンセルしました');}
     const saved=tdCodeCur;
     const had=DB.spots[saved] && DB.spots[saved].cells.length;
     saveDB();
@@ -2062,6 +2076,17 @@
     p.x=Math.max(host.x, Math.min(host.x+host.w-2, p.x));
     p.y=Math.max(host.y, Math.min(host.y+host.h-2, p.y));
     const cells=DB.spots[tdCodeCur].cells;
+    if(tdMoveFrom){
+      const src=tdMoveFrom, i=cells.findIndex(c=>c.f===src.f&&c.x===src.x&&c.y===src.y);
+      if(i<0){tdToast('元の登録が変わりました。もう一度選んでください');return false;}
+      const before=cells.map(c=>({...c}));
+      cells.splice(i,1);
+      if(!cells.some(c=>c.f===tdF&&c.x===p.x&&c.y===p.y))cells.push({f:tdF,x:p.x,y:p.y,s:'b'});
+      const key=tdCodeCur;tdMoveFrom=null;$('tdMoveHint').style.display='none';tdTool=null;tdChipUI();
+      tdRenderSpots();$('tdState').textContent=tdStateText();saveDB();
+      showUndo('選んだ場所の登録を移動しました',()=>{DB.spots[key].cells=before;saveDB();if(tdCodeCur===key){tdRenderSpots();$('tdState').textContent=tdStateText();}});
+      if(n3Return){n3Return=false;n3Open(key);}return true;
+    }
     // タップ位置と重なるマスを探す（昔の位置ズレデータも拾えるように±2未満で判定）
     const i=cells.findIndex(c=> c.f===tdF && Math.abs(c.x-p.x)<2 && Math.abs(c.y-p.y)<2);
     if(i>=0){
@@ -2224,6 +2249,7 @@
         const code=String(result.getText()).toUpperCase().replace(/[^A-Z0-9-]/g,'');
         if(!code) return;
         stopMapScan();
+        if(mpsTarget==='remove'){const resolved=DB.meaning[code]?DB.meaning[code].code:code;const exact=Warehouse3D.locations(DB).find(c=>Warehouse3D.norm(c.code)===Warehouse3D.norm(resolved));if(exact)n3Manage(exact.code,true);else tdToast('この現品票の場所登録はありません');return;}
         // 床QR（LOC:フロア,x,y）なら片付け判定へ
         const loc = String(result.getText()).toUpperCase().match(/^LOC:(\d+),(\d+),(\d+)$/);
         if(loc && mpsTarget!=='map'){
@@ -2283,7 +2309,15 @@
     const cur=(r.parts||[]).join(' ');
     const v=prompt('この場所に置く部品コード（スペース区切りで複数OK）\n例: C00007300 C00006846', cur);
     if(v===null) return;
-    const list=v.toUpperCase().split(/[\s,、]+/).filter(s=>s);
+    const list=[...new Set(v.toUpperCase().split(/[\s,、]+/).filter(s=>s))];
+    const previous=(r.parts||[]).slice();
+    // Convert only edited shelf assignments to the same canonical records used by 3D.
+    for(const code of new Set([...previous,...list])){
+      const key=Warehouse3D.materialize(DB,code),cells=DB.spots[key].cells;
+      const inside=c=>c.f===DB.maps.cur&&c.x>=r.x&&c.x<r.x+r.w&&c.y>=r.y&&c.y<r.y+r.h;
+      if(list.some(c=>mpNorm(c)===mpNorm(code))){if(!cells.some(inside))cells.push({f:DB.maps.cur,x:r.x,y:r.y,w:r.w,h:r.h,s:'r'});}
+      else DB.spots[key].cells=cells.filter(c=>!inside(c));
+    }
     if(list.length) r.parts=list; else delete r.parts;
     mpRender(); saveDB();
   };
@@ -2405,7 +2439,7 @@
   // ゼロ埋めは吸収する（C7300 でも C00007300 でもヒット）
   function mpNorm(s){ return String(s).toUpperCase().replace(/^([A-Z]+)0+/, '$1'); }
   function mpMatch(r, q, nq){
-    const inParts=(r.parts||[]).some(p=> p.indexOf(q)>=0 || mpNorm(p).indexOf(nq)>=0);
+    const inParts=Warehouse3D.locations(DB).some(c=>c.f===DB.maps.cur&&c.x<r.x+r.w&&c.x+c.w>r.x&&c.y<r.y+r.h&&c.y+c.h>r.y&&(c.code.indexOf(q)>=0||mpNorm(c.code).indexOf(nq)>=0));
     const inLabel=String(r.label||'').toUpperCase().indexOf(q)>=0;
     return inParts || inLabel;
   }
@@ -2559,120 +2593,99 @@
     st.addEventListener('pointercancel', up);
   })();
 
-  /* ===== 倉庫3D（おまけ・俯瞰グリグリのみ） ===== */
-  let w3rx=-32, w3ry=-28, w3s=1;
-  const C3=15;
-  function w3Face(parent,w,h,tf,css){
-    const d=document.createElement('div');
-    d.className='w3f';
-    d.style.cssText='width:'+w+'px;height:'+h+'px;left:'+(-w/2)+'px;top:'+(-h/2)+'px;transform:'+tf+';'+css;
-    parent.appendChild(d);
-    return d;
+  /* ===== ver39: shared 3D geometry + location records ===== */
+  let N3=null, n3Selected='', n3Request=0, tdMoveFrom=null, n3Return=false;
+  function n3Close(){ ++n3Request; if(N3){N3.destroy();N3=null;} $('w3Modal').classList.remove('on'); }
+  async function build3D(){
+    const req=++n3Request;
+    if(N3){N3.destroy();N3=null;}
+    $('w3Stage').textContent='3Dを読み込み中…';
+    try {
+      await wkThree();
+      if(req!==n3Request||!$('w3Modal').classList.contains('on'))return;
+      if(n3Selected&&!Warehouse3D.find(DB,n3Selected))n3Selected='';
+      N3=Warehouse3D.overview($('w3Stage'),DB,DB.maps.cur,{selected:n3Selected,onPick:n3Pick});
+      $('n3Detail').replaceChildren();
+      if(n3Selected)n3ShowPart(n3Selected);
+      const bar=$('n3Floors');bar.replaceChildren();
+      DB.maps.floors.forEach((f,i)=>{const b=document.createElement('button');b.textContent=f.name||('フロア'+(i+1));b.classList.toggle('on',i===DB.maps.cur);b.onclick=()=>{DB.maps.cur=i;build3D();};bar.appendChild(b);});
+    } catch(e){$('w3Stage').textContent='3Dを表示できません。2Dマップは引き続き使えます。';console.error(e);}
   }
-  function w3Box(parent,cx,cz,w,d,H,side,top){
-    const g=document.createElement('div');
-    g.style.transform='translate3d('+cx+'px,0px,'+cz+'px)';
-    parent.appendChild(g);
-    w3Face(g,w,H,'translate3d(0px,'+(-H/2)+'px,'+(d/2)+'px)',side);
-    w3Face(g,w,H,'translate3d(0px,'+(-H/2)+'px,'+(-d/2)+'px) rotateY(180deg)',side);
-    w3Face(g,d,H,'translate3d('+(w/2)+'px,'+(-H/2)+'px,0px) rotateY(90deg)',side);
-    w3Face(g,d,H,'translate3d('+(-w/2)+'px,'+(-H/2)+'px,0px) rotateY(-90deg)',side);
-    return w3Face(g,w,d,'translate3d(0px,'+(-H)+'px,0px) rotateX(90deg)',top||side);
+  function n3Open(code){n3Selected=code||'';$('n3Query').value=n3Selected;$('w3Modal').classList.add('on');build3D();}
+  function n3ShowPart(code){
+    const found=Warehouse3D.find(DB,code),d=$('n3Detail');d.replaceChildren();if(!found)return;
+    const title=document.createElement('strong');title.textContent=partName(found.code)||found.code;d.appendChild(title);
+    const small=document.createElement('small');small.textContent=found.code+' · 登録場所 '+found.cells.length+'か所';d.appendChild(small);
+    const manage=document.createElement('button');manage.textContent='場所を移動・解除';manage.onclick=()=>n3Manage(found.code);d.appendChild(manage);
+    const walk=document.createElement('button');walk.textContent='この部品を探して歩く';walk.onclick=()=>{n3Close();WK.x=null;wkOpen(found);};d.appendChild(walk);
+    const other=found.cells.find(c=>c.f!==DB.maps.cur);if(other){const b=document.createElement('button');b.textContent='別フロアの登録を見る';b.onclick=()=>{DB.maps.cur=other.f;build3D();};d.appendChild(b);}
   }
-  function build3D(){
-    const world=$('w3World'); world.innerHTML='';
-    const f=mpFloor();
-    const W=f.cols*C3, D=f.rows*C3;
-    const fl=MP_FLOORS[f.floor]||MP_FLOORS.green;
-    w3Face(world,W,D,'translate3d(0px,0px,0px) rotateX(90deg)',
-      'background:'+fl.bg+';border:2px solid #3a4654;'+
-      'background-image:repeating-linear-gradient(90deg,rgba(255,255,255,.12) 0 1px,transparent 1px '+(C3*2)+'px),repeating-linear-gradient(180deg,rgba(255,255,255,.12) 0 1px,transparent 1px '+(C3*2)+'px);');
-    f.rects.forEach(r=>{
-      const cx=(r.x+r.w/2)*C3-W/2, cz=(r.y+r.h/2)*C3-D/2;
-      const w=r.w*C3-2, d=r.h*C3-2;
-      if(r.type==='wall'){
-        w3Box(world,cx,cz,w,d,92,'background:#5f6b78;border:1px solid #46525f;','background:#75828f;border:1px solid #46525f;');
-      } else if(r.type==='door'){
-        w3Box(world,cx,cz,w,d,34,'background:#f0c15c;border:1px solid #b98a2a;','background:#f6d489;border:1px solid #b98a2a;');
-      } else if(r.type==='shut'){
-        w3Box(world,cx,cz,w,d,92,
-          'background:repeating-linear-gradient(180deg,#9aa6b2 0 6px,#cdd6de 6px 12px);border:1px solid #7b8894;',
-          'background:#aab6c2;border:1px solid #7b8894;');
-      } else if(r.type==='nest'){
-        const legH=52, loadDn=40, loadUp=42, slab=6, lw=4;
-        w3Box(world,cx,cz,w*0.86,d*0.86,loadDn,'background:#d8b98a;border:1px solid #a8895c;','background:#e8d2ab;border:1px solid #a8895c;');
-        [[-1,-1],[1,-1],[-1,1],[1,1]].forEach(p=>{
-          w3Box(world, cx+p[0]*(w/2-lw/2), cz+p[1]*(d/2-lw/2), lw, lw, legH,'background:#c93a3a;');
-        });
-        const g=document.createElement('div');
-        g.style.transform='translate3d('+cx+'px,'+(-legH)+'px,'+cz+'px)';
-        world.appendChild(g);
-        w3Face(g,w,d,'translate3d(0px,'+(-slab/2)+'px,0px) rotateX(90deg)','background:#c93a3a;border:1px solid #8f2525;');
-        const upg=document.createElement('div');
-        upg.style.transform='translate3d('+cx+'px,'+(-(legH+slab))+'px,'+cz+'px)';
-        world.appendChild(upg);
-        w3Face(upg,w*0.86,loadUp,'translate3d(0px,'+(-loadUp/2)+'px,'+(d*0.86/2)+'px)','background:#d8b98a;border:1px solid #a8895c;');
-        w3Face(upg,w*0.86,loadUp,'translate3d(0px,'+(-loadUp/2)+'px,'+(-d*0.86/2)+'px) rotateY(180deg)','background:#d8b98a;border:1px solid #a8895c;');
-        w3Face(upg,d*0.86,loadUp,'translate3d('+(w*0.86/2)+'px,'+(-loadUp/2)+'px,0px) rotateY(90deg)','background:#d8b98a;border:1px solid #a8895c;');
-        w3Face(upg,d*0.86,loadUp,'translate3d('+(-w*0.86/2)+'px,'+(-loadUp/2)+'px,0px) rotateY(-90deg)','background:#d8b98a;border:1px solid #a8895c;');
-        w3Face(upg,w*0.86,d*0.86,'translate3d(0px,'+(-loadUp)+'px,0px) rotateX(90deg)','background:#e8d2ab;border:1px solid #a8895c;');
-      } else if(r.type==='load'){
-        const sh=document.createElement('div');
-        sh.style.transform='translate3d(0px,-13px,0px)';
-        world.appendChild(sh);
-        w3Face(sh,w*0.8,d*0.8,'translate3d('+cx+'px,0px,'+cz+'px) rotateX(90deg)','background:rgba(20,30,42,.28);border-radius:6px;');
-        const g=document.createElement('div');
-        g.style.transform='translate3d(0px,-20px,0px)';
-        world.appendChild(g);
-        const top=w3Box(g,cx,cz,w*0.94,d*0.94,16,
-          'background:#5d92d6;border:1px solid #33639f;',
-          'background:#8bb5eb;border:1px solid #33639f;font-size:10px;font-weight:800;color:#123258;');
-        if(r.label) top.textContent=r.label;
-      } else {
-        const H = r.pal ? 12 : 52;
-        const top=w3Box(world,cx,cz,w,d,H,
-          'background:#b9c2cc;border:1px solid #8d99a6;',
-          'background:#e2e7ec;border:1px solid #8d99a6;');
-        if(r.pal){
-          top.style.backgroundImage=
-            'repeating-linear-gradient(90deg, rgba(60,75,90,.35) 0 1px, transparent 1px '+(C3*2)+'px),'+
-            'repeating-linear-gradient(180deg, rgba(60,75,90,.35) 0 1px, transparent 1px '+(C3*2)+'px)';
-        }
-      }
+  function n3Pick(data){
+    if(data.records){
+      if(data.records.length===1){n3Selected=data.records[0].code;build3D();return;}
+      const d=$('n3Detail');d.replaceChildren();const t=document.createElement('strong');t.textContent='この場所の登録部品';d.appendChild(t);
+      data.records.forEach(c=>{const b=document.createElement('button');b.textContent=c.code;b.onclick=()=>{n3Selected=c.code;build3D();};d.appendChild(b);});return;
+    }
+    if(!data.rect)return;
+    const r=data.rect,d=$('n3Detail');d.replaceChildren();const t=document.createElement('strong');t.textContent=r.label||'保管区画';d.appendChild(t);
+    const list=Warehouse3D.locations(DB).filter(c=>c.f===DB.maps.cur&&c.x<r.x+r.w&&c.x+c.w>r.x&&c.y<r.y+r.h&&c.y+c.h>r.y);
+    const p=document.createElement('small');p.textContent=list.length?'登録された部品を選ぶ':'部品の場所登録なし（空とは限りません）';d.appendChild(p);
+    [...new Set(list.map(c=>c.code))].forEach(code=>{const b=document.createElement('button');b.textContent=partName(code)||code;b.onclick=()=>{n3Selected=code;build3D();};d.appendChild(b);});
+    if(!r.type){const b=document.createElement('button');b.textContent='この区画の3D形状';b.onclick=()=>n3Shape(r);d.appendChild(b);}
+  }
+  function n3Dialog(title,desc){$('n3Dialog').classList.add('on');$('n3DialogTitle').textContent=title;$('n3DialogDesc').textContent=desc;$('n3DialogRows').replaceChildren();}
+  function n3Shape(r){
+    n3Dialog('区画の3D形状','現場に合う形を選んでください。棚の段数・高さは模式表示です。部品の登録は変わりません。');
+    [['shelf','棚（ブロック・標準）'],['zone','区画だけ'],['rack','棚（空の骨組み）'],['pallet','パレット置き場']].forEach(([k,label])=>{const row=document.createElement('div');row.className='n3-loc';const b=document.createElement('button');b.textContent=label;b.onclick=()=>{r.view3d=k;saveDB();$('n3Dialog').classList.remove('on');};row.appendChild(b);$('n3DialogRows').appendChild(row);});
+  }
+  function n3LocName(c){const f=DB.maps.floors[c.f],r=f.rects.find(r=>c.x>=r.x&&c.x<r.x+r.w&&c.y>=r.y&&c.y<r.y+r.h);return (f.name||'フロア')+(r&&r.label?' ／ '+r.label:'')+' ／ 横'+(c.x+1)+'・縦'+(c.y+1);}
+  function n3Mini(c){const ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg'),f=DB.maps.floors[c.f];svg.setAttribute('viewBox','0 0 '+f.cols+' '+f.rows);svg.setAttribute('aria-label','解除・移動する場所');svg.style.cssText='width:90px;height:90px;float:right;margin-left:8px;background:#e3eee9;border:1px solid #c4d7d1;border-radius:6px;';function rect(x,y,w,h,fill){const r=document.createElementNS(ns,'rect');for(const [k,v] of Object.entries({x,y,width:w,height:h,fill}))r.setAttribute(k,v);svg.appendChild(r);}f.rects.forEach(r=>rect(r.x,r.y,r.w,r.h,'#acb9bf'));rect(c.x,c.y,c.w||2,c.h||2,'#e56b32');return svg;}
+  function n3Manage(code,removeOnly=false){
+    const found=Warehouse3D.find(DB,code);if(!found){tdToast('この部品の場所は登録されていません');return;}
+    n3Dialog(found.code,removeOnly?'空になった場所を選んで解除してください。別の場所の登録は残ります。':'変更する場所を選んでください。移動は選んだ1か所だけを変更します。');
+    found.cells.forEach(c=>{
+      const row=document.createElement('div');row.className='n3-loc';row.style.minHeight='114px';row.appendChild(n3Mini(c));const b=document.createElement('b');b.textContent=n3LocName(c);row.appendChild(b);
+      if(!removeOnly){const mv=document.createElement('button');mv.textContent='ここから移動';mv.onclick=()=>{
+        const key=Warehouse3D.materialize(DB,found.code);
+        n3Return=$('w3Modal').classList.contains('on');n3Close();wkClose();$('n3Dialog').classList.remove('on');
+        show('tidy');tdOpen(key,false);tdF=c.f;tdTool='b';tdMoveFrom={code:key,f:c.f,x:c.x,y:c.y};tdChipUI();tdRender();requestAnimationFrame(tdFit);
+        $('tdMoveHint').textContent='移動先をタップしてください。フロア切替もできます。';$('tdMoveHint').style.display='block';
+      };row.appendChild(mv);}
+      const rm=document.createElement('button');rm.className='danger';rm.textContent='空になった・解除';rm.onclick=()=>{
+        const key=Warehouse3D.materialize(DB,found.code),before=DB.spots[key].cells.map(v=>({...v}));
+        DB.spots[key].cells=before.filter(v=>!(v.f===c.f&&v.x===c.x&&v.y===c.y));saveDB();$('n3Dialog').classList.remove('on');
+        if(tdCodeCur===key){tdRenderSpots();$('tdState').textContent=tdStateText();}
+        showUndo('この場所の登録を解除しました',()=>{DB.spots[key].cells=before;saveDB();if(tdCodeCur===key){tdRenderSpots();$('tdState').textContent=tdStateText();}});
+      };row.appendChild(rm);$('n3DialogRows').appendChild(row);
     });
-    const st=$('w3Stage').getBoundingClientRect();
-    w3s=Math.min((st.width-40)/W, (st.height-40)/D, 1)*1.15;
-    w3rx=-32; w3ry=-28;
-    w3Apply();
   }
-  function w3Apply(){
-    $('w3World').style.transform='rotateX('+w3rx+'deg) rotateY('+w3ry+'deg) scale3d('+w3s+','+w3s+','+w3s+')';
-  }
-  $('mpZ3d').onclick = ()=>{ $('w3Modal').classList.add('on'); requestAnimationFrame(build3D); };
-  $('w3Close').onclick = ()=> $('w3Modal').classList.remove('on');
-  (function(){
-    const st=$('w3Stage'); let drag=false,px=0,py=0;
-    st.addEventListener('pointerdown',e=>{drag=true;px=e.clientX;py=e.clientY;st.setPointerCapture(e.pointerId);});
-    st.addEventListener('pointermove',e=>{
-      if(!drag)return;
-      w3ry+=(e.clientX-px)*0.4; w3rx-=(e.clientY-py)*0.4;
-      w3rx=Math.max(-89,Math.min(-5,w3rx));
-      px=e.clientX;py=e.clientY; w3Apply();
-    });
-    ['pointerup','pointercancel'].forEach(ev=>st.addEventListener(ev,()=>{drag=false;}));
-  })();
+  $('n3DialogClose').onclick=()=>$('n3Dialog').classList.remove('on');
+  $('n3Search').onclick=()=>{const q=$('n3Query').value,found=Warehouse3D.find(DB,q);if(!found){$('n3Detail').textContent='該当する場所登録がありません。部品コードを確認してください。';return;}n3Selected=found.code;if(!found.cells.some(c=>c.f===DB.maps.cur))DB.maps.cur=found.cells[0].f;build3D();};
+  $('n3Query').addEventListener('keydown',e=>{if(e.key==='Enter')$('n3Search').click();});
+  $('n3Fit').onclick=()=>N3&&N3.fit();$('n3ZoomIn').onclick=()=>N3&&N3.zoom(.8);$('n3ZoomOut').onclick=()=>N3&&N3.zoom(1.25);
+  $('mpZ3d').onclick=()=>n3Open(mpPart||'');$('w3Close').onclick=n3Close;
+  $('mpShape').onclick=()=>{const r=mpGetSel();if(r&&!r.type)n3Shape(r);};
+  $('tdEmptyScan').onclick=()=>{mpsTarget='remove';startMapScan();};
+  let n3RefreshTimer=0;
+  addEventListener('warehouse-data-changed',()=>{
+    clearTimeout(n3RefreshTimer);n3RefreshTimer=setTimeout(()=>{
+      if($('w3Modal').classList.contains('on'))build3D();
+      if(WK.on){if(WK.target)WK.target=Warehouse3D.find(DB,WK.target.code);wkBuild(true);}
+    },70);
+  });
 
   /* ===== ver36 倉庫を歩く（一人称ストリートビュー）
      1マス＝2（ver35の2倍の広さ）、高さはそのまま（目3.2・棚3.5）。🔍で部品コードを打つと床に光る矢印で案内 ===== */
   const WK={on:false,target:null}; const WK_S=2;
-  function wkThree(){ return window.THREE?Promise.resolve():new Promise((res,rej)=>{const sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';sc.onload=res;sc.onerror=rej;document.head.appendChild(sc);}); }
+  let wkThreePromise=null;
+  function wkThree(){ if(window.THREE)return Promise.resolve();if(!wkThreePromise)wkThreePromise=new Promise((res,rej)=>{const sc=document.createElement('script');sc.src='vendor/three-r128.min.js';sc.onload=res;sc.onerror=()=>{wkThreePromise=null;sc.remove();rej(new Error('3Dの読み込みに失敗'));};document.head.appendChild(sc);});return wkThreePromise; }
   async function wkOpen(target){
-    WK.target=target||null;
+    WK.target=target?Warehouse3D.find(DB,target.code):null;
     $('wkModal').classList.add('on'); $('wkLoad').style.display='flex';
     try{ await wkThree(); }catch(e){ alert('3Dの部品を読み込めんかった。通信を確認してな'); wkClose(); return; }
-    $('wkLoad').style.display='none'; wkBuild();
+    if(!$('wkModal').classList.contains('on'))return; $('wkLoad').style.display='none'; try{wkBuild();}catch(e){wkClose();alert('3Dを表示できません。2Dマップをご利用ください。');console.error(e);}
   }
-  function wkStop(){ WK.on=false; if(WK.raf) cancelAnimationFrame(WK.raf); if(WK.renderer){ WK.renderer.dispose(); WK.renderer.domElement.remove(); WK.renderer=null; } }
+  function wkStop(){ WK.on=false; WK.keys={}; if(WK.raf)cancelAnimationFrame(WK.raf); Warehouse3D.dispose(WK.scene); WK.scene=null; if(WK.renderer){WK.renderer.dispose();WK.renderer.forceContextLoss();WK.renderer.domElement.remove();WK.renderer=null;} WK.onResize=null; }
   function wkClose(){ wkStop(); $('wkModal').classList.remove('on'); $('wkPad').classList.remove('on'); $('wkBar').classList.remove('on'); }
   function wkTex(bg,line){
     const c=document.createElement('canvas');c.width=c.height=64;const g=c.getContext('2d');
@@ -2687,53 +2700,17 @@
   }
   function wkMsg(t,ms){ const m=$('wkMsg'); m.textContent=t; m.classList.add('on'); clearTimeout(WK.msgT); if(ms) WK.msgT=setTimeout(()=>m.classList.remove('on'),ms); }
   // 部品コード → 場所（DB.spots の塗り、なければ棚に登録された部品）
-  function wkFind(q){
-    q=String(q).toUpperCase().trim(); const nq=mpNorm(q); if(!q) return null;
-    const has=c=>DB.spots[c]&&DB.spots[c].cells.length;
-    let code=Object.keys(DB.spots).find(c=>has(c)&&(c===q||mpNorm(c)===nq))||Object.keys(DB.spots).find(c=>has(c)&&(c.indexOf(q)>=0||mpNorm(c).indexOf(nq)>=0));
-    if(code) return {code, cells:DB.spots[code].cells.map(c=>({f:c.f,x:c.x,y:c.y,s:c.s}))};
-    const cells=[]; let hit=null;
-    DB.maps.floors.forEach((f,fi)=>f.rects.forEach(r=>{ const ps=r.parts||[]; const m=ps.find(p=>p===q||mpNorm(p)===nq)||ps.find(p=>p.indexOf(q)>=0||mpNorm(p).indexOf(nq)>=0);
-      if(m){ hit=hit||m; for(let y=r.y;y<r.y+r.h;y++)for(let x=r.x;x<r.x+r.w;x++)cells.push({f:fi,x,y,s:'r'}); } }));
-    return cells.length?{code:hit,cells}:null;
-  }
+  function wkFind(q){return Warehouse3D.find(DB,q);}
   function wkBuild(keepPos){
     wkStop();
     const T=THREE, S=WK_S, f=mpFloor(), fl=MP_FLOORS[f.floor]||MP_FLOORS.green, st=$('wkStage');
     const W=f.cols*S, D=f.rows*S, HALL=7;
     const renderer=new T.WebGLRenderer({antialias:true}); renderer.setPixelRatio(Math.min(2,devicePixelRatio||1));
     renderer.setSize(st.clientWidth,st.clientHeight); st.appendChild(renderer.domElement);
-    const scene=new T.Scene(); scene.background=new T.Color('#d9e1e8'); scene.fog=new T.Fog('#d9e1e8',30,110);
-    const cam=new T.PerspectiveCamera(72,st.clientWidth/st.clientHeight,0.05,300);
-    scene.add(new T.HemisphereLight(0xffffff,0x6d7d8c,0.95));
-    const sun=new T.DirectionalLight(0xffffff,0.45); sun.position.set(W*0.3,20,D*0.2); scene.add(sun);
-    const ft=wkTex(fl.bg,'rgba(255,255,255,.35)'); ft.repeat.set(f.cols,f.rows);
-    const floor=new T.Mesh(new T.PlaneGeometry(W,D),new T.MeshLambertMaterial({map:ft})); floor.rotation.x=-Math.PI/2; floor.position.set(W/2,0,D/2); scene.add(floor);
-    const ceil=new T.Mesh(new T.PlaneGeometry(W,D),new T.MeshBasicMaterial({color:'#dfe6ec'})); ceil.rotation.x=Math.PI/2; ceil.position.set(W/2,HALL,D/2); scene.add(ceil);
-    const wallM=new T.MeshLambertMaterial({color:'#c7d0d8'});
-    [[W/2,-0.1,W,0.2],[W/2,D+0.1,W,0.2],[-0.1,D/2,0.2,D],[W+0.1,D/2,0.2,D]].forEach(a=>{const m=new T.Mesh(new T.BoxGeometry(a[2],HALL,a[3]),wallM);m.position.set(a[0],HALL/2,a[1]);scene.add(m);});
-    const edgeM=new T.LineBasicMaterial({color:'#6f7c89'});
-    const cols=[];
-    function box(x0,z0,w,d,y0,h,color,collide,edges=true){
-      const m=new T.Mesh(new T.BoxGeometry(w,h,d),new T.MeshLambertMaterial({color}));m.position.set(x0+w/2,y0+h/2,z0+d/2);scene.add(m);
-      if(edges){const e=new T.LineSegments(new T.EdgesGeometry(m.geometry),edgeM);e.position.copy(m.position);scene.add(e);}
-      if(collide)cols.push([x0,z0,x0+w,z0+d]);return m;
-    }
-    f.rects.forEach(r=>{
-      const x=r.x*S+0.05,z=r.y*S+0.05,w=r.w*S-0.1,d=r.h*S-0.1;
-      if(r.type==='wall') box(x,z,w,d,0,HALL,'#6b7885',true);
-      else if(r.type==='shut') box(x,z,w,d,0,6.1,'#aab6c2',true);
-      else if(r.type==='door'){ box(x,z,w,d,0,0.05,'#f0c15c',false,false); }
-      else if(r.type==='nest'){ box(x+w*.07,z+d*.07,w*.86,d*.86,0,2.7,'#d8b98a',true); box(x,z,w,d,3.4,0.35,'#c93a3a',false); box(x+w*.07,z+d*.07,w*.86,d*.86,3.75,2.8,'#d8b98a',false);
-        [[0,0],[1,0],[0,1],[1,1]].forEach(p=>box(x+p[0]*(w-0.3),z+p[1]*(d-0.3),0.3,0.3,0,3.4,'#c93a3a',false,false)); }
-      else if(r.type==='load') box(x+w*.03,z+d*.03,w*.94,d*.94,0,2.4,'#5d92d6',true);
-      else if(r.pal){ // パレット置き場：2×2マスごとに1枚ずつ、すき間をあけて並べる（地図の区切りと同じ）
-        cols.push([x,z,x+w,z+d]);
-        for(let py=0;py<r.h;py+=2) for(let px=0;px<r.w;px+=2){ const pw=Math.min(2,r.w-px), ph=Math.min(2,r.h-py);
-          box(r.x*S+px*S+0.12, r.y*S+py*S+0.12, pw*S-0.24, ph*S-0.24, 0, 0.8, '#c9b08a', false); } }
-      else box(x,z,w,d,0,3.5,'#c3ccd5',true);
-      if(r.label){ const sp=wkLabel(r.label); const hh=r.type==='wall'?HALL-1:r.pal?1.9:r.type==='load'?3.3:4.5; sp.position.set((r.x+r.w/2)*S,hh,(r.y+r.h/2)*S); scene.add(sp); }
-    });
+    Warehouse3D.configure(renderer);
+    const world=Warehouse3D.createWorld(DB,DB.maps.cur,{walk:true,selected:WK.target&&WK.target.code});
+    const scene=world.scene, cols=world.blockers;
+    const cam=new T.PerspectiveCamera(72,st.clientWidth/st.clientHeight,0.05,Math.max(W,D)*4);
     const R=0.3;
     const hitR=(px,pz,rr)=>{ if(px<rr||pz<rr||px>W-rr||pz>D-rr) return true; return cols.some(c=> px>c[0]-rr&&px<c[2]+rr&&pz>c[1]-rr&&pz<c[3]+rr); };
     const hit=(px,pz)=>hitR(px,pz,R);
@@ -2758,11 +2735,11 @@
     const colr={r:'#ff3b3b',p:'#b34dff',b:'#2f7bff'};
     here.forEach(c=>{
       const pm=new T.Mesh(new T.CylinderGeometry(0.5,0.5,HALL,16,1,true),new T.MeshBasicMaterial({color:colr[c.s]||'#ff3b3b',transparent:true,opacity:.35,side:T.DoubleSide,depthWrite:false}));
-      pm.position.set((c.x+.5)*S,HALL/2,(c.y+.5)*S);scene.add(pm);
-      const ring=new T.Mesh(new T.CircleGeometry(0.8,24),new T.MeshBasicMaterial({color:colr[c.s]||'#ff3b3b'}));ring.rotation.x=-Math.PI/2;ring.position.set((c.x+.5)*S,0.06,(c.y+.5)*S);scene.add(ring); });
+      pm.position.set((c.x+(c.w||2)/2)*S,HALL/2,(c.y+(c.h||2)/2)*S);scene.add(pm);
+      const ring=new T.Mesh(new T.CircleGeometry(0.8,24),new T.MeshBasicMaterial({color:colr[c.s]||'#ff3b3b'}));ring.rotation.x=-Math.PI/2;ring.position.set((c.x+(c.w||2)/2)*S,0.06,(c.y+(c.h||2)/2)*S);scene.add(ring); });
     const goal=new Uint8Array(GW*GD); let goalN=0;
-    here.forEach(c=>{ const cx=(c.x+.5)*S, cz=(c.y+.5)*S;
-      for(let j=0;j<GD;j++)for(let i=0;i<GW;i++){ if(!free[j*GW+i])continue; const dx=Math.max(0,Math.abs((i+.5)*G-cx)-S/2), dz=Math.max(0,Math.abs((j+.5)*G-cz)-S/2); if(Math.hypot(dx,dz)<=1.6){ if(!goal[j*GW+i])goalN++; goal[j*GW+i]=1; } } });
+    here.forEach(c=>{ const cx=(c.x+(c.w||2)/2)*S, cz=(c.y+(c.h||2)/2)*S;
+      for(let j=0;j<GD;j++)for(let i=0;i<GW;i++){ if(!free[j*GW+i])continue; const dx=Math.max(0,Math.abs((i+.5)*G-cx)-(c.w||2)*S/2), dz=Math.max(0,Math.abs((j+.5)*G-cz)-(c.h||2)*S/2); if(Math.hypot(dx,dz)<=1.6){ if(!goal[j*GW+i])goalN++; goal[j*GW+i]=1; } } });
     // 床の矢印
     const arrowShape=new T.Shape(); arrowShape.moveTo(-0.45,-0.25); arrowShape.lineTo(0,0.25); arrowShape.lineTo(0.45,-0.25); arrowShape.lineTo(0.45,-0.05); arrowShape.lineTo(0,0.45); arrowShape.lineTo(-0.45,-0.05); arrowShape.closePath();
     const arrowG=new T.ShapeGeometry(arrowShape), arrowM=new T.MeshBasicMaterial({color:'#ffe941',transparent:true,opacity:.95,depthWrite:false});
@@ -2801,7 +2778,7 @@
     $('wkTitle').textContent = tg ? ('🔍 '+tg.code) : '🚶 倉庫を歩く';
     $('wkBar').classList.remove('on');
     if(tg && !here.length){ const fs=[...new Set(tg.cells.map(c=>c.f))]; const fi=fs[0];
-      $('wkBarTxt').textContent=tg.code+' は「'+(DB.maps.floors[fi].name||('フロア'+(fi+1)))+'」にあります'; $('wkBarBtn').onclick=()=>{ DB.maps.cur=fi; WK.x=null; wkBuild(false); }; $('wkBar').classList.add('on'); }
+      $('wkBarTxt').textContent=tg.code+' の登録先は「'+(DB.maps.floors[fi].name||('フロア'+(fi+1)))+'」です'; $('wkBarBtn').onclick=()=>{ DB.maps.cur=fi; WK.x=null; wkBuild(false); }; $('wkBar').classList.add('on'); }
     else if(tg && here.length && !goalN) wkMsg('場所のまわりに通路が見つからへん…光の柱を目指してな',3500);
     else if(tg) wkMsg('床の矢印についていってな',2200);
     WK.onResize=()=>{ if(!WK.renderer)return; renderer.setSize(st.clientWidth,st.clientHeight); cam.aspect=st.clientWidth/st.clientHeight; cam.updateProjectionMatrix(); };
@@ -2815,7 +2792,7 @@
       if(goalN && !WK.arrived){
         if(now-WK.pathAt>350){ WK.path=route(WK.x,WK.z); WK.pathAt=now; }
         const gi=Math.floor(WK.x/G), gj=Math.floor(WK.z/G);
-        if(gi>=0&&gj>=0&&gi<GW&&gj<GD&&goal[gj*GW+gi]){ WK.arrived=true; drawRoute(null,0); wkMsg('📦 到着！ '+tg.code+' はここ',4000); }
+        if(gi>=0&&gj>=0&&gi<GW&&gj<GD&&goal[gj*GW+gi]){ WK.arrived=true; drawRoute(null,0); wkMsg('登録場所に到着：'+tg.code,4000); }
         else drawRoute(WK.path,now/1000);
       }
       cam.position.set(WK.x,3.2,WK.z); cam.rotation.order='YXZ'; cam.rotation.y=WK.yaw; cam.rotation.x=WK.pitch;
@@ -2852,8 +2829,10 @@
     md.addEventListener('pointerup',up); md.addEventListener('pointercancel',up);
     addEventListener('keydown',e=>{ if(!WK.on)return; if($('wkPad').classList.contains('on')){ if(/^[0-9]$/.test(e.key))wkPadKey(e.key); else if(/^[abc]$/i.test(e.key)&&$('wkKind').style.display==='grid')wkPickKind(e.key.toUpperCase()); else if(e.key==='Backspace')wkPadKey('del'); else if(e.key==='Enter')wkPadKey('go'); else if(e.key==='Escape')$('wkPad').classList.remove('on'); return; } WK.keys[e.key.toLowerCase()]=true; });
     addEventListener('keyup',e=>{ if(WK.keys) WK.keys[e.key.toLowerCase()]=false; });
+    addEventListener('blur',()=>{WK.keys={};WK.mx=WK.mz=0;move=look=null;stick.style.display='none';});
     addEventListener('resize',()=>WK.onResize&&WK.onResize());
-    $('w3Walk').onclick=()=>{ $('w3Modal').classList.remove('on'); wkOpen(mpPart&&DB.spots[mpPart]&&DB.spots[mpPart].cells.length?{code:mpPart,cells:DB.spots[mpPart].cells}:null); };
+    $('w3Walk').onclick=()=>{const target=n3Selected?Warehouse3D.find(DB,n3Selected):null;n3Close();WK.x=null;wkOpen(target);};
+    $('wkOverview').onclick=()=>{const code=WK.target&&WK.target.code;wkClose();n3Open(code);};
     $('walkBtn').onclick=()=>{ WK.x=null; wkOpen(null); };
     $('wkClose').onclick=wkClose;
     $('wkFind').onclick=()=>{ wkCode=''; wkPadShow(); $('wkPadNote').textContent=''; $('wkPad').classList.add('on'); WK.mx=WK.mz=0; };
@@ -3659,6 +3638,7 @@
     if(!DB.meaning) DB.meaning={}; if(!DB.place) DB.place={}; if(!DB.products) DB.products={};
     if(canLS){ try{ localStorage.setItem(DB_KEY, JSON.stringify(DB)); }catch(e){ window.__memDB=DB; } }
     else window.__memDB=DB;
+    dispatchEvent(new Event('warehouse-data-changed'));
   }
 
   /* ----- register sub-screen nav ----- */
