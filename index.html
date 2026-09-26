@@ -518,7 +518,7 @@
   <div class="wrap">
     <div class="home-title">
       <h1>ピッキング補助</h1>
-      <div class="ver-tag">ver44（9/26 天井の番号の画面に品名を表示）</div>
+      <div class="ver-tag">ver45（9/26 全部の登録をファイルで控え・復元）</div>
     </div>
     <div class="home-btns">
       <button class="home-btn go" id="goBtn">GO</button>
@@ -536,7 +536,7 @@
   <div class="wrap">
     <div style="text-align:center; padding:14px 0 16px;">
       <h2 style="font-size:22px; font-weight:900;">ピッキング補助</h2>
-      <div class="ver-tag" style="margin:4px 0 0;">ver44（9/26 天井の番号の画面に品名を表示）</div>
+      <div class="ver-tag" style="margin:4px 0 0;">ver45（9/26 全部の登録をファイルで控え・復元）</div>
     </div>
 
     <!-- 機種から選ぶ -->
@@ -999,6 +999,17 @@
     <div id="regBackup" style="display:none;">
       <button class="back sm-back" data-regmenu>← 戻る</button>
       <p class="status" style="text-align:left;margin:10px 2px 4px;line-height:1.7;">登録した内容（場所・個数の設定）は、このスマホの中だけに保存されてるで。<br>スマホを変えたり消えたときのために、控えを取っておける。</p>
+
+      <div class="bk-card" style="border-color:#1f8a5a;">
+        <div class="bk-num" style="background:#1f8a5a;">★</div>
+        <div class="bk-body">
+          <div class="bk-title">ファイルで控えを取る（おすすめ）</div>
+          <div class="bk-desc">地図・部品の場所・天井の番号・製品登録など<b>全部</b>が1つのファイルになる。LINEの自分用トークやGoogleドライブに送って保管しとく。</div>
+          <button class="btn ok sm" id="bkFileSave">📥 全部をファイルで保存する</button>
+          <div class="bk-desc" id="bkLast" style="margin-top:6px;"></div>
+          <label class="btn sm" style="display:block;text-align:center;margin-top:10px;">📤 ファイルから元に戻す<input type="file" id="bkFileLoad" accept=".json,application/json,text/plain" style="display:none;"></label>
+        </div>
+      </div>
 
       <div class="bk-card">
         <div class="bk-num">1</div>
@@ -4011,11 +4022,32 @@
   }
 
   /* ----- backup ----- */
+  /* ver45 ファイルで控え（全部）・ファイルから復元。復元前の状態は1つ前として自動で残す */
+  function bkNormalize(obj){ ['meaning','place','products','count','spots','addr'].forEach(k=>{ if(!obj[k]||typeof obj[k]!=='object') obj[k]={}; }); if(!obj.maps||typeof obj.maps!=='object') obj.maps=defaultMaps(); return obj; }
+  function bkLastShow(){ const t=+(localStorage.getItem('bkLastAt')||0); $('bkLast').textContent= t? ('前回の保存：'+new Date(t).toLocaleString('ja-JP')) : 'まだファイルで保存してへん'; }
+  $('bkFileSave').onclick=async ()=>{
+    const d=new Date(), pad=n=>String(n).padStart(2,'0'), name='picking-backup-'+d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+'-'+pad(d.getHours())+pad(d.getMinutes())+'.json';
+    const blob=new Blob([JSON.stringify(DB)],{type:'application/json'});
+    try{ const f=new File([blob],name,{type:'application/json'}); if(navigator.canShare&&navigator.canShare({files:[f]})){ await navigator.share({files:[f],title:'ピッキング補助の控え'}); localStorage.setItem('bkLastAt',Date.now()); bkLastShow(); return; } }catch(e){ if(e&&e.name==='AbortError') return; }
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+    localStorage.setItem('bkLastAt',Date.now()); bkLastShow();
+  };
+  $('bkFileLoad').onchange=async e=>{
+    const f=e.target.files[0]; e.target.value=''; if(!f) return;
+    try{ const obj=bkNormalize(JSON.parse(await f.text()));
+      const n=Object.keys(obj.addr).length+Object.keys(obj.spots).length+Object.keys(obj.products).length;
+      if(!confirm('このファイルの内容で置きかえる？（今の内容は「1つ前」として残すで）\n'+f.name)) return;
+      try{ localStorage.setItem(DB_KEY+'_prev',JSON.stringify(DB)); }catch(_){}
+      DB=obj; saveDB(); $('backupStatus').className='status ok'; $('backupStatus').textContent='✓ ファイルから戻した（登録 '+n+' 件）';
+    }catch(err){ $('backupStatus').className='status ng'; $('backupStatus').textContent='このファイルは読めんかった。保存した控えファイルを選んでな'; }
+  };
+  bkLastShow();
+
   $('exportBtn').onclick = ()=>{ $('backupText').value = JSON.stringify(DB); $('backupStatus').className='status'; $('backupStatus').textContent='この内容をコピーして保存しとくと安心や'; };
   $('copyBackup').onclick = async ()=>{ try{ await navigator.clipboard.writeText($('backupText').value); }catch(e){ $('backupText').select(); document.execCommand('copy'); } $('backupStatus').className='status ok'; $('backupStatus').textContent='✓ コピーした'; };
   $('applyBackup').onclick = ()=>{
     const t=$('backupText').value.trim(); if(!t){ $('backupStatus').className='status ng'; $('backupStatus').textContent='貼り付け内容が空'; return; }
-    try{ const obj=JSON.parse(t); if(!obj.meaning) obj.meaning={}; if(!obj.place) obj.place={}; DB=obj; saveDB();
+    try{ const obj=bkNormalize(JSON.parse(t)); try{ localStorage.setItem(DB_KEY+'_prev',JSON.stringify(DB)); }catch(_){} DB=obj; saveDB();
       $('backupStatus').className='status ok'; $('backupStatus').textContent='✓ 取り込んだ';
     }catch(e){ $('backupStatus').className='status ng'; $('backupStatus').textContent='形式がおかしい。書き出した内容を貼ってな'; }
   };
