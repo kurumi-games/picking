@@ -268,6 +268,12 @@
   html body .ad-done { flex-direction:column; gap:18px; }  html body .ad-done-mk { width:84px; height:auto; filter:drop-shadow(0 0 0 3px #fff); }
   html body .ad-found { gap:14px; }  html body .ad-f-row { width:min(84vw,340px); aspect-ratio:1.785; justify-content:center; gap:22px; background:url('img/ceiling/found-card.webp') center/100% 100% no-repeat; }  html body .ad-f-row b { color:#15202b; font-size:96px; }  html body .ad-f-mk { width:78px; height:auto; }
   html body .ta-mk { width:46px; height:auto; }  html body .af-mk { width:42px; height:auto; }
+  .gone b { opacity:.35; text-decoration:line-through; text-decoration-thickness:5px; } .gone img { opacity:.35; }
+  .ad-gone { color:#e0612b !important; font-weight:900 !important; font-size:13px !important; margin-left:auto; white-space:nowrap; }
+  .ad-f-row.gone .ad-gone { color:#b3471f !important; font-size:15px !important; margin-left:0; }
+  html body .ad-f-row b { white-space:nowrap; } html body .ad-f-row b.br { font-size:64px; } html body .ad-f-row { gap:12px; padding:0 14px; box-sizing:border-box; }
+  html body .ad-strip button.br { font-size:30px; }
+  .ad-hint.small.long { opacity:.5; }
   .td-old-btn { display:block; margin:18px auto 10px; border:none; background:none; color:#5b6b7b; font-weight:700; font-size:13px; text-decoration:underline; }
   .ta-intro { padding:14px; border-radius:14px; background:#fff; border:1.5px solid #dfe5eb; font-size:14px; line-height:1.9; color:#33475b; }
   .ta-card { padding:12px; border-radius:16px; background:#fff; border:1.5px solid #dfe5eb; margin-bottom:10px; }
@@ -537,7 +543,7 @@
   <div class="wrap">
     <div class="home-title">
       <h1>ピッキング補助</h1>
-      <div class="ver-tag">ver48（9/28 品名を手で入れられる：「＋ 品名を入れる」をタップ）</div>
+      <div class="ver-tag">ver49（9/28 引越しで定位置に「いまは無い」・長押しで枝番36-1など）</div>
     </div>
     <div class="home-btns">
       <button class="home-btn go" id="goBtn">GO</button>
@@ -555,7 +561,7 @@
   <div class="wrap">
     <div style="text-align:center; padding:14px 0 16px;">
       <h2 style="font-size:22px; font-weight:900;">ピッキング補助</h2>
-      <div class="ver-tag" style="margin:4px 0 0;">ver48（9/28 品名を手で入れられる：「＋ 品名を入れる」をタップ）</div>
+      <div class="ver-tag" style="margin:4px 0 0;">ver49（9/28 引越しで定位置に「いまは無い」・長押しで枝番36-1など）</div>
     </div>
 
     <!-- 機種から選ぶ -->
@@ -744,6 +750,7 @@
     <div class="ad-hint">天井の番号</div>
     <div class="ad-strip-wrap"><div class="ad-center"></div><div class="ad-strip" id="adStrip"></div></div>
     <div class="ad-hint small" id="adNHint">タップで選ぶ → もう1回タップで決定</div>
+    <div class="ad-hint small long">長押しで枝番（36-1・36-2…）</div>
   </div>
   <div class="ad-step" id="adStepC">
     <div class="ad-big" id="adBigN"></div>
@@ -1255,7 +1262,8 @@
     if(!obj.maps    || typeof obj.maps!=='object')    obj.maps    = defaultMaps();
     if(!obj.spots   || typeof obj.spots!=='object')   obj.spots   = {};
     if(!obj.addr    || typeof obj.addr!=='object')    obj.addr    = {};
-    if(!obj.names   || typeof obj.names!=='object')   obj.names   = {};   // ver48 手で入れた品名 {CODE:'品名'}   // ver40 天井番号 {CODE:[{n,s,t}]} s=r定位置/b仮置き/g引越し   // 部品ごとの塗り絵 {CODE:{cells:[{f,x,y,s}]}}
+    if(!obj.names   || typeof obj.names!=='object')   obj.names   = {};
+    if(!obj.branch  || typeof obj.branch!=='object')  obj.branch  = {};   // ver49 枝番の数 {36:3} → 36-1,36-2,36-3   // ver48 手で入れた品名 {CODE:'品名'}   // ver40 天井番号 {CODE:[{n,s,t}]} s=r定位置/b仮置き/g引越し   // 部品ごとの塗り絵 {CODE:{cells:[{f,x,y,s}]}}
     delete obj.spots['null']; delete obj.spots['NULL']; delete obj.spots['undefined']; delete obj.spots[''];
     // 重複マスの掃除
     Object.keys(obj.spots).forEach(k=>{
@@ -2362,7 +2370,7 @@
     if(!ms.length){
       const digits=/^[0-9]+$/.test(q);
       box.innerHTML='<div class="ta-none">'+q+' はまだ天井の番号が登録されてへん</div>'+(digits?'<div class="ta-reg">'+['C','B','A'].map(p=>'<button data-c="'+p+q+'">'+p+q+' を登録</button>').join('')+'</div>':'<div class="ta-reg"><button data-c="'+q+'">番号を登録する</button></div>');
-    } else box.innerHTML=ms.map(k=>'<div class="ta-card"><div class="ta-code">'+k+'</div><div class="ta-name'+(partName(k)?'':' none')+'" data-nm="'+k+'">'+(partName(k)?partName(k).replace(/</g,'&lt;')+' <u>✎</u>':'＋ 品名を入れる')+'</div>'+DB.addr[k].slice().sort((a,b)=>order[a.s]-order[b.s]).map(e=>'<div class="ta-row"><b>'+e.n+'</b>'+adMark(e.s,'ta-mk')+'<small>'+AD_NAME[e.s]+'</small></div>').join('')+'<button class="ta-add" data-c="'+k+'">＋ 別の番号にも片付ける</button></div>').join('');
+    } else box.innerHTML=ms.map(k=>'<div class="ta-card"><div class="ta-code">'+k+'</div><div class="ta-name'+(partName(k)?'':' none')+'" data-nm="'+k+'">'+(partName(k)?partName(k).replace(/</g,'&lt;')+' <u>✎</u>':'＋ 品名を入れる')+'</div>'+adRows(DB.addr[k],'ta-row','ta-mk',true)+'<button class="ta-add" data-c="'+k+'">＋ 別の番号にも片付ける</button></div>').join('');
     box.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{ adForcePut=true; adOpen(b.dataset.c); });
     box.querySelectorAll('[data-nm]').forEach(b=>b.onclick=()=>adEditName(b.dataset.nm,()=>tdAddrShow($('tdQ').value)));
   }
@@ -3001,6 +3009,8 @@
   // ver47 置き方の印（チャッピー素材）：定位置＝赤丸、仮置き＝青ひし形、引越し＝緑三角
   const AD_MARK={r:'img/ceiling/mark-red-s.webp',b:'img/ceiling/mark-blue-s.webp',g:'img/ceiling/mark-green-s.webp'};
   function adMark(sv,cls){ return '<img class="'+(cls||'ad-mk')+'" src="'+AD_MARK[sv]+'" alt="'+AD_NAME[sv]+'">'; }
+  // ver49 場所の並び（定位置→引越し→仮置き）。引っ越した定位置はうすく線で消して「いまは無い → 行き先」
+  function adRows(list,rowCls,mkCls,withName){ const o={r:0,g:1,b:2}; return list.slice().sort((a,b)=>o[a.s]-o[b.s]).map(e=>'<div class="'+rowCls+(e.moved?' gone':'')+'"><b'+(String(e.n).includes('-')?' class="br"':'')+'>'+e.n+'</b>'+adMark(e.s,mkCls)+(e.moved?'<small class="ad-gone">'+(rowCls==='ad-f-row'?'無い→':'いまは無い → ')+e.moved+'</small>':(withName?'<small>'+AD_NAME[e.s]+'</small>':''))+'</div>').join(''); }
   function adBuzz(ms){ try{ navigator.vibrate&&navigator.vibrate(ms); }catch(e){} }
   let adCodeCur=null, adN=null, adArmedN=null, adArmedS=null, adArmT=0;
   // ver48 品名を手で入れる／直す（タップ）
@@ -3010,26 +3020,38 @@
   function adOpen(code){
     const resolved=(DB.meaning[code]&&DB.meaning[code].code)?DB.meaning[code].code:code;
     adCodeCur=adKey(String(resolved).toUpperCase()); adArmedN=adArmedS=null;
-    adNameShow();
+    adNameShow(); $('adModal').classList.add('on'); adStep('adStepN');
     // ver43 もう登録ずみなら、まず場所を見せる（片付け直す時だけ番号選びへ）
     const reg=(DB.addr[adCodeCur]||[]).slice().sort((a,b)=>({r:0,b:1,g:2}[a.s]-{r:0,b:1,g:2}[b.s]));
-    if(reg.length && !adForcePut){ $('adFound').innerHTML=reg.map(e=>'<div class="ad-f-row"><b>'+e.n+'</b>'+adMark(e.s,'ad-f-mk')+'</div>').join(''); adStep('adStepF'); adSnd('pop'); }
+    if(reg.length && !adForcePut){ $('adFound').innerHTML=adRows(reg,'ad-f-row','ad-f-mk',false); adStep('adStepF'); adSnd('pop'); }
     adForcePut=false;
-    const used=new Set(); Object.values(DB.addr).forEach(l=>l.forEach(e=>used.add(e.n)));
-    const max=Math.max(300,...[...used].map(n=>n+60)); const st=$('adStrip'); let h='';
-    for(let n=1;n<=max;n++) h+='<button data-n="'+n+'"'+(used.has(n)?' class="used"':'')+'>'+n+'</button>';
+    adBuildStrip();
+  }
+  function adBuildStrip(keepLeft){
+    const used=new Set(); Object.values(DB.addr).forEach(l=>l.forEach(e=>used.add(String(e.n))));
+    const max=Math.max(300,...[...used].map(n=>parseInt(n)+60)); const st=$('adStrip'); let h=''; const br=DB.branch||{};
+    for(let n=1;n<=max;n++){ const k=+br[n]||0; const toks=k?Array.from({length:k},(_,i)=>n+'-'+(i+1)):[String(n)];
+      toks.forEach(t=>{ h+='<button data-n="'+t+'" class="'+(used.has(t)?'used':'')+(k?' br':'')+'">'+t+'</button>'; }); }
     st.innerHTML=h;
-    const last=+(localStorage.getItem('adLast')||1); requestAnimationFrame(()=>{ const b=st.querySelector('[data-n="'+last+'"]'); if(b) st.scrollLeft=b.offsetLeft-(st.clientWidth-b.offsetWidth)/2; });
+    const last=localStorage.getItem('adLast')||'1'; if(keepLeft!=null){ st.scrollLeft=keepLeft; return; } requestAnimationFrame(()=>{ const b=st.querySelector('[data-n="'+last+'"]')||st.querySelector('[data-n^="'+parseInt(last)+'-"]'); if(b) st.scrollLeft=b.offsetLeft-(st.clientWidth-b.offsetWidth)/2; });
   }
   function adNameShow(){ const nm=partName(adCodeCur); $('adCode').innerHTML='📦 '+adCodeCur+(nm?'<em class="ad-name" id="adNameE">'+nm.replace(/</g,'&lt;')+' <u>✎</u></em>':'<em class="ad-name none" id="adNameE">＋ 品名を入れる</em>'); $('adNameE').onclick=()=>adEditName(adCodeCur,adNameShow); }
   let adForcePut=false;
   function adClose(){ $('adModal').classList.remove('on'); adCodeCur=null; $('adFlood').classList.remove('go'); }
+  // ver49 長押しで枝番（その番号の列の数）を設定
+  let adLongT=0, adLongDone=false;
+  $('adStrip').addEventListener('pointerdown',e=>{ const b=e.target.closest('button[data-n]'); if(!b) return; clearTimeout(adLongT);
+    adLongT=setTimeout(()=>{ adLongDone=true; const base=parseInt(b.dataset.n), cur=+(DB.branch||{})[base]||0;
+      const v=prompt(base+'番の列の数（例：3 → '+base+'-1・'+base+'-2・'+base+'-3）\n枝番なしにする時は 0',cur||3); if(v===null) return;
+      const k=Math.max(0,Math.min(9,parseInt(v)||0)); if(!DB.branch) DB.branch={}; if(k) DB.branch[base]=k; else delete DB.branch[base]; saveDB(); adBuildStrip($('adStrip').scrollLeft); adSnd('pop'); },650); });
+  ['pointerup','pointercancel','pointerleave'].forEach(t=>$('adStrip').addEventListener(t,()=>clearTimeout(adLongT)));
+  $('adStrip').addEventListener('scroll',()=>clearTimeout(adLongT),{passive:true});
   let adMid=-1;
   $('adStrip').addEventListener('scroll',()=>{ const st=$('adStrip'), f=st.firstElementChild; if(!f) return;
     const i=Math.round((st.scrollLeft+st.clientWidth/2-(f.offsetLeft+f.offsetWidth/2))/(f.offsetWidth+8));
     if(i!==adMid){ const old=st.children[adMid]; if(old) old.classList.remove('mid'); adMid=i; const nb=st.children[i]; if(nb){ nb.classList.add('mid'); adSnd('tick'); adBuzz(6); } } },{passive:true});
   $('adStrip').addEventListener('click',e=>{
-    const b=e.target.closest('button[data-n]'); if(!b) return; const n=+b.dataset.n, st=$('adStrip');
+    const b=e.target.closest('button[data-n]'); if(!b||adLongDone) { adLongDone=false; return; } const n=b.dataset.n, st=$('adStrip');
     if(adArmedN===n && performance.now()-adArmT<4000){ adN=n; localStorage.setItem('adLast',n); $('adBigN').textContent=n; adArmedS=null; $('.ad-colors')&&0;
       document.querySelectorAll('.ad-colors button').forEach(x=>x.classList.remove('armed')); document.querySelector('.ad-colors').classList.remove('has-armed'); adStep('adStepC'); return; }
     st.querySelectorAll('.armed').forEach(x=>x.classList.remove('armed')); b.classList.add('armed'); adArmedN=n; adArmT=performance.now(); adSnd('pop'); adBuzz(15);
@@ -3039,7 +3061,10 @@
     const sv=b.dataset.s, box=document.querySelector('.ad-colors');
     if(adArmedS===sv && performance.now()-adArmT<4000){
       const key=adCodeCur, before=JSON.parse(JSON.stringify(DB.addr[key]||null));
-      const list=(DB.addr[key]||[]).filter(x=>x.n!==adN); list.push({n:adN,s:sv,t:Date.now()}); DB.addr[key]=list; saveDB();
+      let list=(DB.addr[key]||[]).map(x=>Object.assign({},x)).filter(x=>String(x.n)!==String(adN));
+      if(sv==='g'){ list=list.filter(x=>x.s!=='g'); list.forEach(x=>{ if(x.s==='r') x.moved=String(adN); }); }          // 引越し：前の引越し先は消して、定位置に「いまは無い」
+      if(sv==='r'&&(DB.addr[key]||[]).some(x=>x.s==='r'&&String(x.n)===String(adN)&&x.moved)){ list=list.filter(x=>x.s!=='g'); } // 定位置に戻した：引越し先を消す
+      list.push({n:adN,s:sv,t:Date.now()}); DB.addr[key]=list; saveDB();
       const r=b.getBoundingClientRect(), fl=$('adFlood'); fl.style.background=AD_COL[sv]; fl.style.left=(r.left+r.width/2)+'px'; fl.style.top=(r.top+r.height/2)+'px'; fl.classList.remove('go'); void fl.offsetWidth; fl.classList.add('go');
       $('adDone').innerHTML='<div class="ad-stamp">'+adN+'</div>'+adMark(sv,'ad-done-mk'); adStep('adStepD'); setTimeout(()=>{ adSnd('thud'); adBuzz([30,20,50]); },170);
       showUndo(key+' を '+adN+'（'+AD_NAME[sv]+'）に登録',()=>{ if(before) DB.addr[key]=before; else delete DB.addr[key]; saveDB(); });
@@ -3065,7 +3090,7 @@
     const r=afFind(pf+afCode), box=$('afResult'); $('afKind').style.display='none'; box.style.display='flex';
     $('afTitle').textContent=pf+afCode;
     if(!r){ box.innerHTML='<div class="none">まだ登録されてへん</div><button class="again">もう一度さがす</button>'; }
-    else { const order={r:0,b:1,g:2}; box.innerHTML=r.list.slice().sort((a,b)=>order[a.s]-order[b.s]).map(e=>'<div class="row"><b>'+e.n+'</b>'+adMark(e.s,'af-mk')+'<small>'+AD_NAME[e.s]+'</small></div>').join('')+'<button class="again">もう一度さがす</button>'; $('afTitle').textContent=r.code; }
+    else { const order={r:0,b:1,g:2}; box.innerHTML=adRows(r.list,'row','af-mk',true)+'<button class="again">もう一度さがす</button>'; $('afTitle').textContent=r.code; }
     box.querySelector('.again').onclick=()=>{ afCode=''; afShow(); };
   }
   $('afX').onclick=()=>$('afModal').classList.remove('on');
@@ -4055,7 +4080,7 @@
 
   /* ----- backup ----- */
   /* ver45 ファイルで控え（全部）・ファイルから復元。復元前の状態は1つ前として自動で残す */
-  function bkNormalize(obj){ ['meaning','place','products','count','spots','addr','names'].forEach(k=>{ if(!obj[k]||typeof obj[k]!=='object') obj[k]={}; }); if(!obj.maps||typeof obj.maps!=='object') obj.maps=defaultMaps(); return obj; }
+  function bkNormalize(obj){ ['meaning','place','products','count','spots','addr','names','branch'].forEach(k=>{ if(!obj[k]||typeof obj[k]!=='object') obj[k]={}; }); if(!obj.maps||typeof obj.maps!=='object') obj.maps=defaultMaps(); return obj; }
   function bkLastShow(){ const t=+(localStorage.getItem('bkLastAt')||0); $('bkLast').textContent= t? ('前回の保存：'+new Date(t).toLocaleString('ja-JP')) : 'まだファイルで保存してへん'; }
   $('bkFileSave').onclick=async ()=>{
     const d=new Date(), pad=n=>String(n).padStart(2,'0'), name='picking-backup-'+d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+'-'+pad(d.getHours())+pad(d.getMinutes())+'.json';
