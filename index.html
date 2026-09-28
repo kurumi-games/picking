@@ -272,8 +272,8 @@
   .ta-intro { padding:14px; border-radius:14px; background:#fff; border:1.5px solid #dfe5eb; font-size:14px; line-height:1.9; color:#33475b; }
   .ta-card { padding:12px; border-radius:16px; background:#fff; border:1.5px solid #dfe5eb; margin-bottom:10px; }
   .ta-code { font-weight:900; font-size:16px; color:#14263a; }
-  .ta-name { font-weight:800; font-size:18px; color:#14263a; margin:2px 0 8px; } .ta-name.none { font-size:13px; color:#9aa7b3; font-weight:700; }
-  .ad-name { display:block; font-style:normal; font-size:18px; color:#fff; margin-top:2px; } .ad-name.none { font-size:12px; color:#ffffff88; }
+  .ta-name { font-weight:800; font-size:18px; color:#14263a; margin:2px 0 8px; cursor:pointer; } .ta-name u { text-decoration:none; font-size:13px; color:#9aa7b3; } .ta-name.none { display:inline-block; font-size:13px; color:#1c6fe0; font-weight:800; padding:6px 10px; border:1.5px dashed #9fb6d0; border-radius:10px; }
+  .ad-name { display:block; font-style:normal; font-size:18px; color:#fff; margin-top:2px; cursor:pointer; } .ad-name u { text-decoration:none; font-size:13px; opacity:.6; } .ad-name.none { display:inline-block; font-size:13px; color:#9fd0ff; padding:5px 10px; border:1.5px dashed #9fd0ff88; border-radius:10px; margin-top:6px; }
   .ta-row { display:flex; align-items:center; gap:14px; padding:6px 4px; } .ta-row b { font:900 48px/1 system-ui,sans-serif; color:#14263a; min-width:84px; }
   .ta-row i { width:44px; height:44px; border-radius:10px; } .ta-row small { margin-left:auto; color:#5b6b7b; font-weight:700; }
   .ta-add { width:100%; margin-top:8px; height:44px; border-radius:12px; border:1.5px dashed #9fb0c0; background:#f6f9fb; font-weight:800; color:#33475b; }
@@ -537,7 +537,7 @@
   <div class="wrap">
     <div class="home-title">
       <h1>ピッキング補助</h1>
-      <div class="ver-tag">ver47（9/26 天井の番号の画面をチャッピー素材に：赤丸・青ひし形・緑三角）</div>
+      <div class="ver-tag">ver48（9/28 品名を手で入れられる：「＋ 品名を入れる」をタップ）</div>
     </div>
     <div class="home-btns">
       <button class="home-btn go" id="goBtn">GO</button>
@@ -555,7 +555,7 @@
   <div class="wrap">
     <div style="text-align:center; padding:14px 0 16px;">
       <h2 style="font-size:22px; font-weight:900;">ピッキング補助</h2>
-      <div class="ver-tag" style="margin:4px 0 0;">ver47（9/26 天井の番号の画面をチャッピー素材に：赤丸・青ひし形・緑三角）</div>
+      <div class="ver-tag" style="margin:4px 0 0;">ver48（9/28 品名を手で入れられる：「＋ 品名を入れる」をタップ）</div>
     </div>
 
     <!-- 機種から選ぶ -->
@@ -1254,7 +1254,8 @@
     if(!obj.count   || typeof obj.count!=='object')   obj.count   = {};
     if(!obj.maps    || typeof obj.maps!=='object')    obj.maps    = defaultMaps();
     if(!obj.spots   || typeof obj.spots!=='object')   obj.spots   = {};
-    if(!obj.addr    || typeof obj.addr!=='object')    obj.addr    = {};   // ver40 天井番号 {CODE:[{n,s,t}]} s=r定位置/b仮置き/g引越し   // 部品ごとの塗り絵 {CODE:{cells:[{f,x,y,s}]}}
+    if(!obj.addr    || typeof obj.addr!=='object')    obj.addr    = {};
+    if(!obj.names   || typeof obj.names!=='object')   obj.names   = {};   // ver48 手で入れた品名 {CODE:'品名'}   // ver40 天井番号 {CODE:[{n,s,t}]} s=r定位置/b仮置き/g引越し   // 部品ごとの塗り絵 {CODE:{cells:[{f,x,y,s}]}}
     delete obj.spots['null']; delete obj.spots['NULL']; delete obj.spots['undefined']; delete obj.spots[''];
     // 重複マスの掃除
     Object.keys(obj.spots).forEach(k=>{
@@ -2075,6 +2076,7 @@
   // 品名の逆引き（機種登録データから探す。ゼロ埋め違いも吸収）
   function partName(code){
     const n=mpNorm(code);
+    const own=Object.keys(DB.names||{}).find(k=>mpNorm(k)===n); if(own&&DB.names[own]) return DB.names[own];   // ver48 手入力の品名を優先
     let found='';
     Object.keys(DB.products||{}).some(pn=>
       (DB.products[pn]||[]).some(p=>{
@@ -2360,8 +2362,9 @@
     if(!ms.length){
       const digits=/^[0-9]+$/.test(q);
       box.innerHTML='<div class="ta-none">'+q+' はまだ天井の番号が登録されてへん</div>'+(digits?'<div class="ta-reg">'+['C','B','A'].map(p=>'<button data-c="'+p+q+'">'+p+q+' を登録</button>').join('')+'</div>':'<div class="ta-reg"><button data-c="'+q+'">番号を登録する</button></div>');
-    } else box.innerHTML=ms.map(k=>'<div class="ta-card"><div class="ta-code">'+k+'</div><div class="ta-name'+(partName(k)?'':' none')+'">'+(partName(k)||'品名の登録なし').replace(/</g,'&lt;')+'</div>'+DB.addr[k].slice().sort((a,b)=>order[a.s]-order[b.s]).map(e=>'<div class="ta-row"><b>'+e.n+'</b>'+adMark(e.s,'ta-mk')+'<small>'+AD_NAME[e.s]+'</small></div>').join('')+'<button class="ta-add" data-c="'+k+'">＋ 別の番号にも片付ける</button></div>').join('');
+    } else box.innerHTML=ms.map(k=>'<div class="ta-card"><div class="ta-code">'+k+'</div><div class="ta-name'+(partName(k)?'':' none')+'" data-nm="'+k+'">'+(partName(k)?partName(k).replace(/</g,'&lt;')+' <u>✎</u>':'＋ 品名を入れる')+'</div>'+DB.addr[k].slice().sort((a,b)=>order[a.s]-order[b.s]).map(e=>'<div class="ta-row"><b>'+e.n+'</b>'+adMark(e.s,'ta-mk')+'<small>'+AD_NAME[e.s]+'</small></div>').join('')+'<button class="ta-add" data-c="'+k+'">＋ 別の番号にも片付ける</button></div>').join('');
     box.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{ adForcePut=true; adOpen(b.dataset.c); });
+    box.querySelectorAll('[data-nm]').forEach(b=>b.onclick=()=>adEditName(b.dataset.nm,()=>tdAddrShow($('tdQ').value)));
   }
   function tdAddrIntro(){ $('tdAddr').innerHTML='<div class="ta-intro"><b>片付ける</b>：緑のボタンで現品票を読む → 天井の番号 → 色<br><b>探す</b>：コードを入れて「検索」→ 天井の番号が出る</div>'; }
   $('tdQBtn').onclick=()=>tdAddrShow($('tdQ').value);
@@ -3000,12 +3003,14 @@
   function adMark(sv,cls){ return '<img class="'+(cls||'ad-mk')+'" src="'+AD_MARK[sv]+'" alt="'+AD_NAME[sv]+'">'; }
   function adBuzz(ms){ try{ navigator.vibrate&&navigator.vibrate(ms); }catch(e){} }
   let adCodeCur=null, adN=null, adArmedN=null, adArmedS=null, adArmT=0;
+  // ver48 品名を手で入れる／直す（タップ）
+  function adEditName(code,after){ const cur=partName(code); const v=prompt((cur?'品名を直す':'品名を入れてな')+'（'+code+'）',cur||''); if(v===null) return; const t=v.trim(); if(!DB.names) DB.names={}; if(t) DB.names[code]=t; else delete DB.names[code]; saveDB(); after&&after(); }
   function adKey(code){ const k=Object.keys(DB.addr).find(c=>mpNorm(c)===mpNorm(code)); return k||code; }
   function adStep(id){ ['adStepF','adStepN','adStepC','adStepD'].forEach(x=>$(x).classList.toggle('on',x===id)); }
   function adOpen(code){
     const resolved=(DB.meaning[code]&&DB.meaning[code].code)?DB.meaning[code].code:code;
     adCodeCur=adKey(String(resolved).toUpperCase()); adArmedN=adArmedS=null;
-    { const nm=partName(adCodeCur); $('adCode').innerHTML='📦 '+adCodeCur+(nm?'<em class="ad-name">'+nm.replace(/</g,'&lt;')+'</em>':'<em class="ad-name none">品名の登録なし</em>'); } $('adModal').classList.add('on'); adStep('adStepN');
+    adNameShow();
     // ver43 もう登録ずみなら、まず場所を見せる（片付け直す時だけ番号選びへ）
     const reg=(DB.addr[adCodeCur]||[]).slice().sort((a,b)=>({r:0,b:1,g:2}[a.s]-{r:0,b:1,g:2}[b.s]));
     if(reg.length && !adForcePut){ $('adFound').innerHTML=reg.map(e=>'<div class="ad-f-row"><b>'+e.n+'</b>'+adMark(e.s,'ad-f-mk')+'</div>').join(''); adStep('adStepF'); adSnd('pop'); }
@@ -3016,6 +3021,7 @@
     st.innerHTML=h;
     const last=+(localStorage.getItem('adLast')||1); requestAnimationFrame(()=>{ const b=st.querySelector('[data-n="'+last+'"]'); if(b) st.scrollLeft=b.offsetLeft-(st.clientWidth-b.offsetWidth)/2; });
   }
+  function adNameShow(){ const nm=partName(adCodeCur); $('adCode').innerHTML='📦 '+adCodeCur+(nm?'<em class="ad-name" id="adNameE">'+nm.replace(/</g,'&lt;')+' <u>✎</u></em>':'<em class="ad-name none" id="adNameE">＋ 品名を入れる</em>'); $('adNameE').onclick=()=>adEditName(adCodeCur,adNameShow); }
   let adForcePut=false;
   function adClose(){ $('adModal').classList.remove('on'); adCodeCur=null; $('adFlood').classList.remove('go'); }
   let adMid=-1;
@@ -4049,7 +4055,7 @@
 
   /* ----- backup ----- */
   /* ver45 ファイルで控え（全部）・ファイルから復元。復元前の状態は1つ前として自動で残す */
-  function bkNormalize(obj){ ['meaning','place','products','count','spots','addr'].forEach(k=>{ if(!obj[k]||typeof obj[k]!=='object') obj[k]={}; }); if(!obj.maps||typeof obj.maps!=='object') obj.maps=defaultMaps(); return obj; }
+  function bkNormalize(obj){ ['meaning','place','products','count','spots','addr','names'].forEach(k=>{ if(!obj[k]||typeof obj[k]!=='object') obj[k]={}; }); if(!obj.maps||typeof obj.maps!=='object') obj.maps=defaultMaps(); return obj; }
   function bkLastShow(){ const t=+(localStorage.getItem('bkLastAt')||0); $('bkLast').textContent= t? ('前回の保存：'+new Date(t).toLocaleString('ja-JP')) : 'まだファイルで保存してへん'; }
   $('bkFileSave').onclick=async ()=>{
     const d=new Date(), pad=n=>String(n).padStart(2,'0'), name='picking-backup-'+d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+'-'+pad(d.getHours())+pad(d.getMinutes())+'.json';
