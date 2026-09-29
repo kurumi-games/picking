@@ -36,19 +36,20 @@
     db.spots[key] = {cells};
     return key;
   }
-  // Four rows are confirmed. Direction and width are provisional, isolated here.
+  // Four longitudinal rows, each composed of two empty shelves placed back-to-back.
   // World units: one pallet = 4. No map/localStorage migration is performed.
-  const shelfSettings=Object.freeze({rows:4,direction:'z',aisle:4,depth:2,endClearance:2,height:6.9,levels:5});
+  const shelfSettings=Object.freeze({rows:4,direction:'z',aisle:4,depth:2,unitsPerRow:2,endClearance:2,height:6.9,levels:5});
   function shelfLayout(r){
     if(String(r.label||'').replace(/\s/g,'')!=='棚番の品'||r.type)return null;
     const x=r.x*2+.06,z=r.y*2+.06,w=r.w*2-.12,d=r.h*2-.12;
     if(w<=0||d<=0)return null;
     const cfg=shelfSettings,across=cfg.direction==='x'?d:w,along=cfg.direction==='x'?w:d;
-    const fit=Math.min(1,across/(cfg.rows*cfg.depth+(cfg.rows-1)*cfg.aisle+2*cfg.endClearance));
-    const depth=cfg.depth*fit,gap=cfg.aisle*fit,span=cfg.rows*depth+(cfg.rows-1)*gap;
+    const fit=Math.min(1,across/(cfg.rows*cfg.depth*cfg.unitsPerRow+(cfg.rows-1)*cfg.aisle+2*cfg.endClearance));
+    const depth=cfg.depth*cfg.unitsPerRow*fit,gap=cfg.aisle*fit,span=cfg.rows*depth+(cfg.rows-1)*gap;
     const offset=(across-span)/2,end=Math.min(cfg.endClearance,along*.1),length=along-2*end;
     const rows=Array.from({length:cfg.rows},(_,i)=>cfg.direction==='x'?{x:x+end,z:z+offset+i*(depth+gap),w:length,d:depth}:{x:x+offset+i*(depth+gap),z:z+end,w:depth,d:length});
-    return {rect:r,x,z,w,d,rows,direction:cfg.direction,gap,height:cfg.height,levels:cfg.levels};
+    rows.forEach(row=>{row.units=Array.from({length:cfg.unitsPerRow},(_,i)=>cfg.direction==='x'?{x:row.x,z:row.z+i*row.d/cfg.unitsPerRow,w:row.w,d:row.d/cfg.unitsPerRow}:{x:row.x+i*row.w/cfg.unitsPerRow,z:row.z,w:row.w/cfg.unitsPerRow,d:row.d});});
+    return {rect:r,x,z,w,d,rows,direction:cfg.direction,gap,height:cfg.height,levels:cfg.levels,unitsPerRow:cfg.unitsPerRow};
   }
   function dispose(scene) {
     if (!scene) return;
@@ -232,10 +233,11 @@
     }
     function steelShelves(layout){
       const alongX=layout.direction==='x',H=layout.height;
-      layout.rows.forEach(row=>{
+      layout.rows.forEach(pair=>{
+        contact(pair.x,pair.z,pair.w,pair.d);
+        pair.units.forEach(row=>{
         const L=alongX?row.w:row.d,B=alongX?row.d:row.w,bays=Math.max(1,Math.ceil(L/6.4)),bay=L/bays;
         function piece(u,v,a,b,y,h,col,metal=.38){if(alongX)box(row.x+u,row.z+v,a,b,y,h,col,metal);else box(row.x+v,row.z+u,b,a,y,h,col,metal);}
-        contact(row.x,row.z,row.w,row.d);
         for(let i=0;i<=bays;i++)for(const side of [0,1]){
           const u=Math.min(L-.13,i*bay),v=side*(B-.13);
           piece(u,v,.13,.035,.1,H-.1,'#8a918c');piece(u,v,.035,.13,.1,H-.1,'#8a918c');
@@ -249,7 +251,8 @@
             for(const v of [.055,B-.11])piece(i*bay+.055,v,bay-.11,.055,y-.12,.16,'#838b84');
           }
         }
-        blockers.push([row.x,row.z,row.x+row.w,row.z+row.d]);
+        });
+        blockers.push([pair.x,pair.z,pair.x+pair.w,pair.z+pair.d]);
       });
     }
     function metalDoor(x,z,w,d){
