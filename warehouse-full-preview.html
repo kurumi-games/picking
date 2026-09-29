@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>倉庫全体を歩く</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font:16px system-ui,sans-serif;color:#193c30;background:#e9ece5}button,select{font:inherit}button{cursor:pointer}button:focus-visible,select:focus-visible{outline:3px solid #2aa884;outline-offset:2px}#stage{position:fixed;inset:0;touch-action:none}canvas{display:block}header{position:fixed;inset:0 0 auto;display:flex;align-items:center;gap:8px;padding:14px;background:linear-gradient(#163d32db,transparent);color:white;pointer-events:none}header>*{pointer-events:auto}h1{font-size:17px;margin:0;flex:1}button,.viewpoints{border:1px solid #ffffffa0;border-radius:12px;background:#fff;color:#234b3b;padding:11px 14px;font-weight:700}#reflection{background:#255448;color:white;font-size:12px;padding:9px}#viewpoints{position:fixed;top:75px;left:14px;width:min(225px,58vw);box-shadow:0 2px 10px #14272125}#message{position:fixed;top:137px;left:14px;right:14px;text-align:center;color:white;text-shadow:0 1px 4px black;pointer-events:none;font-size:13px}#controls{position:fixed;bottom:66px;left:16px;display:grid;grid-template-columns:repeat(3,44px);gap:5px}#controls button{padding:10px 0;background:#245849e8;color:#fff;font-size:23px}#controls button:first-child{grid-column:2}#controls button:nth-child(2){grid-column:1}#miniBox{position:fixed;right:12px;bottom:65px;background:#ffffffed;border-radius:15px;padding:8px;box-shadow:0 3px 12px #0002;width:134px}#mini{width:100%;height:auto;touch-action:none}#miniBox small{display:block;text-align:center;font-size:10px;margin-top:4px}.hint{position:fixed;bottom:0;inset-inline:0;padding:10px 8px max(10px,env(safe-area-inset-bottom));background:#173d32e8;color:white;text-align:center;font-size:11px;line-height:1.6;margin:0}dialog{border:0;border-radius:20px;padding:16px;width:min(520px,96vw);height:min(890px,94dvh);color:#193c30;background:#f8faf5;box-shadow:0 20px 90px #0005}dialog::backdrop{background:#10292190}dialog[open]{display:flex;flex-direction:column;gap:10px}.dialog-head{display:flex;align-items:center;gap:10px}.dialog-head h2{font-size:18px;margin:0;flex:1}dialog p{margin:0;font-size:13px;line-height:1.55}#mapSpace{min-height:0;flex:1;display:flex;align-items:center;justify-content:center}#fullMap{max-width:100%;max-height:100%;object-fit:contain;touch-action:none;cursor:crosshair}#mapNote{min-height:20px;font-size:12px}#closeMap{background:#245849;color:white}#loading{position:fixed;inset:40% 12px auto;text-align:center;background:#f8faf5f0;border-radius:16px;padding:22px;color:#193c30}.error{color:#ac2424!important}@media(max-height:550px){#miniBox{width:105px}#controls{bottom:54px}#viewpoints{top:66px}.hint{padding:5px}header{padding:8px}#message{top:115px}}
+</style></head><body>
+<div id="stage"></div><header><h1>倉庫全体を歩く</h1><button id="reflection" type="button" aria-pressed="true">反射 ON</button><button id="openMap" type="button">全体図</button></header>
+<select id="viewpoints" class="viewpoints" aria-label="見始める場所"></select><div id="message" role="status"></div>
+<div id="controls"><button data-walk="forward" aria-label="前へ">↑</button><button data-walk="left" aria-label="左へ">←</button><button data-walk="back" aria-label="後ろへ">↓</button><button data-walk="right" aria-label="右へ">→</button></div>
+<aside id="miniBox"><canvas id="mini" width="260" height="300" aria-label="小地図。通路をタップして移動"></canvas><small>通路をタップして移動</small></aside>
+<p class="hint">スワイプで見回す · 床の矢印で移動<br>全体図から再構成した3D · 高さや細部は近似</p><div id="loading">倉庫を準備しています…</div>
+<dialog id="mapDialog"><div class="dialog-head"><h2>倉庫の全体図</h2><button id="closeMap" type="button">とじる</button></div><p>緑の通路をタップすると、その場所から歩けます。<br>白い区画はパレット、右下は「棚番の品」です。</p><div id="mapSpace"><canvas id="fullMap" width="700" height="820" aria-label="全体図。緑の通路を選ぶ"></canvas></div><div id="mapNote" role="status">配置は送ってもらった全体図をもとにしています。</div></dialog>
+<script src="vendor/three-r128.min.js"></script><script src="vendor/three-r128-reflector.js"></script><script src="warehouse-materials.js"></script><script src="warehouse3d.js"></script><script src="warehouse-walk.js"></script><script src="warehouse-layout.js"></script>
+<script>
+(()=>{
+'use strict';
+const $=id=>document.getElementById(id),layout=WarehouseLayout,db={maps:{cur:0,floors:[layout.floor]},spots:{}};
+let walk=null,reflect=true,ready=false,messageTimer=0;
+const canvas=$('fullMap'),g=canvas.getContext('2d'),scale=20;
+function message(t){$('message').textContent=t;clearTimeout(messageTimer);messageTimer=setTimeout(()=>{$('message').textContent='';},3500);}
+function showError(e){$('loading').hidden=false;$('loading').classList.add('error');$('loading').textContent='表示できませんでした。WebGL対応のブラウザで開き直してください。';console.error(e);}
+function view(p){
+  if(!ready)return;
+  try{walk?.destroy();walk=WarehouseWalk.create($('stage'),db,0,{position:p,controls:$('controls'),minimap:$('mini'),isPaused:()=>$('mapDialog').open,onMessage:message});walk.world.setReflections(reflect);window.fullWarehouse=walk;$('loading').hidden=true;}catch(e){showError(e);}
+}
+function drawMap(){
+  const f=layout.floor;g.clearRect(0,0,700,820);g.fillStyle='#6f9d80';g.fillRect(0,0,700,820);
+  // A full-sized white cell is one pallet: two internal grid units per side.
+  g.strokeStyle='#ffffff25';g.lineWidth=1;for(let x=0;x<=f.cols;x++){g.beginPath();g.moveTo(x*scale,0);g.lineTo(x*scale,820);g.stroke();}for(let y=0;y<=f.rows;y++){g.beginPath();g.moveTo(0,y*scale);g.lineTo(700,y*scale);g.stroke();}
+  for(const r of f.rects){const x=r.x*scale,y=r.y*scale,w=r.w*scale,h=r.h*scale;g.fillStyle=r.type==='wall'?'#5d6871':r.type==='door'?'#efc650':'#e8ebed';g.fillRect(x,y,w,h);g.strokeStyle='#87949c';g.strokeRect(x+.5,y+.5,w-1,h-1);
+    if(r.pal){g.lineWidth=1;g.strokeStyle='#a2adb5';for(let i=2;i<r.w;i+=2){g.beginPath();g.moveTo(x+i*scale,y);g.lineTo(x+i*scale,y+h);g.stroke();}for(let i=2;i<r.h;i+=2){g.beginPath();g.moveTo(x,y+i*scale);g.lineTo(x+w,y+i*scale);g.stroke();}}
+    if(r.label){g.save();g.beginPath();g.rect(x+2,y+2,w-4,h-4);g.clip();g.fillStyle='#283c48';g.textAlign='center';g.textBaseline='middle';g.font='bold '+Math.min(15,Math.max(9,w/10))+'px sans-serif';if(w<65&&r.label.length<=3){[...r.label].forEach((ch,i)=>g.fillText(ch,x+w/2,y+h/2+(i-(r.label.length-1)/2)*17));}else g.fillText(r.label,x+w/2,y+h/2,w-6);g.restore();}
+  }
+  if(walk){const p=walk.getPosition();g.save();g.translate(p.x/2*scale,p.z/2*scale);g.rotate(-p.yaw);g.fillStyle='#1776ff';g.strokeStyle='white';g.lineWidth=3;g.beginPath();g.moveTo(0,-13);g.lineTo(9,10);g.lineTo(0,5);g.lineTo(-9,10);g.closePath();g.fill();g.stroke();g.restore();}
+}
+layout.viewpoints.forEach((p,i)=>{const o=document.createElement('option');o.value=i;o.textContent=p.name;$('viewpoints').append(o);});
+$('viewpoints').onchange=e=>view(layout.viewpoints[Number(e.target.value)]);
+$('reflection').onclick=e=>{reflect=!reflect;walk?.world.setReflections(reflect);e.target.textContent='反射 '+(reflect?'ON':'OFF');e.target.setAttribute('aria-pressed',String(reflect));};
+$('openMap').onclick=()=>{drawMap();$('mapNote').textContent='緑の通路を選んでください。';$('mapDialog').showModal();};
+$('closeMap').onclick=()=>$('mapDialog').close();
+canvas.onclick=e=>{if(!walk)return;const r=canvas.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*layout.floor.cols*2,z=(e.clientY-r.top)/r.height*layout.floor.rows*2;
+  if(walk.nav.blocked(x,z)){$('mapNote').textContent='パレットや壁ではなく、緑の通路を選んでください。';return;}
+  const p=walk.getPosition();$('mapDialog').close();$('viewpoints').selectedIndex=-1;view({x,z,yaw:p.yaw,pitch:-.12});
+};
+WarehouseMaterials.load().then(()=>{ready=true;view(layout.viewpoints[0]);}).catch(showError);
+})();
+</script></body></html>
