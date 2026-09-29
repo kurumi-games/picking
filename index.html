@@ -168,6 +168,11 @@
   .mp-tb.warn { color:var(--warn); border-color:rgba(209,60,60,.4); }
   .mp-tb:disabled { opacity:.4; }
 
+  .mp-rect.t-pcdesk{background:#c8dfe7!important;border:2px solid #427084!important;}
+  .mp-rect.t-pcdesk::after{content:'背 ↑';position:absolute;top:2px;right:3px;font-size:9px;color:#23485b;pointer-events:none;}
+  .mp-rect.t-pcdesk[data-back="east"]::after{content:'背 →'}
+  .mp-rect.t-pcdesk[data-back="south"]::after{content:'背 ↓'}
+  .mp-rect.t-pcdesk[data-back="west"]::after{content:'背 ←'}
   /* ===== 倉庫3D（おまけ・俯瞰のみ） ===== */
   .w3-modal { position:fixed; inset:0; background:rgba(15,25,38,.72); z-index:400; display:none; flex-direction:column; padding:10px; }
   .w3-modal.on { display:flex; }
@@ -535,7 +540,7 @@
 </style>
 <link rel="stylesheet" href="warehouse3d.css?v=51">
 <script src="warehouse-materials.js?v=56"></script>
-<script src="warehouse3d.js?v=56"></script>
+<script src="warehouse3d.js?v=56-pc"></script>
 <script src="warehouse-walk.js?v=56"></script>
 </head>
 <body>
@@ -545,7 +550,7 @@
   <div class="wrap">
     <div class="home-title">
       <h1>ピッキング補助</h1>
-      <div class="ver-tag">ver56（奥の部屋・床材の塗り分け）</div>
+      <div class="ver-tag">ver56-PC（PC机をマップで配置）</div>
     </div>
     <div class="home-btns">
       <button class="home-btn go" id="goBtn">GO</button>
@@ -563,7 +568,7 @@
   <div class="wrap">
     <div style="text-align:center; padding:14px 0 16px;">
       <h2 style="font-size:22px; font-weight:900;">ピッキング補助</h2>
-      <div class="ver-tag" style="margin:4px 0 0;">ver56（奥の部屋・床材の塗り分け）</div>
+      <div class="ver-tag" style="margin:4px 0 0;">ver56-PC（PC机をマップで配置）</div>
     </div>
 
     <!-- 機種から選ぶ -->
@@ -692,6 +697,7 @@
       <button class="mp-tb" id="mpAddWall">＋ 柱・壁</button>
       <button class="mp-tb" id="mpAddDoor">＋ 扉</button>
       <button class="mp-tb" id="mpAddShut">＋ シャッター</button>
+      <button class="mp-tb" id="mpAddPC">＋ PC机</button>
       <button class="mp-tb" id="mpAddNest">＋ ネステナー</button>
       <button class="mp-tb" id="mpAddLoad">＋ 荷物</button>
     </div>
@@ -701,6 +707,7 @@
       <button class="mp-tb" id="mpColor">色</button>
       <button class="mp-tb" id="mpPal">切り込み</button>
       <button class="mp-tb" id="mpRot">回転</button>
+      <label id="mpDeskDirection" class="mp-tb" style="display:none">机の背 <select id="mpDeskBack" style="font:inherit;padding:4px" aria-label="PC机の背を向ける方向"><option value="north">上 ↑</option><option value="east">右 →</option><option value="south">下 ↓</option><option value="west">左 ←</option></select></label>
       <button class="mp-tb" id="mpDup">複製</button>
       <button class="mp-tb" id="mpParts">部品</button>
       <button class="mp-tb" id="mpShape">3D形状</button>
@@ -1507,6 +1514,7 @@
       if(r.type==='load') return;
       const d=document.createElement('div');
       d.className='mp-rect'+(r.type?' t-'+r.type:'')+(r.h>r.w?' vert':'');
+      if(r.type==='pcdesk')d.dataset.back=r.back||'north';
       d.style.left=(r.x*MP_CELL)+'px'; d.style.top=(r.y*MP_CELL)+'px';
       d.style.width=(r.w*MP_CELL)+'px'; d.style.height=(r.h*MP_CELL)+'px';
       d.style.background=r.color||MP_COLORS[0];
@@ -1847,6 +1855,7 @@
         +(r.id===mpSel?' sel':'')
         +(ovl.indexOf(r.id)>=0?' ovl':'')
         +(mpHits.indexOf(r.id)>=0?' hit':'');
+      if(r.type==='pcdesk')d.dataset.back=r.back||'north';
       d.style.left=(r.x*MP_CELL)+'px'; d.style.top=(r.y*MP_CELL)+'px';
       d.style.width=(r.w*MP_CELL)+'px'; d.style.height=(r.h*MP_CELL)+'px';
       d.style.background=r.color||MP_COLORS[0];
@@ -1876,6 +1885,8 @@
         $('mpWorld').appendChild(d);
       });
     }
+    const selected=mpGetSel(),isPC=selected?.type==='pcdesk';
+    $('mpDeskDirection').style.display=isPC?'block':'none';if(isPC)$('mpDeskBack').value=selected.back||'north';
     const on = mpSel!=null;
     $('mpSelTools').style.display = on ? 'flex' : 'none';
     $('mpCfgTools').style.display = on ? 'none' : 'flex';
@@ -2006,6 +2017,7 @@
       if(r.type==='load') return;
       const d=document.createElement('div');
       d.className='mp-rect'+(r.type?' t-'+r.type:'')+(r.h>r.w?' vert':'');
+      if(r.type==='pcdesk')d.dataset.back=r.back||'north';
       d.style.left=(r.x*MP_CELL)+'px'; d.style.top=(r.y*MP_CELL)+'px';
       d.style.width=(r.w*MP_CELL)+'px'; d.style.height=(r.h*MP_CELL)+'px';
       d.style.background=r.color||MP_COLORS[0];
@@ -2447,7 +2459,7 @@
     const f=mpFloor();
     const cx=((st.width/2)-mpTx)/mpScale/MP_CELL, cy=((st.height/2)-mpTy)/mpScale/MP_CELL;
     const r={ id:mpSeq(), x:Math.max(0,Math.min(f.cols-w,Math.round(cx-w/2))), y:Math.max(0,Math.min(Warehouse3D.planRows(f)-h,Math.round(cy-h/2))), w, h, label:label||'', color:MP_COLORS[0] };
-    if(type) r.type=type;
+    if(type) r.type=type;if(type==='pcdesk')r.back='north';
     f.rects.push(r); mpSelect(r.id); saveDB();
   }
 
@@ -2460,6 +2472,7 @@
   $('mpAddWall').onclick = ()=> mpAddRect(4,1,'wall');
   $('mpAddDoor').onclick = ()=> mpAddRect(2,1,'door','扉');
   $('mpAddShut').onclick = ()=> mpAddRect(5,1,'shut');
+  $('mpAddPC').onclick = ()=> mpAddRect(2,3,'pcdesk','PC机');
   $('mpAddNest').onclick = ()=> mpAddRect(2,2,'nest');
   $('mpAddLoad').onclick = ()=> mpAddRect(2,2,'load');
   $('mpName').onclick = ()=>{
@@ -2495,8 +2508,14 @@
     r.pal=!r.pal;
     mpRender(); saveDB();
   };
+  function mpDeskTurn(r,back){
+    const dirs=['north','east','south','west'],f=mpFloor(),old=dirs.indexOf(r.back||'north'),next=dirs.indexOf(back);if(next<0)return;
+    if(Math.abs(next-old)%2){const w=r.h,h=r.w;r.w=w;r.h=h;r.x=Math.max(0,Math.min(f.cols-w,r.x));r.y=Math.max(0,Math.min(Warehouse3D.planRows(f)-h,r.y));}r.back=back;mpRender();saveDB();
+  }
+  $('mpDeskBack').onchange=e=>{const r=mpGetSel();if(r?.type==='pcdesk')mpDeskTurn(r,e.target.value);};
   $('mpRot').onclick = ()=>{
     const r=mpGetSel(); if(!r) return;
+    if(r.type==='pcdesk'){const dirs=['north','east','south','west'];mpDeskTurn(r,dirs[(dirs.indexOf(r.back||'north')+1)%4]);return;}
     const f=mpFloor();
     const w=r.h, h=r.w;
     r.x=Math.max(0, Math.min(f.cols-w, r.x));
