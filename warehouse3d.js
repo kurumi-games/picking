@@ -38,7 +38,8 @@
   }
   // Four longitudinal rows, each composed of two empty shelves placed back-to-back.
   // World units: one pallet = 4. No map/localStorage migration is performed.
-  const shelfSettings=Object.freeze({rows:4,direction:'z',aisle:4,depth:2,unitsPerRow:2,endClearance:2,height:6.9,levels:5});
+  // ver57.1 align:'start' ＝ 一番手前（地図の左）の棚の面を区画の黄色い線に合わせ、残りは同じ間隔で奥へ
+  const shelfSettings=Object.freeze({rows:4,direction:'z',aisle:4,depth:2,unitsPerRow:2,endClearance:2,height:6.9,levels:5,align:'start'});
   function shelfLayout(r){
     if(String(r.label||'').replace(/\s/g,'')!=='棚番の品'||r.type)return null;
     const x=r.x*2+.06,z=r.y*2+.06,w=r.w*2-.12,d=r.h*2-.12;
@@ -46,7 +47,7 @@
     const cfg=shelfSettings,across=cfg.direction==='x'?d:w,along=cfg.direction==='x'?w:d;
     const fit=Math.min(1,across/(cfg.rows*cfg.depth*cfg.unitsPerRow+(cfg.rows-1)*cfg.aisle+2*cfg.endClearance));
     const depth=cfg.depth*cfg.unitsPerRow*fit,gap=cfg.aisle*fit,span=cfg.rows*depth+(cfg.rows-1)*gap;
-    const offset=(across-span)/2,end=Math.min(cfg.endClearance,along*.1),length=along-2*end;
+    const offset=cfg.align==='start'?0:(across-span)/2,end=Math.min(cfg.endClearance,along*.1),length=along-2*end;
     const rows=Array.from({length:cfg.rows},(_,i)=>cfg.direction==='x'?{x:x+end,z:z+offset+i*(depth+gap),w:length,d:depth}:{x:x+offset+i*(depth+gap),z:z+end,w:depth,d:length});
     rows.forEach(row=>{row.units=Array.from({length:cfg.unitsPerRow},(_,i)=>cfg.direction==='x'?{x:row.x,z:row.z+i*row.d/cfg.unitsPerRow,w:row.w,d:row.d/cfg.unitsPerRow}:{x:row.x+i*row.w/cfg.unitsPerRow,z:row.z,w:row.w/cfg.unitsPerRow,d:row.d});});
     return {rect:r,x,z,w,d,rows,direction:cfg.direction,gap,height:cfg.height,levels:cfg.levels,unitsPerRow:cfg.unitsPerRow};
