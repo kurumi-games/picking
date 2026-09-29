@@ -10,11 +10,20 @@
       image.src=(root.WarehouseMaterials.assetURLs||{})[key]||path;
     })));return pending;
   }
+  function concreteImage(){
+    if(images.concrete)return images.concrete;
+    const c=document.createElement('canvas');c.width=c.height=512;const g=c.getContext('2d'),im=g.createImageData(512,512);let seed=6337;
+    const rand=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
+    for(let y=0;y<512;y++)for(let x=0;x<512;x++){const i=(y*512+x)*4,n=(rand()-.5)*17+6*Math.sin(x*.025)*Math.cos(y*.037),v=147+n;im.data[i]=v+3;im.data[i+1]=v+2;im.data[i+2]=v;im.data[i+3]=255;}g.putImageData(im,0,0);
+    for(let i=0;i<650;i++){const x=rand()*512,y=rand()*512;g.fillStyle=rand()>.5?'#655e5216':'#f4f0e51c';g.beginPath();g.ellipse(x,y,.4+rand()*2,.3+rand(),rand()*3,0,Math.PI*2);g.fill();}
+    g.strokeStyle='#655f541a';g.lineWidth=.6;for(let i=0;i<8;i++){let x=rand()*512,y=rand()*512;g.beginPath();g.moveTo(x,y);for(let j=0;j<7;j++){x+=(rand()-.4)*14;y+=(rand()-.5)*16;g.lineTo(x,y);}g.stroke();}
+    return images.concrete=c;
+  }
   function kit(){
     const T=root.THREE,cache=new Map();
     function texture(key,rx=1,ry=1,color=true){
       const name=[key,rx,ry,color].join(':');if(cache.has(name))return cache.get(name);
-      let image=images[key];
+      let image=key==='concrete'?concreteImage():images[key];
       if(!image){image=document.createElement('canvas');image.width=image.height=32;const g=image.getContext('2d');g.fillStyle=key==='floor'?'#426858':'#b3b0a4';g.fillRect(0,0,32,32);}
       const t=new T.Texture(image);t.needsUpdate=true;t.wrapS=t.wrapT=T.RepeatWrapping;t.repeat.set(rx,ry);t.anisotropy=4;t.encoding=color?T.sRGBEncoding:T.LinearEncoding;cache.set(name,t);return t;
     }
@@ -23,6 +32,7 @@
     }
     function floor(W,D,mode){
       const m=new T.MeshStandardMaterial({map:texture('floor',W/12,D/12),bumpMap:texture('floor',W/12,D/12,false),bumpScale:.009,roughness:.48,metalness:.06});
+      if(mode==='concrete'){m.map=texture('concrete',W/12,D/12);m.bumpMap=texture('concrete',W/12,D/12,false);m.roughness=.85;m.metalness=0;}
       if(mode==='gray'||mode==='white'){
         m.map=texture('paint',W/12,D/12);m.color.set(mode==='white'?'#d4d7ce':'#89928c').convertSRGBToLinear();m.roughness=.6;
       }

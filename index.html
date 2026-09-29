@@ -534,9 +534,9 @@
   .part-row .pmv:disabled { opacity:.3; cursor:default; }
 </style>
 <link rel="stylesheet" href="warehouse3d.css?v=51">
-<script src="warehouse-materials.js?v=51"></script>
-<script src="warehouse3d.js?v=55"></script>
-<script src="warehouse-walk.js?v=53"></script>
+<script src="warehouse-materials.js?v=56"></script>
+<script src="warehouse3d.js?v=56"></script>
+<script src="warehouse-walk.js?v=56"></script>
 </head>
 <body>
 
@@ -545,7 +545,7 @@
   <div class="wrap">
     <div class="home-title">
       <h1>ピッキング補助</h1>
-      <div class="ver-tag">ver55（パソコン・椅子・窓・空調設備を追加）</div>
+      <div class="ver-tag">ver56（奥の部屋・床材の塗り分け）</div>
     </div>
     <div class="home-btns">
       <button class="home-btn go" id="goBtn">GO</button>
@@ -563,7 +563,7 @@
   <div class="wrap">
     <div style="text-align:center; padding:14px 0 16px;">
       <h2 style="font-size:22px; font-weight:900;">ピッキング補助</h2>
-      <div class="ver-tag" style="margin:4px 0 0;">ver55（パソコン・椅子・窓・空調設備を追加）</div>
+      <div class="ver-tag" style="margin:4px 0 0;">ver56（奥の部屋・床材の塗り分け）</div>
     </div>
 
     <!-- 機種から選ぶ -->
@@ -708,7 +708,8 @@
     </div>
     <!-- 地図の設定（何も選んでない時だけ出る） -->
     <div class="mp-tools" id="mpCfgTools">
-      <button class="mp-tb" id="mpFloorC">床色</button>
+      <button class="mp-tb" id="mpFloorC">床材</button>
+      <button class="mp-tb" id="mpRoom">奥の部屋</button>
       <button class="mp-tb" id="mpSize">外枠</button>
       <button class="mp-tb" id="mpFloorAdd">＋地図追加</button>
       <button class="mp-tb warn" id="mpFloorDel">フロア削除</button>
@@ -1490,16 +1491,16 @@
   // モーダル内のミニ地図描画（全体フィット・光るマス付き）
   function wmRender(fIdx, key){
     const f=DB.maps.floors[fIdx];
-    const W=f.cols*MP_CELL, H=f.rows*MP_CELL;
+    const W=f.cols*MP_CELL, H=Warehouse3D.planRows(f)*MP_CELL;
     const fl=MP_FLOORS[f.floor]||MP_FLOORS.green;
-    $('wmStage').style.aspectRatio = f.cols+' / '+f.rows;
+    $('wmStage').style.aspectRatio = f.cols+' / '+Warehouse3D.planRows(f);
     const fr=$('wmFrame'); fr.style.width=W+'px'; fr.style.height=H+'px'; fr.style.background=fl.bg;
     const g=$('wmGrid');
     g.setAttribute('width',W); g.setAttribute('height',H);
     g.style.width=W+'px'; g.style.height=H+'px';
-    let lines='';
+    let lines=Warehouse3D.floorSVG(f,MP_CELL);
     for(let x=1;x<f.cols;x++) lines+='<line x1="'+(x*MP_CELL)+'" y1="0" x2="'+(x*MP_CELL)+'" y2="'+H+'" stroke="'+fl.grid+'" stroke-width="1"/>';
-    for(let y=1;y<f.rows;y++) lines+='<line x1="0" y1="'+(y*MP_CELL)+'" x2="'+W+'" y2="'+(y*MP_CELL)+'" stroke="'+fl.grid+'" stroke-width="1"/>';
+    for(let y=1;y<Warehouse3D.planRows(f);y++) lines+='<line x1="0" y1="'+(y*MP_CELL)+'" x2="'+W+'" y2="'+(y*MP_CELL)+'" stroke="'+fl.grid+'" stroke-width="1"/>';
     g.innerHTML=lines;
     $('wmWorld').querySelectorAll('.mp-rect,.mp-spot').forEach(n=>n.remove());
     f.rects.forEach(r=>{
@@ -1775,6 +1776,7 @@
   const MP_CELL = 22;
   const MP_COLORS = ['#e3e8ee','#c3ccd6','#8d99a6','#dbe7f7','#ffe0b8','#f2a9a9','#d9b8ea','#a8d8ef'];
   const MP_FLOORS = {
+    concrete: { bg:'#b9b7b0', grid:'rgba(70,65,60,.25)' },
     green: { bg:'#63997b', grid:'rgba(255,255,255,.3)' },
     gray:  { bg:'#cfd4d9', grid:'rgba(90,100,110,.35)' },
     white: { bg:'#ffffff', grid:'#dfe5eb' }
@@ -1787,7 +1789,7 @@
   function mpFit(){
     const st=$('mpStage').getBoundingClientRect();
     if(st.width<10) return;
-    const f=mpFloor(), W=f.cols*MP_CELL, H=f.rows*MP_CELL;
+    const f=mpFloor(), W=f.cols*MP_CELL, H=Warehouse3D.planRows(f)*MP_CELL;
     mpScale=Math.min(st.width/(W+24), st.height/(H+24));
     mpTx=(st.width-W*mpScale)/2; mpTy=(st.height-H*mpScale)/2;
     mpApply();
@@ -1801,7 +1803,7 @@
     mpApply();
   }
   function mpRender(){
-    const f=mpFloor(), W=f.cols*MP_CELL, H=f.rows*MP_CELL;
+    const f=mpFloor(), W=f.cols*MP_CELL, H=Warehouse3D.planRows(f)*MP_CELL;
     const fl = MP_FLOORS[f.floor] || MP_FLOORS.green;
     // タブ
     const tabs=$('mpTabs'); tabs.innerHTML='';
@@ -1815,7 +1817,7 @@
           if(v!==null && v.trim()){ flr.name=v.trim(); saveDB(); mpRender(); }
           return;
         }
-        DB.maps.cur=i; mpSel=null; mpHits=[]; saveDB(); mpRender(); mpFit();
+        if(mpSurface)surfaceClose(); DB.maps.cur=i; mpSel=null; mpHits=[]; saveDB(); mpRender(); mpFit();
       };
       tabs.appendChild(b);
     });
@@ -1825,10 +1827,11 @@
     const g=$('mpGrid');
     g.setAttribute('width',W); g.setAttribute('height',H);
     g.style.width=W+'px'; g.style.height=H+'px';
-    let lines='';
+    let lines=Warehouse3D.floorSVG(f,MP_CELL);
     for(let x=1;x<f.cols;x++) lines+='<line x1="'+(x*MP_CELL)+'" y1="0" x2="'+(x*MP_CELL)+'" y2="'+H+'" stroke="'+fl.grid+'" stroke-width="1"/>';
-    for(let y=1;y<f.rows;y++) lines+='<line x1="0" y1="'+(y*MP_CELL)+'" x2="'+W+'" y2="'+(y*MP_CELL)+'" stroke="'+fl.grid+'" stroke-width="1"/>';
+    for(let y=1;y<Warehouse3D.planRows(f);y++) lines+='<line x1="0" y1="'+(y*MP_CELL)+'" x2="'+W+'" y2="'+(y*MP_CELL)+'" stroke="'+fl.grid+'" stroke-width="1"/>';
     g.innerHTML=lines;
+    if(mpSurfaceCorner&&mpSurfaceFloor===f)g.innerHTML+='<rect x="'+mpSurfaceCorner.x*MP_CELL+'" y="'+mpSurfaceCorner.y*MP_CELL+'" width="'+MP_CELL+'" height="'+MP_CELL+'" fill="#ffd843" stroke="#805500" stroke-width="2"/>';
     // かぶり検出（選択中とマスを共有する四角）
     const s = f.rects.find(q=>q.id===mpSel);
     const ovl = s ? f.rects.filter(q=> q.id!==s.id &&
@@ -1881,6 +1884,7 @@
   let mpPart=null;    // 表示中の部品コード（nullなら通常編集）
   let mpTool='r';     // r=定位置 p=仮置き b=引越し e=消す hand=動かす
   function mpOpenPart(code){
+    if(mpSurface)surfaceClose();
     code=Warehouse3D.materialize(DB,code);
     mpPart=code;
     if(!DB.spots[code]) DB.spots[code]={cells:[]};
@@ -1925,9 +1929,9 @@
   function mpPaintCell(clientX, clientY){
     const fr=$('mpFrame').getBoundingClientRect();
     const f=mpFloor();
-    const p=palSnap(f, (clientX-fr.left)/fr.width*f.cols, (clientY-fr.top)/fr.height*f.rows);
+    const p=palSnap(f, (clientX-fr.left)/fr.width*f.cols, (clientY-fr.top)/fr.height*Warehouse3D.planRows(f));
     const x=p.x, y=p.y;
-    if(x<0||y<0||x>=f.cols||y>=f.rows) return;
+    if(x<0||y<0||x>=f.cols||y>=Warehouse3D.planRows(f)) return;
     const cells=DB.spots[mpPart].cells;
     const i=cells.findIndex(c=> c.f===DB.maps.cur && c.x===x && c.y===y);
     if(mpTool==='e'){
@@ -1947,7 +1951,7 @@
   function tdClamp(){
     const st=$('tdStage').getBoundingClientRect();
     const f=DB.maps.floors[tdF];
-    const W=f.cols*MP_CELL, H=f.rows*MP_CELL;
+    const W=f.cols*MP_CELL, H=Warehouse3D.planRows(f)*MP_CELL;
     const minS=Math.min(st.width/(W+16), st.height/(H+16));
     tdScale=Math.max(minS, Math.min(6, tdScale));
     const fw=W*tdScale, fh=H*tdScale;
@@ -1959,7 +1963,7 @@
   function tdFit(){
     const st=$('tdStage').getBoundingClientRect();
     if(st.width<10 || st.height<10){ requestAnimationFrame(tdFit); return; }
-    const f=DB.maps.floors[tdF], W=f.cols*MP_CELL, H=f.rows*MP_CELL;
+    const f=DB.maps.floors[tdF], W=f.cols*MP_CELL, H=Warehouse3D.planRows(f)*MP_CELL;
     tdScale=Math.min(st.width/(W+16), st.height/(H+16));
     tdTx=(st.width-W*tdScale)/2; tdTy=(st.height-H*tdScale)/2;
     tdApply();
@@ -1967,7 +1971,7 @@
   function tdDefaultView(){
     const st=$('tdStage').getBoundingClientRect();
     if(st.width<10 || st.height<10){ requestAnimationFrame(tdFit); return; }
-    const f=DB.maps.floors[tdF], W=f.cols*MP_CELL, H=f.rows*MP_CELL;
+    const f=DB.maps.floors[tdF], W=f.cols*MP_CELL, H=Warehouse3D.planRows(f)*MP_CELL;
     const fit=Math.min(st.width/(W+16), st.height/(H+16));
     tdScale=Math.max(fit, 34/MP_CELL);
     tdTx=(st.width-W*tdScale)/2; tdTy=(st.height-H*tdScale)/2;
@@ -1975,7 +1979,7 @@
   }
   function tdRender(){
     const fl0=DB.maps.floors[tdF];
-    $('tdStage').style.aspectRatio = fl0.cols+' / '+fl0.rows;
+    $('tdStage').style.aspectRatio = fl0.cols+' / '+Warehouse3D.planRows(fl0);
     const tabs=$('tdTabs'); tabs.innerHTML='';
     if(DB.maps.floors.length>1){
       DB.maps.floors.forEach((flr,i)=>{
@@ -1987,15 +1991,15 @@
       });
     }
     const f=DB.maps.floors[tdF];
-    const W=f.cols*MP_CELL, H=f.rows*MP_CELL;
+    const W=f.cols*MP_CELL, H=Warehouse3D.planRows(f)*MP_CELL;
     const fl=MP_FLOORS[f.floor]||MP_FLOORS.green;
     const fr=$('tdFrame'); fr.style.width=W+'px'; fr.style.height=H+'px'; fr.style.background=fl.bg;
     const g=$('tdGrid');
     g.setAttribute('width',W); g.setAttribute('height',H);
     g.style.width=W+'px'; g.style.height=H+'px';
-    let lines='';
+    let lines=Warehouse3D.floorSVG(f,MP_CELL);
     for(let x=1;x<f.cols;x++) lines+='<line x1="'+(x*MP_CELL)+'" y1="0" x2="'+(x*MP_CELL)+'" y2="'+H+'" stroke="'+fl.grid+'" stroke-width="1"/>';
-    for(let y=1;y<f.rows;y++) lines+='<line x1="0" y1="'+(y*MP_CELL)+'" x2="'+W+'" y2="'+(y*MP_CELL)+'" stroke="'+fl.grid+'" stroke-width="1"/>';
+    for(let y=1;y<Warehouse3D.planRows(f);y++) lines+='<line x1="0" y1="'+(y*MP_CELL)+'" x2="'+W+'" y2="'+(y*MP_CELL)+'" stroke="'+fl.grid+'" stroke-width="1"/>';
     g.innerHTML=lines;
     $('tdWorld').querySelectorAll('.mp-rect,.mp-spot').forEach(n=>n.remove());
     f.rects.forEach(r=>{
@@ -2149,7 +2153,7 @@
     const fr=$('tdFrame').getBoundingClientRect();
     const f=DB.maps.floors[tdF];
     const gx=(clientX-fr.left)/fr.width*f.cols;
-    const gy=(clientY-fr.top )/fr.height*f.rows;
+    const gy=(clientY-fr.top )/fr.height*Warehouse3D.planRows(f);
     // タップ地点の区画（普通の四角）を探す
     let host=null;
     for(let i=f.rects.length-1;i>=0;i--){
@@ -2203,7 +2207,7 @@
     const fr=$('tdFrame').getBoundingClientRect();
     const f=DB.maps.floors[tdF];
     const gx=(clientX-fr.left)/fr.width*f.cols;
-    const gy=(clientY-fr.top )/fr.height*f.rows;
+    const gy=(clientY-fr.top )/fr.height*Warehouse3D.planRows(f);
     let host=null;
     for(let i=f.rects.length-1;i>=0;i--){
       const r=f.rects[i];
@@ -2283,6 +2287,7 @@
       ptrs.delete(e.pointerId);
       if(ptrs.size<2) pinch0=null;
       if(ptrs.size===0){
+        if(mode==='surface'){if(tapped&&e.type==='pointerup')surfaceTap(tapped.x,tapped.y);mode=null;tapped=null;return;}
         if(tapped && Date.now()-tapped.t<600){
           if(tdCodeCur) tdTapPaint(tapped.x, tapped.y);   // 部品を開いてる時＝塗り
           else tdBrowseTap(tapped.x, tapped.y);            // 開いてない時＝タップで潜るナビ
@@ -2441,7 +2446,7 @@
     const st=$('mpStage').getBoundingClientRect();
     const f=mpFloor();
     const cx=((st.width/2)-mpTx)/mpScale/MP_CELL, cy=((st.height/2)-mpTy)/mpScale/MP_CELL;
-    const r={ id:mpSeq(), x:Math.max(0,Math.min(f.cols-w,Math.round(cx-w/2))), y:Math.max(0,Math.min(f.rows-h,Math.round(cy-h/2))), w, h, label:label||'', color:MP_COLORS[0] };
+    const r={ id:mpSeq(), x:Math.max(0,Math.min(f.cols-w,Math.round(cx-w/2))), y:Math.max(0,Math.min(Warehouse3D.planRows(f)-h,Math.round(cy-h/2))), w, h, label:label||'', color:MP_COLORS[0] };
     if(type) r.type=type;
     f.rects.push(r); mpSelect(r.id); saveDB();
   }
@@ -2495,14 +2500,14 @@
     const f=mpFloor();
     const w=r.h, h=r.w;
     r.x=Math.max(0, Math.min(f.cols-w, r.x));
-    r.y=Math.max(0, Math.min(f.rows-h, r.y));
+    r.y=Math.max(0, Math.min(Warehouse3D.planRows(f)-h, r.y));
     r.w=w; r.h=h;
     mpRender(); saveDB();
   };
   $('mpDup').onclick = ()=>{
     const r=mpGetSel(); if(!r) return;
     const f=mpFloor();
-    const c={...r, id:mpSeq(), x:Math.min(f.cols-r.w, r.x+1), y:Math.min(f.rows-r.h, r.y+1)};
+    const c={...r, id:mpSeq(), x:Math.min(f.cols-r.w, r.x+1), y:Math.min(Warehouse3D.planRows(f)-r.h, r.y+1)};
     delete c.parts;   // 部品の紐付けは複製しない（場所は1つやから）
     f.rects.push(c); mpSelect(c.id); saveDB();
   };
@@ -2514,16 +2519,40 @@
     f.rects=f.rects.filter(q=>q.id!==mpSel);
     mpSelect(null); saveDB();
   };
-  $('mpFloorC').onclick = ()=>{
-    const f=mpFloor();
-    const order=['green','gray','white'];
-    f.floor=order[(order.indexOf(f.floor||'green')+1)%order.length];
-    mpRender(); saveDB();
+  let mpSurface=null,mpSurfaceCorner=null,mpSurfaceFloor=null,mpSurfaceUndo=[];
+  const surfaceBar=document.createElement('div');surfaceBar.id='mpSurfaceBar';surfaceBar.hidden=true;surfaceBar.style.cssText='padding:10px;background:#fff;border:2px solid #26866a;border-radius:12px;margin:8px;';
+  surfaceBar.innerHTML='<div id="mpSurfaceNote" role="status">塗る範囲の端を2か所タップ</div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px"><button class="mp-tb" data-surface="green">緑の床</button><button class="mp-tb" data-surface="concrete">コンクリート</button><button class="mp-tb" data-surface="erase">塗り分けを消す</button><button class="mp-tb" data-surface="hand">地図を動かす</button><button class="mp-tb" id="mpSurfaceUndo">1つ戻す</button><button class="mp-tb" id="mpSurfaceBase">全体の床材</button><button class="mp-tb" id="mpSurfaceDone">完了</button></div>';
+  $('mpStage').before(surfaceBar);
+  function surfaceNote(){const names={green:'緑の床',concrete:'コンクリート',erase:'元の床材',hand:'地図を動かせます'};$('mpSurfaceNote').textContent=mpSurface==='hand'?names.hand:names[mpSurface]+'：'+(mpSurfaceCorner?'反対側の端をタップ':'範囲の端を2か所タップ');surfaceBar.querySelectorAll('[data-surface]').forEach(b=>{b.style.background=b.dataset.surface===mpSurface?'#d8eee4':'';b.setAttribute('aria-pressed',String(b.dataset.surface===mpSurface));});}
+  function surfaceOpen(){mpSel=null;mpSurface='concrete';mpSurfaceCorner=null;mpSurfaceFloor=mpFloor();mpSurfaceUndo=[];surfaceBar.hidden=false;surfaceNote();mpRender();}
+  function surfaceClose(){mpSurface=null;mpSurfaceCorner=null;surfaceBar.hidden=true;mpRender();}
+  surfaceBar.querySelectorAll('[data-surface]').forEach(b=>b.onclick=()=>{mpSurface=b.dataset.surface;mpSurfaceCorner=null;surfaceNote();mpRender();});
+  $('mpSurfaceDone').onclick=surfaceClose;
+  $('mpSurfaceUndo').onclick=()=>{if(mpSurfaceFloor!==mpFloor())return;const old=mpSurfaceUndo.pop();if(old){mpFloor().floorTiles=old;saveDB();mpRender();}};
+  $('mpSurfaceBase').onclick=()=>{const ov=document.createElement('dialog');ov.style.cssText='border:0;border-radius:16px;padding:20px;font-size:18px;max-width:90vw;';ov.innerHTML='<p>このフロア全体の床材</p><p style="font-size:14px">範囲ごとの塗り分けは残ります。</p><button class="mp-tb" data-base="green">緑の床</button> <button class="mp-tb" data-base="concrete">コンクリート</button> <button class="mp-tb" data-close>とじる</button>';document.body.append(ov);ov.querySelectorAll('[data-base]').forEach(b=>b.onclick=()=>{mpFloor().floor=b.dataset.base;saveDB();mpRender();ov.close();});ov.querySelector('[data-close]').onclick=()=>ov.close();ov.onclose=()=>ov.remove();ov.showModal();};
+  function surfaceTap(cx,cy){
+    const f=mpFloor();if(mpSurfaceFloor!==f){mpSurfaceFloor=f;mpSurfaceCorner=null;mpSurfaceUndo=[];}
+    const fr=$('mpFrame').getBoundingClientRect(),x=Math.floor((cx-fr.left)/fr.width*f.cols),y=Math.floor((cy-fr.top)/fr.height*Warehouse3D.planRows(f));
+    if(!Warehouse3D.insidePlan(f,x,y))return;
+    if(!mpSurfaceCorner){mpSurfaceCorner={x,y};surfaceNote();mpRender();return;}
+    const a=mpSurfaceCorner;mpSurfaceUndo.push({...f.floorTiles});if(mpSurfaceUndo.length>30)mpSurfaceUndo.shift();f.floorTiles={...f.floorTiles};
+    for(let py=Math.min(a.y,y);py<=Math.max(a.y,y);py++)for(let px=Math.min(a.x,x);px<=Math.max(a.x,x);px++)if(Warehouse3D.insidePlan(f,px,py)){const key=px+','+py;if(mpSurface==='erase')delete f.floorTiles[key];else f.floorTiles[key]=mpSurface;}
+    mpSurfaceCorner=null;saveDB();surfaceNote();mpRender();
+  }
+  $('mpRoom').onclick=()=>{
+    const f=mpFloor(),a=Warehouse3D.annexLayout(f)||{x:0,width:Math.min(10,f.cols),depth:8,openingX:2,openingWidth:2.5};
+    const ov=document.createElement('dialog');ov.id='mpRoomDialog';ov.style.cssText='border:0;border-radius:16px;padding:20px;width:min(460px,94vw);max-height:90dvh;overflow:auto;font-size:17px;';
+    ov.innerHTML='<form id="mpRoomForm"><h3>通路の先の部屋</h3><p style="font-size:14px">地図の下側に接続します。白いパレット1枚＝2マス。写真からの寸法は仮設定です。</p><label><input name="enabled" type="checkbox" '+(Warehouse3D.annexLayout(f)?'checked':'')+'> 部屋を表示する</label>'+[['x','部屋の左端（マス）'],['width','部屋の幅（マス）'],['depth','奥行き（マス）'],['openingX','入口の左端（マス）'],['openingWidth','入口の幅（マス）']].map(([key,label])=>'<label style="display:flex;justify-content:space-between;align-items:center;margin:12px 0;gap:8px">'+label+'<input name="'+key+'" type="number" step="0.5" min="0" value="'+a[key]+'" required style="width:90px;font:inherit;padding:8px"></label>').join('')+'<p id="mpRoomError" role="alert" style="color:#b32929"></p><button class="mp-tb" type="submit">適用</button> <button class="mp-tb" type="button" id="mpRoomCancel">とじる</button></form>';
+    document.body.append(ov);ov.querySelector('#mpRoomCancel').onclick=()=>ov.close();ov.onclose=()=>ov.remove();ov.querySelector('form').onsubmit=e=>{e.preventDefault();const form=e.target,values={};for(const k of ['x','width','depth','openingX','openingWidth'])values[k]=Number(form.elements[k].value);let error='';
+      if(form.elements.enabled.checked){const v=values;if(!Object.values(v).every(Number.isFinite)||v.x<0||v.width<3||v.x+v.width>f.cols||v.depth<3||v.depth>40||v.openingWidth<1||v.openingX<v.x+.25||v.openingX+v.openingWidth>v.x+v.width-.25)error='部屋と入口を地図の横幅に収めてください。奥行きは3〜40マスです。';
+      if(f.rects.some(r=>r.y<f.rows&&r.y+r.h>=f.rows-.2&&r.x<v.openingX+v.openingWidth&&r.x+r.w>v.openingX))error='入口の手前に区画があります。通路につながる位置へ調整してください。';}
+      if(error){ov.querySelector('#mpRoomError').textContent=error;return;}f.annex=form.elements.enabled.checked?values:false;mpSurfaceCorner=null;saveDB();mpRender();mpFit();ov.close();};ov.showModal();
   };
+  $('mpFloorC').onclick=surfaceOpen;
   $('mpSize').onclick = ()=>{
     const f=mpFloor();
     const c=prompt('外枠の横のマス数', f.cols); if(c===null) return;
-    const rr=prompt('外枠の縦のマス数', f.rows); if(rr===null) return;
+    const rr=prompt('外枠の縦のマス数（追加した部屋を除く）', f.rows); if(rr===null) return;
     const nc=parseInt(c,10), nr=parseInt(rr,10);
     if(nc>=6 && nr>=6 && nc<=200 && nr<=200){ f.cols=nc; f.rows=nr; mpRender(); mpFit(); saveDB(); }
   };
@@ -2648,6 +2677,8 @@
         return;
       }
       const el=e.target;
+      if(mpSurface&&mpSurface!=='hand'){mode='surface';tapped={x:e.clientX,y:e.clientY,t:Date.now(),el};return;}
+      if(mpSurface==='hand'){mode='pan';start={x:e.clientX,y:e.clientY,tx:mpTx,ty:mpTy};tapped=null;return;}
       // 部品モード：塗りツール中はマスを塗る／✋なら移動
       if(mpPart && mpTool!=='hand'){
         mode='paint';
@@ -2699,13 +2730,13 @@
         const dx=Math.round((e.clientX-start.x)/mpScale/MP_CELL);
         const dy=Math.round((e.clientY-start.y)/mpScale/MP_CELL);
         const nx=Math.max(0,Math.min(f.cols-tgt.w, start.rx+dx));
-        const ny=Math.max(0,Math.min(f.rows-tgt.h, start.ry+dy));
+        const ny=Math.max(0,Math.min(Warehouse3D.planRows(f)-tgt.h, start.ry+dy));
         if(nx!==tgt.x || ny!==tgt.y){ tgt.x=nx; tgt.y=ny; mpRender(); }
       } else if(mode==='resize' && tgt){
         const dw=Math.round((e.clientX-start.x)/mpScale/MP_CELL);
         const dh=Math.round((e.clientY-start.y)/mpScale/MP_CELL);
         tgt.w=Math.max(1,Math.min(f.cols-tgt.x, start.w+dw));
-        tgt.h=Math.max(1,Math.min(f.rows-tgt.y, start.h+dh));
+        tgt.h=Math.max(1,Math.min(Warehouse3D.planRows(f)-tgt.y, start.h+dh));
         mpRender();
       } else if(mode==='pan'){
         mpTx=start.tx+(e.clientX-start.x);
@@ -2717,6 +2748,7 @@
       ptrs.delete(e.pointerId);
       if(mode==='pinch' && ptrs.size<2){ mode=null; pinch0=null; }
       if(ptrs.size===0){
+        if(mode==='surface'){if(tapped&&e.type==='pointerup')surfaceTap(tapped.x,tapped.y);mode=null;tapped=null;return;}
         if(tapped && Date.now()-tapped.t<600){
           const rectEl = tapped.el.closest('.mp-rect');
           if(!rectEl){
@@ -2728,7 +2760,7 @@
               const fr=$('mpFrame').getBoundingClientRect();
               const f=mpFloor();
               const gx=(tapped.x-fr.left)/fr.width*f.cols;
-              const gy=(tapped.y-fr.top )/fr.height*f.rows;
+              const gy=(tapped.y-fr.top )/fr.height*Warehouse3D.planRows(f);
               let col=Math.floor((gx-r.x)/2), row=Math.floor((gy-r.y)/2);
               col=Math.max(0,Math.min(Math.floor((r.w-1)/2),col));
               row=Math.max(0,Math.min(Math.floor((r.h-1)/2),row));
@@ -2797,7 +2829,7 @@
     [['shelf','棚（ブロック・標準）'],['zone','区画だけ'],['rack','棚（空の骨組み）'],['pallet','パレット置き場']].forEach(([k,label])=>{const row=document.createElement('div');row.className='n3-loc';const b=document.createElement('button');b.textContent=label;b.onclick=()=>{r.view3d=k;saveDB();$('n3Dialog').classList.remove('on');};row.appendChild(b);$('n3DialogRows').appendChild(row);});
   }
   function n3LocName(c){const f=DB.maps.floors[c.f],r=f.rects.find(r=>c.x>=r.x&&c.x<r.x+r.w&&c.y>=r.y&&c.y<r.y+r.h);return (f.name||'フロア')+(r&&r.label?' ／ '+r.label:'')+' ／ 横'+(c.x+1)+'・縦'+(c.y+1);}
-  function n3Mini(c){const ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg'),f=DB.maps.floors[c.f];svg.setAttribute('viewBox','0 0 '+f.cols+' '+f.rows);svg.setAttribute('aria-label','解除・移動する場所');svg.style.cssText='width:90px;height:90px;float:right;margin-left:8px;background:#e3eee9;border:1px solid #c4d7d1;border-radius:6px;';function rect(x,y,w,h,fill){const r=document.createElementNS(ns,'rect');for(const [k,v] of Object.entries({x,y,width:w,height:h,fill}))r.setAttribute(k,v);svg.appendChild(r);}f.rects.forEach(r=>rect(r.x,r.y,r.w,r.h,'#acb9bf'));rect(c.x,c.y,c.w||2,c.h||2,'#e56b32');return svg;}
+  function n3Mini(c){const ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg'),f=DB.maps.floors[c.f];svg.setAttribute('viewBox','0 0 '+f.cols+' '+Warehouse3D.planRows(f));svg.setAttribute('aria-label','解除・移動する場所');svg.style.cssText='width:90px;height:90px;float:right;margin-left:8px;background:#e3eee9;border:1px solid #c4d7d1;border-radius:6px;';function rect(x,y,w,h,fill){const r=document.createElementNS(ns,'rect');for(const [k,v] of Object.entries({x,y,width:w,height:h,fill}))r.setAttribute(k,v);svg.appendChild(r);}f.rects.forEach(r=>rect(r.x,r.y,r.w,r.h,'#acb9bf'));rect(c.x,c.y,c.w||2,c.h||2,'#e56b32');return svg;}
   function n3Manage(code,removeOnly=false){
     const found=Warehouse3D.find(DB,code);if(!found){tdToast('この部品の場所は登録されていません');return;}
     n3Dialog(found.code,removeOnly?'空になった場所を選んで解除してください。別の場所の登録は残ります。':'変更する場所を選んでください。移動は選んだ1か所だけを変更します。');
