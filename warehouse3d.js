@@ -40,6 +40,7 @@
     if (!scene) return;
     const gs=new Set(), ms=new Set(), ts=new Set();
     scene.traverse(o => {
+      if(o.userData&&o.userData.dispose)o.userData.dispose();
       if(o.geometry) gs.add(o.geometry);
       if(o.material) (Array.isArray(o.material)?o.material:[o.material]).forEach(m=>ms.add(m));
     });
@@ -56,43 +57,70 @@
     const sp=new T.Sprite(new T.SpriteMaterial({map:tex,depthTest:true}));sp.scale.set(width,width*112/512,1);return sp;
   }
   function createWorld(db, fi, opts={}) {
-    const T=root.THREE,S=2,f=db.maps.floors[fi],W=f.cols*S,D=f.rows*S;
-    const scene=new T.Scene();scene.background=new T.Color('#e8edf0');
-    if(opts.walk) scene.fog=new T.Fog('#e8edf0',Math.max(W,D)*.8,Math.max(W,D)*2);
-    scene.add(new T.HemisphereLight('#fff9ed','#879dab',.85));
-    const sun=new T.DirectionalLight('#fff6e5',.85);sun.position.set(-W*.3,Math.max(W,D),D*.6);
+    const T=root.THREE,S=2,f=db.maps.floors[fi],W=f.cols*S,D=f.rows*S,HALL=9.6;
+    const detail=!!opts.walk&&!!root.WarehouseMaterials,kit=detail?root.WarehouseMaterials.kit():null;
+    const scene=new T.Scene();scene.background=new T.Color(opts.walk?'#b1b3a9':'#e8edf0');
+    if(opts.walk)scene.fog=new T.Fog('#a4a69a',Math.max(W,D)*1.3,Math.max(W,D)*3);
+    scene.add(new T.HemisphereLight('#f1f1e5','#494e42',opts.walk?.52:.85));
+    const sun=new T.DirectionalLight('#fff6e5',opts.walk?.28:.85);sun.position.set(-W*.3,Math.max(W,D),D*.6);
     sun.target.position.set(W/2,0,D/2);scene.add(sun.target);scene.add(sun);
-    sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);const sc=sun.shadow.camera;
+    sun.castShadow=!opts.walk;sun.shadow.mapSize.set(1024,1024);const sc=sun.shadow.camera;
     sc.left=-W;sc.right=W;sc.top=D;sc.bottom=-D;sc.far=Math.max(W,D)*4;sc.updateProjectionMatrix();sun.shadow.bias=-.00015;sun.shadow.normalBias=.025;
     const groups=new Map(),geom=new T.BoxGeometry(1,1,1),matCache=new Map();
-    function mat(col,metal=0){const key=col+':'+metal;if(!matCache.has(key))matCache.set(key,new T.MeshStandardMaterial({color:new T.Color(col).convertSRGBToLinear(),roughness:metal?.48:.88,metalness:metal}));return matCache.get(key);}
+    function mat(col,metal=0){if(col&&col.isMaterial)return col;const key=col+':'+metal;if(!matCache.has(key))matCache.set(key,new T.MeshStandardMaterial({color:new T.Color(col).convertSRGBToLinear(),roughness:metal?.4:.72,metalness:metal}));return matCache.get(key);}
     function box(x,z,w,d,y,h,col,metal=0){if(w<=0||d<=0||h<=0)return;const m=mat(col,metal);if(!groups.has(m))groups.set(m,[]);groups.get(m).push([x+w/2,y+h/2,z+d/2,w,h,d]);}
-    const ground = f.floor==='gray'?'#929fa2':f.floor==='white'?'#ced5d4':'#708575';
-    // A subtle, deterministic floor texture is decoration, not an occupancy signal.
-    const cv=document.createElement('canvas');cv.width=cv.height=128;const ctx=cv.getContext('2d');ctx.fillStyle=ground;ctx.fillRect(0,0,128,128);
-    let seed=781;for(let i=0;i<1300;i++){seed=(seed*16807)%2147483647;const x=seed%128;seed=(seed*16807)%2147483647;ctx.fillStyle=i%2?'#ffffff09':'#00000007';ctx.fillRect(x,seed%128,1,1);}
-    ctx.strokeStyle='#ffffff0d';ctx.strokeRect(0,0,128,128);
-    const ft=new T.CanvasTexture(cv);ft.wrapS=ft.wrapT=T.RepeatWrapping;ft.repeat.set(f.cols/2,f.rows/2);ft.encoding=T.sRGBEncoding;
-    const floor=new T.Mesh(new T.PlaneGeometry(W,D),new T.MeshStandardMaterial({map:ft,roughness:.91}));floor.rotation.x=-Math.PI/2;floor.position.set(W/2,.015,D/2);floor.receiveShadow=true;scene.add(floor);
-    box(-.35,-.35,W+.7,D+.7,-.6,.45,'#a7b4b7');
+    const ground=f.floor==='gray'?'#929fa2':f.floor==='white'?'#ced5d4':'#647c69';
+    const floorMaterial=kit?kit.floor(W,D,f.floor):mat(ground);
+    const floor=new T.Mesh(new T.PlaneGeometry(W,D),floorMaterial);floor.rotation.x=-Math.PI/2;floor.position.set(W/2,.015,D/2);floor.receiveShadow=true;scene.add(floor);
+    const mirror=kit?kit.reflection(W,D):null;if(mirror)scene.add(mirror);
+    box(-.35,-.35,W+.7,D+.7,-.6,.45,'#6b726d');
+    const panelMat=kit?kit.painted(1,1,'#e9ebe6'):mat('#c6c6bd');
+    const wallMat=kit?kit.painted(1,1.7,'#e3e7e5'):mat('#d7d5c9');
+    const pipeMat=mat('#878d8b',.68),pipeGeo=new T.CylinderGeometry(1,1,1,10),pipeInstances=[];
+    function pipe(ax,ay,az,bx,by,bz,r){const a=new T.Vector3(ax,ay,az),b=new T.Vector3(bx,by,bz),v=b.clone().sub(a),o=new T.Object3D();o.position.copy(a).add(b).multiplyScalar(.5);o.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),v.clone().normalize());o.scale.set(r,v.length(),r);o.updateMatrix();pipeInstances.push(o.matrix.clone());}
+    const lampPositions=[],lampPool=[];
     if(opts.walk){
-      box(-.18,0,.18,D,0,10.8,'#c6c6bd');box(W,0,.18,D,0,10.8,'#c6c6bd');
-      box(0,-.18,W,.18,0,10.8,'#d7d5c9');box(0,D,W,.18,0,10.8,'#d7d5c9');
-      box(0,0,W,D,10.8,.15,'#deded5');
-      const glow=new T.MeshBasicMaterial({color:'#fffff3'}),fixture=new T.BoxGeometry(3.5,.08,.22);
+      // Panel-sized wall pieces keep texture scale consistent in differently sized maps.
+      for(let z=0;z<D;z+=6){box(-.18,z,.18,Math.min(6,D-z),0,HALL,wallMat);box(W,z,.18,Math.min(6,D-z),0,HALL,wallMat);}
+      for(let x=0;x<W;x+=6){box(x,-.18,Math.min(6,W-x),.18,0,HALL,wallMat);box(x,D,Math.min(6,W-x),.18,0,HALL,wallMat);}
+      const ceiling=new T.Mesh(new T.PlaneGeometry(W,D),kit?kit.painted(W/6,D/6):panelMat);ceiling.rotation.x=Math.PI/2;ceiling.position.set(W/2,HALL,D/2);scene.add(ceiling);
+      for(let z=0;z<D;z+=4.8)box(0,z,W,.023,HALL-.015,.014,'#66695f');
+      for(let x=0;x<W;x+=2.4)box(x,0,.02,D,HALL-.018,.014,'#73756a');
+      // Existing surface conduit, hangers and twin-tube fluorescent housings.
+      const glow=new T.MeshBasicMaterial({color:'#eff9ff',toneMapped:false});
       for(let z=3;z<D;z+=12){
-        box(0,z,W,.10,10.5,.12,'#89918e',.4);
-        for(let x=4;x<W;x+=12){box(x-.15,z-.32,3.8,.85,10.3,.13,'#b7c0bd',.35);
-          for(const dz of [-.15,.22]){const tube=new T.Mesh(fixture,glow);tube.position.set(x+1.6,10.25,z+dz);scene.add(tube);}}
+        pipe(0,HALL-.55,z,W,HALL-.55,z,.065);
+        for(let x=4;x<W;x+=12){
+          box(x-.13,z-.44,3.8,.88,HALL-.54,.13,panelMat);
+          box(x,z-.4,.18,.8,HALL-.8,.3,panelMat);box(x+3.4,z-.4,.18,.8,HALL-.8,.3,panelMat);
+          for(const dz of [-.23,.23]){const tube=new T.Mesh(new T.CylinderGeometry(.085,.085,3.3,12),glow);tube.rotation.z=Math.PI/2;tube.position.set(x+1.8,HALL-.76,z+dz);scene.add(tube);}
+          lampPositions.push(new T.Vector3(x+1.7,HALL-.98,z));
+          pipe(x+1.7,HALL-.25,z-.5,x+1.7,HALL-.65,z-.5,.025);
+        }
       }
+      for(let x=2;x<W;x+=16){pipe(x,HALL-.18,0,x,HALL-.18,D,.037);for(let z=2;z<D;z+=6)box(x-.08,z,.16,.08,HALL-.3,.25,'#73766f',.35);}
+      // A fixed-size light pool follows the nearest fixtures, keeping mobile shader cost bounded.
+      for(let i=0;i<Math.min(6,lampPositions.length);i++){const l=new T.PointLight('#f4f8ff',.8,23,1.4);scene.add(l);lampPool.push(l);}
     }
+    const contactMat=kit?new T.MeshBasicMaterial({map:kit.contactMap(),transparent:true,depthWrite:false,color:'#000000',opacity:.62}):null;
+    const contacts=[];
+    function contact(x,z,w,d){if(contactMat)contacts.push([x+w/2,z+d/2,w+.65,d+.65]);}
     const blockers=[], heightRects=[], pickZones=[];
     function border(x,z,w,d,col,y=.035,t=.065){box(x,z,w,t,y,.018,col);box(x,z+d-t,w,t,y,.018,col);box(x,z,t,d,y,.018,col);box(x+w-t,z,t,d,y,.018,col);}
     function pallet(x,z,w,d){
-      // Reusable black plastic pallet: runners and an open lattice, no stock imagery.
-      for(const k of [0,.5,1])box(x+k*(w-.24),z,.24,d,.08,.3,'#242e2d');
-      for(let k=0;k<=8;k++){box(x+k*(w-.10)/8,z,.10,d,.38,.13,'#394440');box(x,z+k*(d-.10)/8,w,.10,.38,.13,'#394440');}
-      box(x,z,w,.12,.3,.2,'#202b29');box(x,z+d-.12,w,.12,.3,.2,'#202b29');
+      contact(x,z,w,d);
+      // Deep molded rim, fork openings and thin recessed lattice (not a flat wire grid).
+      const dark='#151b1a',edge='#29302e',rib='#303632';
+      for(const k of [0,.5,1]){
+        const rx=x+k*(w-.3);box(rx,z,.3,d,.07,.11,dark);
+        for(const j of [0,.5,1])box(rx,z+j*(d-.38),.3,.38,.16,.28,dark);
+      }
+      box(x,z,w,.15,.35,.23,edge);box(x,z+d-.15,w,.15,.35,.23,edge);
+      box(x,z,.15,d,.35,.23,edge);box(x+w-.15,z,.15,d,.35,.23,edge);
+      for(let k=1;k<8;k++){box(x+k*w/8,z,.042,d,.42,.115,rib);box(x,z+k*d/8,w,.042,.42,.115,rib);}
+      for(const k of [.25,.75]){box(x+k*w-.07,z,.14,d,.38,.17,edge);box(x,z+k*d-.07,w,.14,.38,.17,edge);}
+      // Small worn molded lip catches the light without whitening the whole pallet.
+      box(x,z,w,.024,.57,.015,'#48504a');box(x,z,.024,d,.57,.015,'#48504a');
     }
     function rack(x,z,w,d,nest=false){
       const H=nest?5:4.6, post=.13, clr=nest?'#a64f48':'#405f70';
@@ -104,30 +132,38 @@
       if(!nest){box(x,z,w,.12,4.4,.16,clr,.45);box(x,z+d-.12,w,.12,4.4,.16,clr,.45);}
       return H;
     }
+    let warmLights=0;
     f.rects.forEach(r=>{
       const x=r.x*S+.06,z=r.y*S+.06,w=r.w*S-.12,d=r.h*S-.12;
       let H=.13;
-      if(r.type==='wall') {H=opts.walk?10.8:3.6;box(x,z,w,d,0,H,'#bac7cb',.1);box(x,z,w,d,H,.08,'#dde3e5');}
-      else if(r.type==='shut') {H=5.6;box(x,z,w,d,0,H,'#97a8b0',.5);for(let y=.2;y<H;y+=.28)box(x-.01,z-.01,w+.02,d+.02,y,.025,'#6e818b',.3);}
+      if(r.type==='wall') {H=opts.walk?HALL:3.6;box(x,z,w,d,0,H,wallMat);box(x,z,w,d,H,.08,'#c9cbc2');contact(x,z,w,d);}
+      else if(r.type==='shut') {
+        H=8.6;box(x,z,w,d,0,H,kit?kit.curtain(Math.max(w,d),H):'#d1b431');
+        for(let y=.6;y<H;y+=2)box(x-.02,z-.02,w+.04,d+.04,y,.09,'#c5a52d',.15);
+        box(x,z,w,d,H,.2,'#d3d5ca',.3);
+        if(w>d){box(x-.12,z-.03,.12,d+.06,0,H,'#9a9e96',.4);box(x+w,z-.03,.12,d+.06,0,H,'#9a9e96',.4);}
+        else{box(x-.03,z-.12,w+.06,.12,0,H,'#9a9e96',.4);box(x-.03,z+d,w+.06,.12,0,H,'#9a9e96',.4);}
+        if(opts.walk&&warmLights++<2){const light=new T.PointLight('#ffd16c',1.1,20,1.5);light.position.set(x+w/2,3,z+d/2);scene.add(light);}
+      }
       else if(r.type==='door'){H=0; border(x,z,w,d,'#e8c976');}
       else if(r.type==='nest'){H=rack(x,z,w,d,true);}
       else {
-        box(x,z,w,d,.02,.08,'#b9c2c3');border(x,z,w,d,'#e9d69b',.12);
+        border(x,z,w,d,'#b6a24c',.03,.08);contact(x,z,w,d);
         // Preserve explicit shapes; summarized shelf areas stay a single region.
         const style=r.view3d || (r.pal?'pallet':'shelf');
-        if(style==='shelf') { H=3.5; box(x,z,w,d,0,H,'#c3ccd5'); }
+        if(style==='shelf') { H=3.5; box(x,z,w,d,0,H,panelMat); }
         else if(style==='rack') {
           H=4.73;const nx=Math.max(1,Math.ceil(w/4)),nz=Math.max(1,Math.ceil(d/4));
           for(let a=0;a<nx;a++)for(let b=0;b<nz;b++)rack(x+a*w/nx+.08,z+b*d/nz+.08,w/nx-.16,d/nz-.16);
         } else if(style==='pallet') {
-          H=.51;for(let a=0;a<r.w;a+=2)for(let b=0;b<r.h;b+=2)pallet(x+a*S+.08,z+b*S+.08,Math.min(2,r.w-a)*S-.28,Math.min(2,r.h-b)*S-.28);
+          H=.585;for(let a=0;a<r.w;a+=2)for(let b=0;b<r.h;b+=2)pallet(x+a*S+.08,z+b*S+.08,Math.min(2,r.w-a)*S-.28,Math.min(2,r.h-b)*S-.28);
         }
         // Generic areas and the old "load" shape never fabricate physical boxes.
       }
       if(r.type!=='door')blockers.push([x,z,x+w,z+d]);
       heightRects.push({x,z,w,d,h:H});
       const hit=new T.Mesh(new T.BoxGeometry(w,Math.max(.2,H),d),new T.MeshBasicMaterial({visible:false}));hit.position.set(x+w/2,Math.max(.2,H)/2,z+d/2);hit.userData.rect=r;scene.add(hit);pickZones.push(hit);
-      if(r.label){const sp=label(r.label,'#314c58',Math.min(6,Math.max(2.3,w*.6)));sp.position.set(x+w/2,H+.8,z+d/2);scene.add(sp);}
+      if(r.label){const sp=label(r.label,'#314c58',Math.min(opts.walk?3:6,Math.max(2.3,w*.6)));sp.position.set(x+w/2,H+.8,z+d/2);scene.add(sp);}
     });
     const heightAt=(x,z)=>heightRects.reduce((h,r)=>x>=r.x&&x<=r.x+r.w&&z>=r.z&&z<=r.z+r.d?Math.max(h,r.h):h,0);
     const records=locations(db).filter(c=>c.f===fi), grouped=new Map(),markGroup=new T.Group();scene.add(markGroup);
@@ -144,8 +180,13 @@
       if(selected){const ring=new T.Mesh(new T.RingGeometry(1.0,1.16,32),new T.MeshBasicMaterial({color:'#04baa1',side:T.DoubleSide}));ring.rotation.x=-Math.PI/2;ring.position.set(x,base+.12,z);markGroup.add(ring);}
       const sp=label(items.length===1?c.code:'登録 '+items.length+'品番',color,3.0);sp.position.set(x,base+1.5,z);markGroup.add(sp);
     });
-    groups.forEach((instances,material)=>{const mesh=new T.InstancedMesh(geom,material,instances.length),o=new T.Object3D();instances.forEach((a,i)=>{o.position.set(a[0],a[1],a[2]);o.scale.set(a[3],a[4],a[5]);o.updateMatrix();mesh.setMatrixAt(i,o.matrix);});mesh.castShadow=material!==mat('#a7b4b7');mesh.receiveShadow=false;mesh.frustumCulled=false;scene.add(mesh);});
-    return {scene,blockers,heightAt,marks,pickZones,W,D,records,markGroup};
+    groups.forEach((instances,material)=>{const mesh=new T.InstancedMesh(geom,material,instances.length),o=new T.Object3D();instances.forEach((a,i)=>{o.position.set(a[0],a[1],a[2]);o.scale.set(a[3],a[4],a[5]);o.updateMatrix();mesh.setMatrixAt(i,o.matrix);});mesh.castShadow=material!==mat('#a7b4b7');mesh.receiveShadow=true;mesh.frustumCulled=false;scene.add(mesh);});
+    if(pipeInstances.length){const mesh=new T.InstancedMesh(pipeGeo,pipeMat,pipeInstances.length);pipeInstances.forEach((m,i)=>mesh.setMatrixAt(i,m));mesh.frustumCulled=false;scene.add(mesh);}else pipeGeo.dispose();
+    if(contacts.length){const mesh=new T.InstancedMesh(new T.PlaneGeometry(1,1),contactMat,contacts.length),o=new T.Object3D();contacts.forEach((a,i)=>{o.position.set(a[0],.029,a[1]);o.rotation.x=-Math.PI/2;o.scale.set(a[2],a[3],1);o.updateMatrix();mesh.setMatrixAt(i,o.matrix);});mesh.frustumCulled=false;scene.add(mesh);}
+    let lastLightX=-100,lastLightZ=-100;
+    function updateCamera(camera){if(!lampPool.length||Math.hypot(camera.position.x-lastLightX,camera.position.z-lastLightZ)<2)return;lastLightX=camera.position.x;lastLightZ=camera.position.z;const near=lampPositions.slice().sort((a,b)=>a.distanceToSquared(camera.position)-b.distanceToSquared(camera.position));lampPool.forEach((l,i)=>l.position.copy(near[i]));}
+    return {scene,blockers,heightAt,marks,pickZones,W,D,records,markGroup,updateCamera,setReflections:on=>{if(mirror)mirror.visible=on;},hasReflections:!!mirror};
+
   }
   function configure(renderer){const T=root.THREE;renderer.setPixelRatio(Math.min(1.6,root.devicePixelRatio||1));renderer.outputEncoding=T.sRGBEncoding;renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=.92;}
   function overview(stage,db,fi,opts={}){

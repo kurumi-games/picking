@@ -533,9 +533,10 @@
   .part-row .pmv { background:var(--panel-2); border:1px solid var(--line); color:var(--code); border-radius:6px; width:30px; height:20px; font-size:13px; line-height:1; cursor:pointer; padding:0; display:flex; align-items:center; justify-content:center; }
   .part-row .pmv:disabled { opacity:.3; cursor:default; }
 </style>
-<link rel="stylesheet" href="warehouse3d.css?v=50">
-<script src="warehouse3d.js?v=50"></script>
-<script src="warehouse-walk.js?v=50"></script>
+<link rel="stylesheet" href="warehouse3d.css?v=51">
+<script src="warehouse-materials.js?v=51"></script>
+<script src="warehouse3d.js?v=51"></script>
+<script src="warehouse-walk.js?v=51"></script>
 </head>
 <body>
 
@@ -544,7 +545,7 @@
   <div class="wrap">
     <div class="home-title">
       <h1>ピッキング補助</h1>
-      <div class="ver-tag">ver50（倉庫ストリートビュー・パレットをタップして場所登録）</div>
+      <div class="ver-tag">ver51（写真を参考に床・天井の質感と照明を改善）</div>
     </div>
     <div class="home-btns">
       <button class="home-btn go" id="goBtn">GO</button>
@@ -562,7 +563,7 @@
   <div class="wrap">
     <div style="text-align:center; padding:14px 0 16px;">
       <h2 style="font-size:22px; font-weight:900;">ピッキング補助</h2>
-      <div class="ver-tag" style="margin:4px 0 0;">ver50（倉庫ストリートビュー・パレットをタップして場所登録）</div>
+      <div class="ver-tag" style="margin:4px 0 0;">ver51（写真を参考に床・天井の質感と照明を改善）</div>
     </div>
 
     <!-- 機種から選ぶ -->
@@ -770,7 +771,7 @@
   <div class="wk-pad-keys" id="afKeys"><button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button><button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button><button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button><button data-k="del">⌫</button><button data-k="0">0</button><button data-k="go" class="go">決定</button></div>
 </div></div>
 <div class="wk-modal" id="wkModal"><div id="wkStage"></div><div class="wk-load" id="wkLoad">読み込み中…</div><div class="wk-top"><button id="wkFind" class="wk-find">🔍 部品</button><span id="wkTitle">🚶 倉庫を歩く</span><button id="wkOverview">全体</button><button id="wkClose">とじる</button></div><div class="wk-bar" id="wkBar"><span id="wkBarTxt"></span><button id="wkBarBtn">移動する</button></div><div class="wk-msg" id="wkMsg"></div><div class="wk-tools"><select id="wkFloor" aria-label="表示フロア"></select><button id="wkRegister">＋ 場所登録</button></div>
-<div class="wk-minimap"><canvas id="wkMini" width="260" height="290" aria-label="倉庫マップ。緑の通路をタップして移動"></canvas><small>通路をタップして移動</small></div>
+<div class="wk-minimap"><canvas id="wkMini" width="260" height="290" aria-label="倉庫マップ。緑の通路をタップして移動"></canvas><small>通路をタップして移動</small><button id="wkReflection" type="button">床の反射 ON</button></div>
 <div class="wk-controls" id="wkControls"><button data-walk="forward" aria-label="前へ">↑</button><button data-walk="left" aria-label="左へ">←</button><button data-walk="back" aria-label="後ろへ">↓</button><button data-walk="right" aria-label="右へ">→</button></div>
 <p class="wk-hint">スワイプで見回す · 床の矢印で移動<br>地図をもとにした3D表示</p>
 <div class="wk-place" id="wkPlace"><form id="wkPlaceForm"><strong>このパレットに場所登録</strong><p>選んだパレットを黄色で表示しています。</p><label>部品コード<input id="wkPlaceCode" placeholder="例：C00004765" autocomplete="off" required pattern="[A-Za-z][A-Za-z0-9-]*"></label><label>置き方<select id="wkPlaceState"><option value="r">定位置</option><option value="p">仮置き</option><option value="b">引越し</option></select></label><p id="wkPlaceNote"></p><div><button type="button" id="wkPlaceCancel">キャンセル</button><button type="submit">ここに登録</button></div></form></div><div class="wk-pad" id="wkPad"><div class="wk-pad-box"><div class="wk-pad-head"><b id="wkPadTitle">番号を入力</b><button id="wkPadX">✕</button></div><form id="wkSearchForm" class="wk-search-form"><input id="wkSearchCode" aria-label="部品コード" placeholder="C00004765 を貼り付け" autocomplete="off"><button type="submit">検索</button></form><div class="wk-pad-code" id="wkPadCode"> </div><div class="wk-pad-note" id="wkPadNote"></div><div class="wk-kind" id="wkKind"><button data-p="C"><b>C</b>部品<small></small></button><button data-p="B"><b>B</b>中間品<small></small></button><button data-p="A"><b>A</b>完成品<small></small></button><button id="wkKindBack" class="back">← 番号を直す</button></div><div class="wk-pad-keys" id="wkPadKeys"><button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button><button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button><button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button><button data-k="del">⌫</button><button data-k="0">0</button><button data-k="go" class="go">決定</button></div></div></div></div>
@@ -2834,7 +2835,13 @@
   /* ===== ver50 地図から歩ける倉庫ストリートビュー ===== */
   const WK={on:false,target:null,view:null,location:0,placing:false,selected:null};
   let wkThreePromise=null;
-  function wkThree(){ if(window.THREE)return Promise.resolve();if(!wkThreePromise)wkThreePromise=new Promise((res,rej)=>{const sc=document.createElement('script');sc.src='vendor/three-r128.min.js';sc.onload=res;sc.onerror=()=>{wkThreePromise=null;sc.remove();rej(new Error('3Dの読み込みに失敗'));};document.head.appendChild(sc);});return wkThreePromise; }
+  function wkThree(){
+    if(!wkThreePromise){
+      const script=src=>new Promise((resolve,reject)=>{const el=document.createElement('script');el.src=src;el.onload=resolve;el.onerror=()=>{el.remove();reject(new Error('3Dの素材を読み込めませんでした。再度開いてください。'));};document.head.appendChild(el);});
+      wkThreePromise=(async()=>{if(!window.THREE)await script('vendor/three-r128.min.js');if(!THREE.Reflector)await script('vendor/three-r128-reflector.js');await WarehouseMaterials.load();})().catch(e=>{wkThreePromise=null;throw e;});
+    }
+    return wkThreePromise;
+  }
   async function wkOpen(target){
     WK.target=target?Warehouse3D.find(DB,target.code):null;WK.location=0;WK.position=null;
     if(WK.target)DB.maps.cur=WK.target.cells[0].f;
@@ -2854,7 +2861,7 @@
     const target=cells[WK.location]?.f===fi?cells[WK.location]:null;
     $('wkTitle').textContent=WK.target?WK.target.code:'倉庫を歩く';$('wkBar').classList.toggle('on',!!WK.target);
     if(WK.target){$('wkBarTxt').textContent=target?'登録場所 '+(WK.location+1)+' / '+cells.length:'別フロアに登録場所があります';$('wkBarBtn').textContent=cells.length>1?'次の場所':'場所を見る';$('wkBarBtn').onclick=()=>{if(target&&cells.length>1)WK.location=(WK.location+1)%cells.length;DB.maps.cur=cells[WK.location].f;wkBuild(false);};}
-    try{WK.view=WarehouseWalk.create($('wkStage'),DB,fi,{target,jump:!keepPos,position:keepPos&&WK.position?.f===fi?WK.position:null,minimap:$('wkMini'),controls:$('wkControls'),isPaused:()=>$('wkPad').classList.contains('on')||$('wkPlace').classList.contains('on'),onMessage:wkMsg,onPick:c=>{WK.selected=c;$('wkPlaceCode').value=WK.target?.code||'';$('wkPlaceState').value='r';$('wkPlaceNote').textContent='同じ部品のほかの登録場所は残ります。';$('wkPlace').classList.add('on');}});WK.on=true;}
+    try{WK.view=WarehouseWalk.create($('wkStage'),DB,fi,{target,jump:!keepPos,position:keepPos&&WK.position?.f===fi?WK.position:null,minimap:$('wkMini'),controls:$('wkControls'),isPaused:()=>$('wkPad').classList.contains('on')||$('wkPlace').classList.contains('on'),onMessage:wkMsg,onPick:c=>{WK.selected=c;$('wkPlaceCode').value=WK.target?.code||'';$('wkPlaceState').value='r';$('wkPlaceNote').textContent='同じ部品のほかの登録場所は残ります。';$('wkPlace').classList.add('on');}});WK.on=true;WK.view.world.setReflections(!WK.reflectionOff);}
     catch(e){wkClose();alert(e.message||'3Dを表示できません。');}
   }
   // 🔍 数字パッド：数字を打って「決定」→ C 部品／B 中間品／A 完成品 を選ぶ
@@ -2888,6 +2895,7 @@
     document.querySelectorAll('#wkPad [data-k]').forEach(b=>b.onclick=()=>wkPadKey(b.dataset.k));
     document.querySelectorAll('#wkKind [data-p]').forEach(b=>b.onclick=()=>wkPickKind(b.dataset.p));$('wkKindBack').onclick=wkPadShow;
     $('wkSearchForm').onsubmit=e=>{e.preventDefault();const r=wkFind($('wkSearchCode').value);if(!r){$('wkPadNote').textContent='この部品の場所登録がありません';return;}$('wkPad').classList.remove('on');WK.target=r;WK.location=0;DB.maps.cur=r.cells[0].f;wkBuild(false);};
+    $('wkReflection').onclick=()=>{WK.reflectionOff=!WK.reflectionOff;WK.view?.world.setReflections(!WK.reflectionOff);$('wkReflection').textContent='床の反射 '+(WK.reflectionOff?'OFF':'ON');};
     $('wkFloor').onchange=()=>{DB.maps.cur=Number($('wkFloor').value);wkBuild(false);};
     $('wkRegister').onclick=()=>{WK.placing=!WK.placing;$('wkRegister').textContent=WK.placing?'登録をやめる':'＋ 場所登録';WK.view?.setPlacing(WK.placing);};
     $('wkPlaceCancel').onclick=()=>{$('wkPlace').classList.remove('on');WK.selected=null;};

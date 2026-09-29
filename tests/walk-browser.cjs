@@ -1,7 +1,7 @@
 const {chromium}=require('playwright');
 const fs=require('fs'),http=require('http'),path=require('path'),assert=require('node:assert/strict');
 const root=path.resolve(__dirname,'..');
-const server=http.createServer((req,res)=>{const name=path.resolve(root,'.'+decodeURIComponent(req.url.split('?')[0]==='/'?'/index.html':req.url.split('?')[0]));if(!name.startsWith(root+path.sep)){res.writeHead(403).end();return;}fs.readFile(name,(err,data)=>{if(err){res.writeHead(404).end();return;}res.setHeader('Content-Type',name.endsWith('.js')?'text/javascript':name.endsWith('.css')?'text/css':'text/html');res.end(data);});});
+const server=http.createServer((req,res)=>{const name=path.resolve(root,'.'+decodeURIComponent(req.url.split('?')[0]==='/'?'/index.html':req.url.split('?')[0]));if(!name.startsWith(root+path.sep)){res.writeHead(403).end();return;}fs.readFile(name,(err,data)=>{if(err){res.writeHead(404).end();return;}res.setHeader('Content-Type',name.endsWith('.js')?'text/javascript':name.endsWith('.css')?'text/css':name.endsWith('.webp')?'image/webp':'text/html');res.end(data);});});
 let browser;
 (async()=>{
  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
@@ -14,6 +14,15 @@ let browser;
  // Capture the public module's result for coordinate/collision and resource checks.
  await page.evaluate(()=>{const create=WarehouseWalk.create;WarehouseWalk.create=(...args)=>{window.testWalk=create(...args);return window.testWalk;};});
  await page.locator('#bnMap').click();await page.locator('#mpWalk').click();await page.waitForFunction(()=>window.testWalk?.renderer?.domElement.width>0);await page.waitForTimeout(700);
+ // Photo textures decode, the reflection is optional, and toggling does not alter position.
+ const materials=await page.evaluate(()=>{const sizes=[];testWalk.world.scene.traverse(o=>{if(o.material?.map?.image?.naturalWidth)sizes.push(o.material.map.image.naturalWidth);});return {sizes,reflection:testWalk.world.hasReflections};});
+ assert(materials.sizes.includes(1024),'photo texture did not decode');assert(materials.reflection,'reflection unavailable');
+ const reflectionPosition=await page.evaluate(()=>testWalk.getPosition());
+ await page.locator('#wkReflection').click();
+ assert.equal(await page.evaluate(()=>testWalk.world.scene.children.find(o=>o.isReflector).visible),false);
+ assert.deepEqual(await page.evaluate(()=>testWalk.getPosition()),reflectionPosition);
+ await page.locator('#wkReflection').click();
+ assert.equal(await page.evaluate(()=>testWalk.world.scene.children.find(o=>o.isReflector).visible),true);
  // Drag changes the actual camera, not a sequence of still photographs.
  const before=await page.evaluate(()=>testWalk.getPosition());
  await page.mouse.move(200,330);await page.mouse.down();await page.mouse.move(280,330,{steps:5});await page.mouse.up();

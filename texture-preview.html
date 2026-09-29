@@ -1,0 +1,15 @@
+<!doctype html><html lang="ja"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>倉庫の質感確認・ver51</title>
+<style>*{box-sizing:border-box}body{margin:0;font:15px system-ui,sans-serif;color:#fff;background:#c0c1b6}#stage{position:fixed;inset:0;touch-action:none}canvas{display:block}header{position:fixed;top:0;left:0;right:0;padding:18px;background:linear-gradient(#142721b8,transparent);pointer-events:none}h1{margin:0;font-size:18px}p{font-size:12px;line-height:1.6;margin:5px 0}nav{position:fixed;bottom:22px;left:12px;right:12px;display:flex;flex-wrap:wrap;gap:7px;justify-content:center}button{border:1px solid #ffffff80;border-radius:12px;background:#183d32e8;color:#fff;padding:12px 15px;font:inherit}#message{position:fixed;top:90px;left:12px;right:12px;text-align:center;pointer-events:none;font-size:13px}#controls{position:fixed;bottom:100px;left:18px;display:grid;grid-template-columns:repeat(3,42px);gap:5px}#controls button{padding:8px}#controls button:first-child{grid-column:2}#controls button:nth-child(2){grid-column:1}</style>
+<div id="stage"></div><header><h1>倉庫の質感確認 · ver51</h1><p>写真を参考にした通路の試作。配置・寸法は仮です。<br>スワイプで見回す · 床の矢印で移動</p></header><div id="message"></div>
+<div id="controls"><button data-walk="forward">↑</button><button data-walk="left">←</button><button data-walk="back">↓</button><button data-walk="right">→</button></div><nav><button id="entrance">通路を見る</button><button id="floor">床・パレット</button><button id="ceiling">天井を見る</button><button id="reflection">反射 ON</button></nav>
+<script src="vendor/three-r128.min.js"></script><script src="vendor/three-r128-reflector.js"></script><script src="warehouse-materials.js"></script><script src="warehouse3d.js"></script><script src="warehouse-walk.js"></script>
+<script>
+const db={maps:{cur:0,floors:[{name:'質感確認',cols:20,rows:24,floor:'green',rects:[{id:1,x:2,y:5,w:6,h:16,pal:true},{id:2,x:11,y:7,w:7,h:14,pal:true},{id:3,x:10,y:.2,w:9.8,h:.2,type:'shut'},{id:4,x:.2,y:.2,w:1,h:1,type:'wall'}]}]},spots:{}};
+let walk=null,reflect=true;const message=document.getElementById('message');
+async function view(p){await WarehouseMaterials.load();walk?.destroy();walk=WarehouseWalk.create(document.getElementById('stage'),db,0,{position:p,controls:document.getElementById('controls'),onMessage:t=>{message.textContent=t;}});walk.world.setReflections(reflect);window.previewWalk=walk;}
+document.getElementById('entrance').onclick=()=>view({x:19,z:40,yaw:0,pitch:-.1});
+document.getElementById('floor').onclick=()=>view({x:19,z:29,yaw:.5,pitch:-.72});
+document.getElementById('ceiling').onclick=()=>view({x:19,z:35,yaw:.3,pitch:.42});
+document.getElementById('reflection').onclick=e=>{reflect=!reflect;walk.world.setReflections(reflect);e.target.textContent='反射 '+(reflect?'ON':'OFF');};
+view({x:19,z:40,yaw:0,pitch:-.1});
+</script></html>

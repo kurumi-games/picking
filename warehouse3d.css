@@ -81,3 +81,4 @@
 @media(max-height:540px){.wk-minimap{width:96px;bottom:12px;}.wk-controls{bottom:15px;}.wk-hint{bottom:8px;font-size:10px;}.wk-msg{top:118px;}.wk-bar{left:26%;right:26%;top:66px;}}
 .mp-walk-entry {width:100%;padding:12px;border:0;border-radius:12px;background:#166c54;color:#fff;font-size:15px;font-weight:800;margin:0 0 10px;}
 .wk-msg {white-space:normal;text-align:center;width:max-content;box-sizing:border-box;}
+#wkReflection {display:block;width:100%;border:0;border-radius:7px;background:#e0e9e2;color:#264b3d;padding:5px 2px;font-size:10px;margin-top:3px;cursor:pointer;}

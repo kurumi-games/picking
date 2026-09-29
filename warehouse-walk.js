@@ -23,7 +23,7 @@
   function create(stage,db,fi,opts={}){
     const T=root.THREE,f=db.maps.floors[fi],world=root.Warehouse3D.createWorld(db,fi,{walk:true});
     const {scene,W,D}=world,nav=navigation(W,D,world.blockers);
-    const renderer=new T.WebGLRenderer({antialias:true});root.Warehouse3D.configure(renderer);renderer.shadowMap.enabled=false;stage.replaceChildren(renderer.domElement);
+    const renderer=new T.WebGLRenderer({antialias:true});root.Warehouse3D.configure(renderer);renderer.shadowMap.enabled=false;renderer.toneMappingExposure=1.05;stage.replaceChildren(renderer.domElement);
     const cam=new T.PerspectiveCamera(68,1,.08,Math.max(W,D)*3),ray=new T.Raycaster();
     const door=f.rects.find(r=>r.type==='door');
     let start=nav.nearest(opts.position?.x??(door?(door.x+door.w/2)*S:W/2),opts.position?.z??(door?(door.y+door.h/2)*S:D-2));
@@ -61,7 +61,7 @@
       else {face(...targetCenter,targetBase+1.1);tell(end<0?'この場所に隣接する通路がありません。全体マップで確認してください。':'赤い矢印が登録場所です');}
       updateSteps();drawMini();
     }
-    function moveTo(end){if(placing||end<0||!reachable[end])return;const path=nav.path(nav.nearest(x,z,reachable),end);if(!path)return;route=path;updateRoute();if(route.length>1)face(route[1][0],route[1][1],EYE-1.2);}
+    function moveTo(end){if(placing||end<0||!reachable[end])return;const path=nav.path(nav.nearest(x,z,reachable),end);if(!path)return;route=path;updateRoute();if(route.length>1){yaw=Math.atan2(x-route[1][0],z-route[1][1]);pitch=-.18;}}
     function updateSteps(){const base=Math.round(yaw/(Math.PI/2))*Math.PI/2;steps.forEach((s,i)=>{const angle=base+i*Math.PI/2,px=x-Math.sin(angle)*6,pz=z-Math.cos(angle)*6;const end=nav.index(px,pz);let clear=end>=0&&reachable[end];for(let t=.25;clear&&t<=6;t+=.25)if(nav.blocked(x-Math.sin(angle)*t,z-Math.cos(angle)*t))clear=false;s.end=clear?end:-1;s.group.visible=!!clear&&!placing;s.group.position.set(px,.075,pz);s.a.rotation.z=-angle;});}
     const mini=opts.minimap,mg=mini?.getContext('2d');
     function drawMini(){if(!mg)return;const w=mini.width,h=mini.height,k=Math.min((w-16)/W,(h-16)/D),ox=(w-W*k)/2,oy=(h-D*k)/2;mini._map={k,ox,oy};mg.clearRect(0,0,w,h);mg.fillStyle='#eaf0eb';mg.fillRect(ox,oy,W*k,D*k);mg.fillStyle='#6d967b';mg.fillRect(ox,oy,W*k,D*k);f.rects.forEach(r=>{mg.fillStyle=r.type==='wall'||r.type==='shut'?'#526066':r.type==='door'?'#eddc84':'#e2e5e2';mg.fillRect(ox+r.x*S*k,oy+r.y*S*k,r.w*S*k,r.h*S*k);});if(route.length){mg.strokeStyle='#ffe353';mg.lineWidth=3;mg.beginPath();mg.moveTo(ox+x*k,oy+z*k);route.forEach(p=>mg.lineTo(ox+p[0]*k,oy+p[1]*k));mg.stroke();}if(target){mg.fillStyle='#ef283d';mg.fillRect(ox+target.x*S*k,oy+target.y*S*k,target.w*S*k,target.h*S*k);}mg.save();mg.translate(ox+x*k,oy+z*k);mg.rotate(-yaw);mg.fillStyle='#147cff';mg.strokeStyle='#fff';mg.lineWidth=2;mg.beginPath();mg.moveTo(0,-10);mg.lineTo(7,7);mg.lineTo(0,3);mg.lineTo(-7,7);mg.closePath();mg.fill();mg.stroke();mg.restore();}
@@ -93,7 +93,7 @@
       }else {held='';keys={};}
       cam.position.set(x,EYE,z);cam.rotation.order='YXZ';cam.rotation.set(pitch,yaw,0,'YXZ');arrowGroup.position.y=targetBase+Math.sin(now*.003)*.14;
       if(now-miniAt>100){miniAt=now;updateSteps();drawMini();}
-      renderer.render(scene,cam);
+      world.updateCamera?.(cam);renderer.render(scene,cam);
     }
     raf=requestAnimationFrame(loop);
     return {world,nav,cam,renderer,focus,getPosition:()=>({x,z,yaw,pitch,f:fi}),setPlacing(on){placing=on;selection=null;route=[];updateRoute();if(on){arrowGroup.visible=footprint.visible=false;tell('登録したい黒いパレットをタップ');}else focus(target,false);updateSteps();},destroy(){dead=true;cancelAnimationFrame(raf);ro.disconnect();listeners.forEach(([n,fn])=>stage.removeEventListener(n,fn));mini?.removeEventListener('click',miniClick);root.removeEventListener('keydown',keyboard);root.removeEventListener('keyup',keyboard);root.removeEventListener('blur',reset);control?.removeEventListener('pointerdown',controlDown);control?.removeEventListener('pointerup',controlUp);control?.removeEventListener('pointercancel',controlUp);root.Warehouse3D.dispose(scene);renderer.dispose();renderer.forceContextLoss();renderer.domElement.remove();}};
