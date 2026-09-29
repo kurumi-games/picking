@@ -533,8 +533,9 @@
   .part-row .pmv { background:var(--panel-2); border:1px solid var(--line); color:var(--code); border-radius:6px; width:30px; height:20px; font-size:13px; line-height:1; cursor:pointer; padding:0; display:flex; align-items:center; justify-content:center; }
   .part-row .pmv:disabled { opacity:.3; cursor:default; }
 </style>
-<link rel="stylesheet" href="warehouse3d.css?v=39">
-<script src="warehouse3d.js?v=39b"></script>
+<link rel="stylesheet" href="warehouse3d.css?v=50">
+<script src="warehouse3d.js?v=50"></script>
+<script src="warehouse-walk.js?v=50"></script>
 </head>
 <body>
 
@@ -543,7 +544,7 @@
   <div class="wrap">
     <div class="home-title">
       <h1>ピッキング補助</h1>
-      <div class="ver-tag">ver49（9/28 引越しで定位置に「いまは無い」・長押しで枝番36-1など）</div>
+      <div class="ver-tag">ver50（倉庫ストリートビュー・パレットをタップして場所登録）</div>
     </div>
     <div class="home-btns">
       <button class="home-btn go" id="goBtn">GO</button>
@@ -561,7 +562,7 @@
   <div class="wrap">
     <div style="text-align:center; padding:14px 0 16px;">
       <h2 style="font-size:22px; font-weight:900;">ピッキング補助</h2>
-      <div class="ver-tag" style="margin:4px 0 0;">ver49（9/28 引越しで定位置に「いまは無い」・長押しで枝番36-1など）</div>
+      <div class="ver-tag" style="margin:4px 0 0;">ver50（倉庫ストリートビュー・パレットをタップして場所登録）</div>
     </div>
 
     <!-- 機種から選ぶ -->
@@ -667,6 +668,7 @@
       <button id="mpQBtn">検索</button>
       <button id="mpScanBtn" style="background:var(--ok);">📷</button>
     </div>
+    <button class="mp-walk-entry" id="mpWalk">🚶 倉庫ストリートビューを開く</button>
     <div class="mp-paint" id="mpPaint">
       <span class="mp-pcode" id="mpPCode"></span>
       <button class="mp-pt c-r on" id="mpTr">🔴 定位置</button>
@@ -767,7 +769,11 @@
   <div class="af-result" id="afResult"></div>
   <div class="wk-pad-keys" id="afKeys"><button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button><button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button><button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button><button data-k="del">⌫</button><button data-k="0">0</button><button data-k="go" class="go">決定</button></div>
 </div></div>
-<div class="wk-modal" id="wkModal"><div id="wkStage"></div><div class="wk-load" id="wkLoad">読み込み中…</div><div class="wk-top"><button id="wkFind" class="wk-find">🔍 部品</button><span id="wkTitle">🚶 倉庫を歩く</span><button id="wkOverview">全体</button><button id="wkClose">とじる</button></div><div class="wk-bar" id="wkBar"><span id="wkBarTxt"></span><button id="wkBarBtn">移動する</button></div><div class="wk-msg" id="wkMsg"></div><div id="wkStick"><i></i></div><p class="wk-hint">左側で歩く・右側で見回す<br>立体マーカーは登録場所。実物・数量の再現ではありません。</p><div class="wk-pad" id="wkPad"><div class="wk-pad-box"><div class="wk-pad-head"><b id="wkPadTitle">番号を入力</b><button id="wkPadX">✕</button></div><div class="wk-pad-code" id="wkPadCode"> </div><div class="wk-pad-note" id="wkPadNote"></div><div class="wk-kind" id="wkKind"><button data-p="C"><b>C</b>部品<small></small></button><button data-p="B"><b>B</b>中間品<small></small></button><button data-p="A"><b>A</b>完成品<small></small></button><button id="wkKindBack" class="back">← 番号を直す</button></div><div class="wk-pad-keys" id="wkPadKeys"><button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button><button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button><button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button><button data-k="del">⌫</button><button data-k="0">0</button><button data-k="go" class="go">決定</button></div></div></div></div>
+<div class="wk-modal" id="wkModal"><div id="wkStage"></div><div class="wk-load" id="wkLoad">読み込み中…</div><div class="wk-top"><button id="wkFind" class="wk-find">🔍 部品</button><span id="wkTitle">🚶 倉庫を歩く</span><button id="wkOverview">全体</button><button id="wkClose">とじる</button></div><div class="wk-bar" id="wkBar"><span id="wkBarTxt"></span><button id="wkBarBtn">移動する</button></div><div class="wk-msg" id="wkMsg"></div><div class="wk-tools"><select id="wkFloor" aria-label="表示フロア"></select><button id="wkRegister">＋ 場所登録</button></div>
+<div class="wk-minimap"><canvas id="wkMini" width="260" height="290" aria-label="倉庫マップ。緑の通路をタップして移動"></canvas><small>通路をタップして移動</small></div>
+<div class="wk-controls" id="wkControls"><button data-walk="forward" aria-label="前へ">↑</button><button data-walk="left" aria-label="左へ">←</button><button data-walk="back" aria-label="後ろへ">↓</button><button data-walk="right" aria-label="右へ">→</button></div>
+<p class="wk-hint">スワイプで見回す · 床の矢印で移動<br>地図をもとにした3D表示</p>
+<div class="wk-place" id="wkPlace"><form id="wkPlaceForm"><strong>このパレットに場所登録</strong><p>選んだパレットを黄色で表示しています。</p><label>部品コード<input id="wkPlaceCode" placeholder="例：C00004765" autocomplete="off" required pattern="[A-Za-z][A-Za-z0-9-]*"></label><label>置き方<select id="wkPlaceState"><option value="r">定位置</option><option value="p">仮置き</option><option value="b">引越し</option></select></label><p id="wkPlaceNote"></p><div><button type="button" id="wkPlaceCancel">キャンセル</button><button type="submit">ここに登録</button></div></form></div><div class="wk-pad" id="wkPad"><div class="wk-pad-box"><div class="wk-pad-head"><b id="wkPadTitle">番号を入力</b><button id="wkPadX">✕</button></div><form id="wkSearchForm" class="wk-search-form"><input id="wkSearchCode" aria-label="部品コード" placeholder="C00004765 を貼り付け" autocomplete="off"><button type="submit">検索</button></form><div class="wk-pad-code" id="wkPadCode"> </div><div class="wk-pad-note" id="wkPadNote"></div><div class="wk-kind" id="wkKind"><button data-p="C"><b>C</b>部品<small></small></button><button data-p="B"><b>B</b>中間品<small></small></button><button data-p="A"><b>A</b>完成品<small></small></button><button id="wkKindBack" class="back">← 番号を直す</button></div><div class="wk-pad-keys" id="wkPadKeys"><button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button><button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button><button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button><button data-k="del">⌫</button><button data-k="0">0</button><button data-k="go" class="go">決定</button></div></div></div></div>
 <div class="w3-modal" id="w3Modal">
   <div class="w3-head"><h2>倉庫ナビ</h2><button class="w3-walk" id="w3Walk">歩く</button><button class="w3-close" id="w3Close">とじる</button></div>
   <div class="n3-search"><input id="n3Query" placeholder="部品コードで検索" aria-label="部品コード"><button id="n3Search">検索</button></div>
@@ -2825,130 +2831,31 @@
     },70);
   });
 
-  /* ===== ver36 倉庫を歩く（一人称ストリートビュー）
-     1マス＝2（ver35の2倍の広さ）、高さはそのまま（目3.2・棚3.5）。🔍で部品コードを打つと床に光る矢印で案内 ===== */
-  const WK={on:false,target:null}; const WK_S=2;
+  /* ===== ver50 地図から歩ける倉庫ストリートビュー ===== */
+  const WK={on:false,target:null,view:null,location:0,placing:false,selected:null};
   let wkThreePromise=null;
   function wkThree(){ if(window.THREE)return Promise.resolve();if(!wkThreePromise)wkThreePromise=new Promise((res,rej)=>{const sc=document.createElement('script');sc.src='vendor/three-r128.min.js';sc.onload=res;sc.onerror=()=>{wkThreePromise=null;sc.remove();rej(new Error('3Dの読み込みに失敗'));};document.head.appendChild(sc);});return wkThreePromise; }
   async function wkOpen(target){
-    WK.target=target?Warehouse3D.find(DB,target.code):null;
-    $('wkModal').classList.add('on'); $('wkLoad').style.display='flex';
-    try{ await wkThree(); }catch(e){ alert('3Dの部品を読み込めんかった。通信を確認してな'); wkClose(); return; }
-    if(!$('wkModal').classList.contains('on'))return; $('wkLoad').style.display='none'; try{wkBuild();}catch(e){wkClose();alert('3Dを表示できません。2Dマップをご利用ください。');console.error(e);}
+    WK.target=target?Warehouse3D.find(DB,target.code):null;WK.location=0;WK.position=null;
+    if(WK.target)DB.maps.cur=WK.target.cells[0].f;
+    $('wkModal').classList.add('on');$('wkLoad').style.display='flex';
+    try{await wkThree();if(!$('wkModal').classList.contains('on'))return;wkBuild(false);}
+    catch(e){wkClose();alert(e.message||'3Dを表示できません。2Dマップをご利用ください。');console.error(e);}
+    finally{$('wkLoad').style.display='none';}
   }
-  function wkStop(){ WK.on=false; WK.keys={}; if(WK.raf)cancelAnimationFrame(WK.raf); Warehouse3D.dispose(WK.scene); WK.scene=null; if(WK.renderer){WK.renderer.dispose();WK.renderer.forceContextLoss();WK.renderer.domElement.remove();WK.renderer=null;} WK.onResize=null; }
-  function wkClose(){ wkStop(); $('wkModal').classList.remove('on'); $('wkPad').classList.remove('on'); $('wkBar').classList.remove('on'); }
-  function wkTex(bg,line){
-    const c=document.createElement('canvas');c.width=c.height=64;const g=c.getContext('2d');
-    g.fillStyle=bg;g.fillRect(0,0,64,64);g.strokeStyle=line;g.lineWidth=2;g.strokeRect(0,0,64,64);
-    const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;return t;
-  }
-  function wkLabel(text){
-    const c=document.createElement('canvas');const g=c.getContext('2d');g.font='bold 44px sans-serif';
-    const w=Math.ceil(g.measureText(text).width)+40;c.width=w;c.height=72;g.font='bold 44px sans-serif';
-    g.fillStyle='rgba(20,34,50,.82)';g.fillRect(0,0,w,72);g.fillStyle='#fff';g.textBaseline='middle';g.fillText(text,20,38);
-    const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c)}));sp.scale.set(w/72*1.1,1.1,1);return sp;
-  }
-  function wkMsg(t,ms){ const m=$('wkMsg'); m.textContent=t; m.classList.add('on'); clearTimeout(WK.msgT); if(ms) WK.msgT=setTimeout(()=>m.classList.remove('on'),ms); }
-  // 部品コード → 場所（DB.spots の塗り、なければ棚に登録された部品）
+  function wkStop(){WK.on=false;if(WK.view){WK.position=WK.view.getPosition();WK.view.destroy();WK.view=null;}clearTimeout(WK.msgT);}
+  function wkClose(){wkStop();WK.placing=false;WK.selected=null;$('wkModal').classList.remove('on');$('wkPad').classList.remove('on');$('wkPlace').classList.remove('on');$('wkBar').classList.remove('on');}
+  function wkMsg(t,ms=3200){const m=$('wkMsg');m.textContent=t;m.classList.add('on');clearTimeout(WK.msgT);if(ms)WK.msgT=setTimeout(()=>m.classList.remove('on'),ms);}
   function wkFind(q){return Warehouse3D.find(DB,q);}
   function wkBuild(keepPos){
-    wkStop();
-    const T=THREE, S=WK_S, f=mpFloor(), fl=MP_FLOORS[f.floor]||MP_FLOORS.green, st=$('wkStage');
-    const W=f.cols*S, D=f.rows*S, HALL=7;
-    const renderer=new T.WebGLRenderer({antialias:true}); renderer.setPixelRatio(Math.min(2,devicePixelRatio||1));
-    renderer.setSize(st.clientWidth,st.clientHeight); st.appendChild(renderer.domElement);
-    Warehouse3D.configure(renderer);
-    const world=Warehouse3D.createWorld(DB,DB.maps.cur,{walk:true,selected:WK.target&&WK.target.code});
-    const scene=world.scene, cols=world.blockers;
-    const cam=new T.PerspectiveCamera(72,st.clientWidth/st.clientHeight,0.05,Math.max(W,D)*4);
-    const R=0.3;
-    const hitR=(px,pz,rr)=>{ if(px<rr||pz<rr||px>W-rr||pz>D-rr) return true; return cols.some(c=> px>c[0]-rr&&px<c[2]+rr&&pz>c[1]-rr&&pz<c[3]+rr); };
-    const hit=(px,pz)=>hitR(px,pz,R);
-    // スタート位置
-    let sx,sz,yaw=0;
-    if(keepPos&&WK.x!=null&&!hit(WK.x,WK.z)){ sx=WK.x; sz=WK.z; yaw=WK.yaw; }
-    else {
-      const door=f.rects.find(r=>r.type==='door'); const ray=(px,pz,a)=>{let k=0;while(k<120&&!hit(px-Math.sin(a)*k*.25,pz-Math.cos(a)*k*.25))k++;return k*.25;};
-      let best=null;
-      for(let gz=S/2;gz<D;gz+=S/2) for(let gx=S/2;gx<W;gx+=S/2){ if(hit(gx,gz))continue;
-        let cl=0; while(cl<5&&!hit(gx+cl+.25,gz)&&!hit(gx-cl-.25,gz)&&!hit(gx,gz+cl+.25)&&!hit(gx,gz-cl-.25))cl+=.25;
-        const dd=door?Math.hypot(gx-(door.x+door.w/2)*S,gz-(door.y+door.h/2)*S):Math.hypot(gx-W/2,gz-D/2);
-        const sc=cl*3-dd*0.08; if(!best||sc>best.sc)best={sc,gx,gz}; }
-      sx=best?best.gx:W/2; sz=best?best.gz:D/2; let far=-1;
-      for(let a=0;a<8;a++){ const ang=a/8*Math.PI*2, r=ray(sx,sz,ang); if(r>far){far=r;yaw=ang;} }
-    }
-    // 案内用の格子（0.5刻み）。棚から0.45以上はなれたところだけ通れる
-    const G=0.5, GW=Math.floor(W/G), GD=Math.floor(D/G), free=new Uint8Array(GW*GD);
-    for(let j=0;j<GD;j++)for(let i=0;i<GW;i++) free[j*GW+i]=hitR((i+.5)*G,(j+.5)*G,0.45)?0:1;
-    // 目的地
-    const tg=WK.target, here=tg?tg.cells.filter(c=>c.f===DB.maps.cur):[];
-    const colr={r:'#ff3b3b',p:'#b34dff',b:'#2f7bff'};
-    here.forEach(c=>{
-      const pm=new T.Mesh(new T.CylinderGeometry(0.5,0.5,HALL,16,1,true),new T.MeshBasicMaterial({color:colr[c.s]||'#ff3b3b',transparent:true,opacity:.35,side:T.DoubleSide,depthWrite:false}));
-      pm.position.set((c.x+(c.w||2)/2)*S,HALL/2,(c.y+(c.h||2)/2)*S);scene.add(pm);
-      const ring=new T.Mesh(new T.CircleGeometry(0.8,24),new T.MeshBasicMaterial({color:colr[c.s]||'#ff3b3b'}));ring.rotation.x=-Math.PI/2;ring.position.set((c.x+(c.w||2)/2)*S,0.06,(c.y+(c.h||2)/2)*S);scene.add(ring); });
-    const goal=new Uint8Array(GW*GD); let goalN=0;
-    here.forEach(c=>{ const cx=(c.x+(c.w||2)/2)*S, cz=(c.y+(c.h||2)/2)*S;
-      for(let j=0;j<GD;j++)for(let i=0;i<GW;i++){ if(!free[j*GW+i])continue; const dx=Math.max(0,Math.abs((i+.5)*G-cx)-(c.w||2)*S/2), dz=Math.max(0,Math.abs((j+.5)*G-cz)-(c.h||2)*S/2); if(Math.hypot(dx,dz)<=1.6){ if(!goal[j*GW+i])goalN++; goal[j*GW+i]=1; } } });
-    // 床の矢印
-    const arrowShape=new T.Shape(); arrowShape.moveTo(-0.45,-0.25); arrowShape.lineTo(0,0.25); arrowShape.lineTo(0.45,-0.25); arrowShape.lineTo(0.45,-0.05); arrowShape.lineTo(0,0.45); arrowShape.lineTo(-0.45,-0.05); arrowShape.closePath();
-    const arrowG=new T.ShapeGeometry(arrowShape), arrowM=new T.MeshBasicMaterial({color:'#ffe941',transparent:true,opacity:.95,depthWrite:false});
-    const arrows=[]; for(let k=0;k<90;k++){ const a=new T.Mesh(arrowG,arrowM); a.rotation.order='YXZ'; a.rotation.x=-Math.PI/2; a.visible=false; a.renderOrder=2; scene.add(a); arrows.push(a); }
-    const lineM=new T.MeshBasicMaterial({color:'#fff6a8',transparent:true,opacity:.45,depthWrite:false}); let lineMesh=null;
-    function route(px,pz){
-      if(!goalN) return null;
-      const si=Math.min(GW-1,Math.max(0,Math.floor(px/G))), sj=Math.min(GD-1,Math.max(0,Math.floor(pz/G)));
-      const dist=new Float32Array(GW*GD).fill(1e9), prev=new Int32Array(GW*GD).fill(-1), done=new Uint8Array(GW*GD);
-      const st0=sj*GW+si; dist[st0]=0; const q=[st0]; let end=-1;
-      const nb=[[1,0,1],[-1,0,1],[0,1,1],[0,-1,1],[1,1,1.414],[1,-1,1.414],[-1,1,1.414],[-1,-1,1.414]];
-      while(q.length){ let bi=0; for(let k=1;k<q.length;k++) if(dist[q[k]]<dist[q[bi]])bi=k; const u=q[bi]; q[bi]=q[q.length-1]; q.pop(); if(done[u])continue; done[u]=1;
-        if(goal[u]){end=u;break;} const ui=u%GW, uj=(u-ui)/GW;
-        for(const n of nb){ const vi=ui+n[0], vj=uj+n[1]; if(vi<0||vj<0||vi>=GW||vj>=GD)continue; const v=vj*GW+vi; if(!free[v]&&v!==st0)continue;
-          if(n[0]&&n[1]&&(!free[uj*GW+vi]||!free[vj*GW+ui]))continue; const nd=dist[u]+n[2]; if(nd<dist[v]){dist[v]=nd;prev[v]=u;q.push(v);} } }
-      if(end<0) return null;
-      const pts=[]; for(let v=end;v>=0;v=prev[v]) pts.push([(v%GW+.5)*G,(Math.floor(v/GW)+.5)*G]); pts.reverse(); pts[0]=[px,pz];
-      // 見通せる点まで一気につなぐ
-      const clear=(a,b)=>{ const l=Math.hypot(b[0]-a[0],b[1]-a[1]),n=Math.ceil(l/0.25); for(let k=1;k<n;k++){ if(hitR(a[0]+(b[0]-a[0])*k/n,a[1]+(b[1]-a[1])*k/n,0.35))return false;} return true; };
-      const out=[pts[0]]; let i=0; while(i<pts.length-1){ let j=pts.length-1; while(j>i+1&&!clear(pts[i],pts[j]))j--; out.push(pts[j]); i=j; }
-      return out;
-    }
-    function drawRoute(path,t){
-      if(lineMesh){ scene.remove(lineMesh); lineMesh.geometry.dispose(); lineMesh=null; }
-      arrows.forEach(a=>a.visible=false); if(!path||path.length<2) return 0;
-      let total=0; const seg=[]; for(let k=0;k<path.length-1;k++){ const a=path[k],b=path[k+1],l=Math.hypot(b[0]-a[0],b[1]-a[1]); seg.push([a,b,l,total]); total+=l; }
-      const pos=[]; seg.forEach(sg=>{ const [a,b,l]=sg, nx=-(b[1]-a[1])/l*.18, nz=(b[0]-a[0])/l*.18; pos.push(a[0]+nx,.04,a[1]+nz, a[0]-nx,.04,a[1]-nz, b[0]+nx,.04,b[1]+nz, a[0]-nx,.04,a[1]-nz, b[0]-nx,.04,b[1]-nz, b[0]+nx,.04,b[1]+nz); });
-      const lg=new T.BufferGeometry(); lg.setAttribute('position',new T.Float32BufferAttribute(pos,3)); lineMesh=new T.Mesh(lg,lineM); lineMesh.renderOrder=1; scene.add(lineMesh);
-      const step=1.6, ph=(t*1.6)%step; let k=0;
-      for(let d=0.9+ph; d<total-0.3 && k<arrows.length; d+=step){ const sg=seg.find(sg=>d>=sg[3]&&d<=sg[3]+sg[2])||seg[seg.length-1]; const [a,b,l,s0]=sg,u=(d-s0)/l;
-        const ar=arrows[k++]; ar.visible=true; ar.position.set(a[0]+(b[0]-a[0])*u,.07,a[1]+(b[1]-a[1])*u); ar.rotation.y=Math.atan2(-(b[0]-a[0]),-(b[1]-a[1])); }
-      return total;
-    }
-    Object.assign(WK,{on:true,renderer,scene,cam,x:sx,z:sz,yaw,pitch:WK.pitch!=null&&keepPos?WK.pitch:-0.08,mx:0,mz:0,keys:WK.keys||{},last:performance.now(),path:null,pathAt:0,arrived:false});
-    // 表示
-    $('wkTitle').textContent = tg ? ('🔍 '+tg.code) : '🚶 倉庫を歩く';
-    $('wkBar').classList.remove('on');
-    if(tg && !here.length){ const fs=[...new Set(tg.cells.map(c=>c.f))]; const fi=fs[0];
-      $('wkBarTxt').textContent=tg.code+' の登録先は「'+(DB.maps.floors[fi].name||('フロア'+(fi+1)))+'」です'; $('wkBarBtn').onclick=()=>{ DB.maps.cur=fi; WK.x=null; wkBuild(false); }; $('wkBar').classList.add('on'); }
-    else if(tg && here.length && !goalN) wkMsg('場所のまわりに通路が見つからへん…光の柱を目指してな',3500);
-    else if(tg) wkMsg('床の矢印についていってな',2200);
-    WK.onResize=()=>{ if(!WK.renderer)return; renderer.setSize(st.clientWidth,st.clientHeight); cam.aspect=st.clientWidth/st.clientHeight; cam.updateProjectionMatrix(); };
-    (function loop(){ if(!WK.on||WK.renderer!==renderer)return; WK.raf=requestAnimationFrame(loop);
-      const now=performance.now(),dt=Math.min(.05,(now-WK.last)/1000); WK.last=now;
-      let fx=WK.mx,fz=WK.mz; const K=WK.keys; if(K.w||K.arrowup)fz+=1; if(K.s||K.arrowdown)fz-=1; if(K.a)fx-=1; if(K.d)fx+=1; if(K.arrowleft)WK.yaw+=1.8*dt; if(K.arrowright)WK.yaw-=1.8*dt;
-      const len=Math.hypot(fx,fz); if(len>1){fx/=len;fz/=len;}
-      const sp=6*dt, sin=Math.sin(WK.yaw), cos=Math.cos(WK.yaw);
-      const vx=(-sin*fz+cos*fx)*sp, vz=(-cos*fz-sin*fx)*sp;
-      if(!hit(WK.x+vx,WK.z)) WK.x+=vx; if(!hit(WK.x,WK.z+vz)) WK.z+=vz;
-      if(goalN && !WK.arrived){
-        if(now-WK.pathAt>350){ WK.path=route(WK.x,WK.z); WK.pathAt=now; }
-        const gi=Math.floor(WK.x/G), gj=Math.floor(WK.z/G);
-        if(gi>=0&&gj>=0&&gi<GW&&gj<GD&&goal[gj*GW+gi]){ WK.arrived=true; drawRoute(null,0); wkMsg('登録場所に到着：'+tg.code,4000); }
-        else drawRoute(WK.path,now/1000);
-      }
-      cam.position.set(WK.x,3.2,WK.z); cam.rotation.order='YXZ'; cam.rotation.y=WK.yaw; cam.rotation.x=WK.pitch;
-      renderer.render(scene,cam);
-    })();
+    wkStop();WK.placing=false;WK.selected=null;$('wkRegister').textContent='＋ 場所登録';$('wkPlace').classList.remove('on');
+    const fi=DB.maps.cur,select=$('wkFloor');select.replaceChildren();DB.maps.floors.forEach((f,i)=>{const o=document.createElement('option');o.value=i;o.textContent=f.name||('フロア'+(i+1));select.appendChild(o);});select.value=fi;
+    const cells=WK.target?.cells||[];WK.location=Math.min(WK.location,Math.max(0,cells.length-1));
+    const target=cells[WK.location]?.f===fi?cells[WK.location]:null;
+    $('wkTitle').textContent=WK.target?WK.target.code:'倉庫を歩く';$('wkBar').classList.toggle('on',!!WK.target);
+    if(WK.target){$('wkBarTxt').textContent=target?'登録場所 '+(WK.location+1)+' / '+cells.length:'別フロアに登録場所があります';$('wkBarBtn').textContent=cells.length>1?'次の場所':'場所を見る';$('wkBarBtn').onclick=()=>{if(target&&cells.length>1)WK.location=(WK.location+1)%cells.length;DB.maps.cur=cells[WK.location].f;wkBuild(false);};}
+    try{WK.view=WarehouseWalk.create($('wkStage'),DB,fi,{target,jump:!keepPos,position:keepPos&&WK.position?.f===fi?WK.position:null,minimap:$('wkMini'),controls:$('wkControls'),isPaused:()=>$('wkPad').classList.contains('on')||$('wkPlace').classList.contains('on'),onMessage:wkMsg,onPick:c=>{WK.selected=c;$('wkPlaceCode').value=WK.target?.code||'';$('wkPlaceState').value='r';$('wkPlaceNote').textContent='同じ部品のほかの登録場所は残ります。';$('wkPlace').classList.add('on');}});WK.on=true;}
+    catch(e){wkClose();alert(e.message||'3Dを表示できません。');}
   }
   // 🔍 数字パッド：数字を打って「決定」→ C 部品／B 中間品／A 完成品 を選ぶ
   let wkCode='';
@@ -2966,31 +2873,33 @@
   }
   function wkPickKind(pf){
     const r=wkFind(pf+wkCode); if(!r){ $('wkPadNote').textContent=pf+wkCode+' はまだ場所が登録されてへん'; return; }
-    $('wkPad').classList.remove('on'); WK.target=r; wkBuild(true);
+    $('wkPad').classList.remove('on'); WK.target=r; WK.location=0; DB.maps.cur=r.cells[0].f; wkBuild(false);
   }
   (function(){
-    const md=$('wkModal'), stick=$('wkStick'), knob=stick.firstElementChild; let move=null, look=null;
-    md.addEventListener('pointerdown',e=>{ if(e.target.closest('button,.wk-pad,.wk-bar'))return; if($('wkPad').classList.contains('on'))return; md.setPointerCapture(e.pointerId);
-      if(e.clientX<innerWidth*0.45 && !move){ move={id:e.pointerId,x:e.clientX,y:e.clientY}; stick.style.left=e.clientX+'px'; stick.style.top=e.clientY+'px'; stick.style.display='block'; knob.style.transform=''; }
-      else if(!look){ look={id:e.pointerId,x:e.clientX,y:e.clientY}; } });
-    md.addEventListener('pointermove',e=>{
-      if(move&&e.pointerId===move.id){ let dx=e.clientX-move.x,dy=e.clientY-move.y; const l=Math.hypot(dx,dy),m=50; if(l>m){dx*=m/l;dy*=m/l;} knob.style.transform='translate('+dx+'px,'+dy+'px)'; WK.mx=dx/m; WK.mz=-dy/m; }
-      else if(look&&e.pointerId===look.id){ WK.yaw-=(e.clientX-look.x)*0.006; WK.pitch=Math.max(-1.2,Math.min(1.2,WK.pitch-(e.clientY-look.y)*0.005)); look.x=e.clientX; look.y=e.clientY; } });
-    const up=e=>{ if(move&&e.pointerId===move.id){ move=null; WK.mx=WK.mz=0; stick.style.display='none'; } if(look&&e.pointerId===look.id) look=null; };
-    md.addEventListener('pointerup',up); md.addEventListener('pointercancel',up);
-    addEventListener('keydown',e=>{ if(!WK.on)return; if($('wkPad').classList.contains('on')){ if(/^[0-9]$/.test(e.key))wkPadKey(e.key); else if(/^[abc]$/i.test(e.key)&&$('wkKind').style.display==='grid')wkPickKind(e.key.toUpperCase()); else if(e.key==='Backspace')wkPadKey('del'); else if(e.key==='Enter')wkPadKey('go'); else if(e.key==='Escape')$('wkPad').classList.remove('on'); return; } WK.keys[e.key.toLowerCase()]=true; });
-    addEventListener('keyup',e=>{ if(WK.keys) WK.keys[e.key.toLowerCase()]=false; });
-    addEventListener('blur',()=>{WK.keys={};WK.mx=WK.mz=0;move=look=null;stick.style.display='none';});
-    addEventListener('resize',()=>WK.onResize&&WK.onResize());
-    $('w3Walk').onclick=()=>{const target=n3Selected?Warehouse3D.find(DB,n3Selected):null;n3Close();WK.x=null;wkOpen(target);};
+    addEventListener('keydown',e=>{if(!WK.on||!$('wkPad').classList.contains('on'))return;
+      if(e.target.id==='wkSearchCode')return;
+      if(/^[0-9]$/.test(e.key))wkPadKey(e.key);else if(/^[abc]$/i.test(e.key)&&$('wkKind').style.display==='grid')wkPickKind(e.key.toUpperCase());else if(e.key==='Backspace')wkPadKey('del');else if(e.key==='Enter')wkPadKey('go');else if(e.key==='Escape')$('wkPad').classList.remove('on');
+    });
+    $('w3Walk').onclick=()=>{const target=n3Selected?Warehouse3D.find(DB,n3Selected):null;n3Close();wkOpen(target);};
     $('wkOverview').onclick=()=>{const code=WK.target&&WK.target.code;wkClose();n3Open(code);};
-    $('walkBtn').onclick=()=>{ WK.x=null; wkOpen(null); };
-    $('wkClose').onclick=wkClose;
-    $('wkFind').onclick=()=>{ wkCode=''; wkPadShow(); $('wkPadNote').textContent=''; $('wkPad').classList.add('on'); WK.mx=WK.mz=0; };
+    $('walkBtn').onclick=()=>wkOpen(null);$('mpWalk').onclick=()=>wkOpen(mpPart?Warehouse3D.find(DB,mpPart):null);$('wkClose').onclick=wkClose;
+    $('wkFind').onclick=()=>{wkCode='';wkPadShow();$('wkPadNote').textContent='';$('wkSearchCode').value='';$('wkPad').classList.add('on');};
     $('wkPadX').onclick=()=>$('wkPad').classList.remove('on');
     document.querySelectorAll('#wkPad [data-k]').forEach(b=>b.onclick=()=>wkPadKey(b.dataset.k));
-    document.querySelectorAll('#wkKind [data-p]').forEach(b=>b.onclick=()=>wkPickKind(b.dataset.p));
-    $('wkKindBack').onclick=()=>wkPadShow();
+    document.querySelectorAll('#wkKind [data-p]').forEach(b=>b.onclick=()=>wkPickKind(b.dataset.p));$('wkKindBack').onclick=wkPadShow;
+    $('wkSearchForm').onsubmit=e=>{e.preventDefault();const r=wkFind($('wkSearchCode').value);if(!r){$('wkPadNote').textContent='この部品の場所登録がありません';return;}$('wkPad').classList.remove('on');WK.target=r;WK.location=0;DB.maps.cur=r.cells[0].f;wkBuild(false);};
+    $('wkFloor').onchange=()=>{DB.maps.cur=Number($('wkFloor').value);wkBuild(false);};
+    $('wkRegister').onclick=()=>{WK.placing=!WK.placing;$('wkRegister').textContent=WK.placing?'登録をやめる':'＋ 場所登録';WK.view?.setPlacing(WK.placing);};
+    $('wkPlaceCancel').onclick=()=>{$('wkPlace').classList.remove('on');WK.selected=null;};
+    $('wkPlaceForm').onsubmit=e=>{
+      e.preventDefault();if(!WK.selected)return;let code=$('wkPlaceCode').value.trim().toUpperCase();if(!/^[A-Z][A-Z0-9-]*$/.test(code))return;
+      const existing=Warehouse3D.find(DB,code);if(existing)code=existing.code;
+      else if(/^[ABC]\d+$/.test(code))code=code[0]+code.slice(1).padStart(8,'0');
+      code=Warehouse3D.materialize(DB,code);const c={...WK.selected,s:$('wkPlaceState').value},cells=DB.spots[code].cells;
+      const old=cells.findIndex(v=>v.f===c.f&&v.x===c.x&&v.y===c.y);
+      if(old>=0)cells[old]=c;else cells.push(c);
+      saveDB();WK.target=Warehouse3D.find(DB,code);WK.location=WK.target.cells.findIndex(v=>v.f===c.f&&v.x===c.x&&v.y===c.y);$('wkPlace').classList.remove('on');wkBuild(true);wkMsg(code+' の場所を登録しました');
+    };
   })();
 
   /* ===== ver40 天井番号：片付ける（読む→番号→色）・探す（番号→C/B/A→天井の番号） ===== */

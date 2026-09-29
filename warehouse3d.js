@@ -67,7 +67,7 @@
     const groups=new Map(),geom=new T.BoxGeometry(1,1,1),matCache=new Map();
     function mat(col,metal=0){const key=col+':'+metal;if(!matCache.has(key))matCache.set(key,new T.MeshStandardMaterial({color:new T.Color(col).convertSRGBToLinear(),roughness:metal?.48:.88,metalness:metal}));return matCache.get(key);}
     function box(x,z,w,d,y,h,col,metal=0){if(w<=0||d<=0||h<=0)return;const m=mat(col,metal);if(!groups.has(m))groups.set(m,[]);groups.get(m).push([x+w/2,y+h/2,z+d/2,w,h,d]);}
-    const ground = f.floor==='gray'?'#929fa2':f.floor==='white'?'#ced5d4':'#6f9985';
+    const ground = f.floor==='gray'?'#929fa2':f.floor==='white'?'#ced5d4':'#708575';
     // A subtle, deterministic floor texture is decoration, not an occupancy signal.
     const cv=document.createElement('canvas');cv.width=cv.height=128;const ctx=cv.getContext('2d');ctx.fillStyle=ground;ctx.fillRect(0,0,128,128);
     let seed=781;for(let i=0;i<1300;i++){seed=(seed*16807)%2147483647;const x=seed%128;seed=(seed*16807)%2147483647;ctx.fillStyle=i%2?'#ffffff09':'#00000007';ctx.fillRect(x,seed%128,1,1);}
@@ -76,16 +76,23 @@
     const floor=new T.Mesh(new T.PlaneGeometry(W,D),new T.MeshStandardMaterial({map:ft,roughness:.91}));floor.rotation.x=-Math.PI/2;floor.position.set(W/2,.015,D/2);floor.receiveShadow=true;scene.add(floor);
     box(-.35,-.35,W+.7,D+.7,-.6,.45,'#a7b4b7');
     if(opts.walk){
-      box(-.18,0,.18,D,0,7,'#c5cdd0');box(W,0,.18,D,0,7,'#c5cdd0');
-      box(0,-.18,W,.18,0,7,'#d5dbdc');box(0,D,W,.18,0,7,'#d5dbdc');
-      box(0,0,W,D,7,.15,'#e4e9e9');
-      for(let z=2;z<D;z+=10){box(0,z,W,.16,6.7,.3,'#7c919b',.4);for(let x=3;x<W;x+=12)box(x,z,2.5,.5,6.63,.07,'#ffffff');}
+      box(-.18,0,.18,D,0,10.8,'#c6c6bd');box(W,0,.18,D,0,10.8,'#c6c6bd');
+      box(0,-.18,W,.18,0,10.8,'#d7d5c9');box(0,D,W,.18,0,10.8,'#d7d5c9');
+      box(0,0,W,D,10.8,.15,'#deded5');
+      const glow=new T.MeshBasicMaterial({color:'#fffff3'}),fixture=new T.BoxGeometry(3.5,.08,.22);
+      for(let z=3;z<D;z+=12){
+        box(0,z,W,.10,10.5,.12,'#89918e',.4);
+        for(let x=4;x<W;x+=12){box(x-.15,z-.32,3.8,.85,10.3,.13,'#b7c0bd',.35);
+          for(const dz of [-.15,.22]){const tube=new T.Mesh(fixture,glow);tube.position.set(x+1.6,10.25,z+dz);scene.add(tube);}}
+      }
     }
     const blockers=[], heightRects=[], pickZones=[];
     function border(x,z,w,d,col,y=.035,t=.065){box(x,z,w,t,y,.018,col);box(x,z+d-t,w,t,y,.018,col);box(x,z,t,d,y,.018,col);box(x+w-t,z,t,d,y,.018,col);}
     function pallet(x,z,w,d){
-      box(x,z+.12,w,.24,.08,.22,'#927951');box(x,z+d-.36,w,.24,.08,.22,'#927951');
-      const n=Math.max(2,Math.min(6,Math.ceil(w/.55)));for(let k=0;k<n;k++)box(x+k*w/n,z,w/n-.07,d,.3,.12,'#c6ae83');
+      // Reusable black plastic pallet: runners and an open lattice, no stock imagery.
+      for(const k of [0,.5,1])box(x+k*(w-.24),z,.24,d,.08,.3,'#242e2d');
+      for(let k=0;k<=8;k++){box(x+k*(w-.10)/8,z,.10,d,.38,.13,'#394440');box(x,z+k*(d-.10)/8,w,.10,.38,.13,'#394440');}
+      box(x,z,w,.12,.3,.2,'#202b29');box(x,z+d-.12,w,.12,.3,.2,'#202b29');
     }
     function rack(x,z,w,d,nest=false){
       const H=nest?5:4.6, post=.13, clr=nest?'#a64f48':'#405f70';
@@ -100,20 +107,20 @@
     f.rects.forEach(r=>{
       const x=r.x*S+.06,z=r.y*S+.06,w=r.w*S-.12,d=r.h*S-.12;
       let H=.13;
-      if(r.type==='wall') {H=opts.walk?7:3.6;box(x,z,w,d,0,H,'#bac7cb',.1);box(x,z,w,d,H,.08,'#dde3e5');}
+      if(r.type==='wall') {H=opts.walk?10.8:3.6;box(x,z,w,d,0,H,'#bac7cb',.1);box(x,z,w,d,H,.08,'#dde3e5');}
       else if(r.type==='shut') {H=5.6;box(x,z,w,d,0,H,'#97a8b0',.5);for(let y=.2;y<H;y+=.28)box(x-.01,z-.01,w+.02,d+.02,y,.025,'#6e818b',.3);}
       else if(r.type==='door'){H=0; border(x,z,w,d,'#e8c976');}
       else if(r.type==='nest'){H=rack(x,z,w,d,true);}
       else {
         box(x,z,w,d,.02,.08,'#b9c2c3');border(x,z,w,d,'#e9d69b',.12);
-        // 指定なしの区画は棚ブロックとして立てる（ver38までの歩く見た目）。「区画だけ」を選べば平らになる
+        // Preserve explicit shapes; summarized shelf areas stay a single region.
         const style=r.view3d || (r.pal?'pallet':'shelf');
         if(style==='shelf') { H=3.5; box(x,z,w,d,0,H,'#c3ccd5'); }
         else if(style==='rack') {
           H=4.73;const nx=Math.max(1,Math.ceil(w/4)),nz=Math.max(1,Math.ceil(d/4));
           for(let a=0;a<nx;a++)for(let b=0;b<nz;b++)rack(x+a*w/nx+.08,z+b*d/nz+.08,w/nx-.16,d/nz-.16);
         } else if(style==='pallet') {
-          H=.42;for(let a=0;a<r.w;a+=2)for(let b=0;b<r.h;b+=2)pallet(x+a*S+.08,z+b*S+.08,Math.min(2,r.w-a)*S-.28,Math.min(2,r.h-b)*S-.28);
+          H=.51;for(let a=0;a<r.w;a+=2)for(let b=0;b<r.h;b+=2)pallet(x+a*S+.08,z+b*S+.08,Math.min(2,r.w-a)*S-.28,Math.min(2,r.h-b)*S-.28);
         }
         // Generic areas and the old "load" shape never fabricate physical boxes.
       }
@@ -126,7 +133,7 @@
     const records=locations(db).filter(c=>c.f===fi), grouped=new Map(),markGroup=new T.Group();scene.add(markGroup);
     records.forEach(c=>{const k=[c.x,c.y,c.w,c.h].join(':');if(!grouped.has(k))grouped.set(k,[]);grouped.get(k).push(c);});
     const marks=[];
-    grouped.forEach(items=>{
+    if(!opts.walk) grouped.forEach(items=>{
       const c=items[0],x=(c.x+c.w/2)*S,z=(c.y+c.h/2)*S,base=heightAt(x,z);
       const selected=items.some(i=>norm(i.code)===norm(opts.selected));
       const color=selected?'#087f75':c.s==='p'?'#9954b8':c.s==='b'?'#317cc0':'#bc6650';
@@ -172,5 +179,5 @@
     stage.addEventListener('pointerdown',down);stage.addEventListener('pointermove',move);stage.addEventListener('pointerup',up);stage.addEventListener('pointercancel',up);stage.addEventListener('wheel',wheel,{passive:false});
     return {world,renderer,cam,fit:()=>{autoFit=true;fit();},zoom:k=>{autoFit=false;dist=Math.max(7,Math.min(Math.max(world.W,world.D)*5,dist*k));schedule();},destroy(){dead=true;cancelAnimationFrame(raf);ro.disconnect();[['pointerdown',down],['pointermove',move],['pointerup',up],['pointercancel',up],['wheel',wheel]].forEach(([n,fn])=>stage.removeEventListener(n,fn));dispose(world.scene);renderer.dispose();renderer.forceContextLoss();renderer.domElement.remove();}};
   }
-  root.Warehouse3D={locations,find,materialize,createWorld,overview,configure,dispose,norm};
+  root.Warehouse3D={locations,find,materialize,createWorld,overview,configure,dispose,norm,label};
 })(window);
