@@ -38,7 +38,7 @@
   }
   // Four rows are confirmed. Direction and width are provisional, isolated here.
   // World units: one pallet = 4. No map/localStorage migration is performed.
-  const shelfSettings=Object.freeze({rows:4,direction:'x',aisle:4,depth:2,endClearance:2,height:6.9,levels:5});
+  const shelfSettings=Object.freeze({rows:4,direction:'z',aisle:4,depth:2,endClearance:2,height:6.9,levels:5});
   function shelfLayout(r){
     if(String(r.label||'').replace(/\s/g,'')!=='棚番の品'||r.type)return null;
     const x=r.x*2+.06,z=r.y*2+.06,w=r.w*2-.12,d=r.h*2-.12;
