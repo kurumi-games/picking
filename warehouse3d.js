@@ -198,10 +198,78 @@
       piece(.32,-.19,.8,.38,H-.44,.18,frame);piece(.75,-.24,.9,.1,H-.36,.055,frame);
       return H;
     }
+    function parkedLift(x,z,w,d,rect){
+      const lift=new T.Group();lift.name='warehouse-lift';lift.userData={rectId:rect.id,fixture:'parked-lift',label:rect.label};
+      const yellow=mat('#d9ad12',.16),edgeYellow=mat('#ba9015',.18),steel=mat('#303738',.48),rubber=mat('#131817',.05),silver=mat('#87908f',.72),dark=mat('#202625',.12);
+      const parts=new Map();
+      function block(px,py,pz,a,b,c,m){if(!parts.has(m))parts.set(m,[]);parts.get(m).push([px,py,pz,a,b,c]);}
+      function mesh(geometry,m,px=0,py=0,pz=0){const item=new T.Mesh(geometry,m);item.position.set(px,py,pz);lift.add(item);return item;}
+      function rod(a,b,r,m){const p=new T.Vector3(...a),q=new T.Vector3(...b),v=q.clone().sub(p);const item=mesh(new T.CylinderGeometry(r,r,v.length(),10),m);item.position.copy(p).add(q).multiplyScalar(.5);item.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),v.normalize());return item;}
+      function profile(shape,depth,m,z0,bevel=.04){return mesh(new T.ExtrudeGeometry(shape,{depth,bevelEnabled:bevel>0,bevelSize:bevel,bevelThickness:bevel,bevelSegments:3,steps:1,curveSegments:12}),m,0,0,z0);}
+      // Standing reach truck: curved side panels, open operator well, no seat or load.
+      const body=new T.Shape();body.moveTo(.2,.38);body.quadraticCurveTo(-.22,.38,-.3,.95);body.lineTo(-.3,3.35);body.quadraticCurveTo(-.2,4.2,.5,4.25);body.lineTo(2.15,4.25);body.quadraticCurveTo(2.5,4.2,2.5,3.75);body.lineTo(2.5,.78);body.quadraticCurveTo(2.47,.38,2.12,.38);body.closePath();
+      profile(body,.12,yellow,-1.08,.08);profile(body,.12,yellow,.96,.08);
+      block(2.35,2.22,0,.26,3.42,2.02,yellow);block(1.08,.58,0,2.63,.3,2.03,edgeYellow);block(1.05,.78,0,2.42,.12,1.8,rubber);
+      block(.05,1.05,0,.22,1.04,1.8,steel);block(1.6,3.87,0,1.18,.35,1.84,dark);
+      rod([.42,4.29,-1.01],[2.27,4.29,-1.01],.075,dark);rod([.42,4.29,1.01],[2.27,4.29,1.01],.075,dark);
+      // Low outriggers and wheels. Fork tips point to local -X.
+      for(const zz of [-.88,.88]){
+        block(-1.05,.45,zz,2.85,.43,.36,yellow);
+        const wheel=mesh(new T.CylinderGeometry(.43,.43,.44,24),rubber,-1.96,.46,zz);wheel.rotation.x=Math.PI/2;
+        for(const side of [-1,1]){const hub=mesh(new T.CylinderGeometry(.26,.26,.025,20),steel,-1.96,.46,zz+side*.232);hub.rotation.x=Math.PI/2;}
+      }
+      const rearWheel=mesh(new T.CylinderGeometry(.43,.43,.64,24),rubber,1.92,.46,0);rearWheel.rotation.x=Math.PI/2;
+      for(const zz of [-.59,.59]){
+        const fork=new T.Shape();fork.moveTo(-3.25,.13);fork.lineTo(-.8,.13);fork.lineTo(-.8,2.44);fork.lineTo(-.98,2.44);fork.lineTo(-.98,.31);fork.lineTo(-3.25,.23);fork.closePath();profile(fork,.24,steel,zz-.12,.018);
+      }
+      // Twin mast channels, central hydraulic ram, carriage and restrained cross bars.
+      for(const zz of [-.85,.85]){block(-.69,3.91,zz,.36,6.55,.24,steel);block(-.44,3.75,zz,.12,6.08,.09,silver);}
+      block(-.69,7.16,0,.4,.18,1.94,steel);block(-.69,2.58,0,.42,.16,1.94,steel);
+      rod([-.69,.83,0],[-.69,5.86,0],.12,dark);rod([-.69,2.2,0],[-.69,6.62,0],.065,silver);
+      block(-.91,1.71,0,.15,1.81,1.72,dark);
+      for(const zz of [-.66,-.33,0,.33,.66])block(-1.025,1.85,zz,.045,1.15,.045,steel);
+      // The photo's curved overhead guard is a C profile on each side.
+      const guard=new T.Shape();guard.moveTo(.12,4.24);guard.lineTo(-.1,5.35);guard.lineTo(-.1,6.8);guard.quadraticCurveTo(-.06,7.42,.48,7.45);guard.lineTo(2.53,7.45);guard.lineTo(2.57,7.79);guard.lineTo(.22,7.79);guard.quadraticCurveTo(-.56,7.79,-.6,6.98);guard.lineTo(-.58,5.25);guard.lineTo(-.28,4.14);guard.closePath();
+      profile(guard,.13,steel,-1.05,.045);profile(guard,.13,steel,.92,.045);
+      for(let xx=.28;xx<2.52;xx+=.28)block(xx,7.49,0,.09,.11,1.96,dark);
+      block(2.48,7.6,0,.14,.24,2.12,steel);block(.1,7.6,0,.13,.24,2.12,steel);
+      // Small controls and amber lamp; no changes to the warehouse lighting.
+      rod([.16,3.05,.2],[.45,5.13,.2],.045,dark);
+      const steering=mesh(new T.TorusGeometry(.22,.033,8,20),dark,.45,5.15,.2);steering.rotation.y=.35;
+      rod([.45,4.96,.2],[.45,5.34,.2],.02,dark);rod([.27,5.15,.27],[.63,5.15,.13],.02,dark);
+      rod([1.91,4.05,-.56],[1.91,4.52,-.56],.033,steel);mesh(new T.SphereGeometry(.085,10,8),rubber,1.91,4.55,-.56);
+      block(1.96,7.37,.72,.34,.06,.32,steel);block(1.96,6.81,.72,.34,.06,.32,steel);
+      for(const xx of [1.81,2.11])block(xx,7.09,.72,.04,.56,.32,steel);
+      const amber=new T.MeshStandardMaterial({color:'#c77b15',roughness:.35,metalness:.15,emissive:'#a65b07',emissiveIntensity:.2});
+      mesh(new T.CylinderGeometry(.09,.115,.37,16),amber,1.96,7.1,.72);
+      // Painted "09" and light scuffs are deterministic Canvas decals, not stock photos.
+      const decal=document.createElement('canvas');decal.width=512;decal.height=768;const ctx=decal.getContext('2d');
+      ctx.font='italic 900 118px sans-serif';ctx.textAlign='center';ctx.lineWidth=8;ctx.strokeStyle='#273231';ctx.fillStyle='#edece0';ctx.strokeText('09',260,170);ctx.fillText('09',260,170);
+      let seed=9;const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
+      for(let i=0;i<95;i++){const sx=random()*512,sy=220+random()*548;ctx.strokeStyle=i%3?'#48473525':'#f4e08a45';ctx.lineWidth=.6+random();ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(sx+3+random()*28,sy+random()*3);ctx.stroke();}
+      const decalMap=new T.CanvasTexture(decal);decalMap.encoding=T.sRGBEncoding;
+      const decalMat=new T.MeshStandardMaterial({map:decalMap,transparent:true,depthWrite:false,roughness:.7,polygonOffset:true,polygonOffsetFactor:-1});
+      for(const side of [-1,1]){const paint=mesh(new T.PlaneGeometry(2.42,3.38),decalMat,1.11,2.36,side*1.165);if(side<0)paint.rotation.y=Math.PI;}
+      // Panel seams and small fasteners give the side a painted-metal finish.
+      for(const side of [-1,1]){block(2.1,2.07,side*1.153,.018,2.85,.015,edgeYellow);for(const y of [1.65,3.7]){const screw=mesh(new T.CylinderGeometry(.048,.048,.02,8),silver,.3,y,side*1.161);screw.rotation.x=Math.PI/2;}}
+      parts.forEach((instances,material)=>{const batch=new T.InstancedMesh(geom,material,instances.length),o=new T.Object3D();instances.forEach((a,i)=>{o.position.set(a[0],a[1],a[2]);o.scale.set(a[3],a[4],a[5]);o.updateMatrix();batch.setMatrixAt(i,o.matrix);});batch.frustumCulled=false;lift.add(batch);});
+      // Fit the whole parked truck (including lowered forks) within the existing rectangle.
+      lift.rotation.y=d>w?Math.PI/2:0;lift.updateMatrixWorld(true);
+      // r128 Box3 does not expand InstancedMesh transforms. Include each instance explicitly.
+      const bounds=new T.Box3(),instance=new T.Matrix4();
+      lift.traverse(o=>{if(!o.geometry)return;o.geometry.computeBoundingBox();
+        if(o.isInstancedMesh){for(let i=0;i<o.count;i++){o.getMatrixAt(i,instance);bounds.union(o.geometry.boundingBox.clone().applyMatrix4(new T.Matrix4().multiplyMatrices(o.matrixWorld,instance)));}}
+        else bounds.union(o.geometry.boundingBox.clone().applyMatrix4(o.matrixWorld));
+      });
+      const size=bounds.getSize(new T.Vector3()),center=bounds.getCenter(new T.Vector3());
+      const scale=Math.min(1,Math.max(.01,w-.12)/size.x,Math.max(.01,d-.12)/size.z);
+      lift.scale.setScalar(scale);lift.position.set(x+w/2-center.x*scale,.035-bounds.min.y*scale,z+d/2-center.z*scale);
+      scene.add(lift);contact(x,z,w,d);return size.y*scale+.035;
+    }
     let warmLights=0;
     f.rects.forEach(r=>{
       const x=r.x*S+.06,z=r.y*S+.06,w=r.w*S-.12,d=r.h*S-.12;
-      const shelves=shelfLayout(r);
+      const shelves=shelfLayout(r),isLift=!r.type&&['リフト','フォークリフト'].includes(String(r.label||'').replace(/\s/g,''));
       let H=.13;
       if(r.type==='wall') {H=opts.walk?HALL:3.6;box(x,z,w,d,0,H,wallMat);box(x,z,w,d,H,.08,'#c9cbc2');contact(x,z,w,d);}
       else if(r.type==='shut') {
@@ -215,10 +283,11 @@
       else if(r.type==='door'){H=metalDoor(x,z,w,d);border(x,z,w,d,'#e8c976');}
       else if(r.type==='nest'){H=rack(x,z,w,d,true);}
       else {
-        border(x,z,w,d,'#b6a24c',.03,.08);if(!shelves)contact(x,z,w,d);
+        border(x,z,w,d,'#b6a24c',.03,.08);if(!shelves&&!isLift)contact(x,z,w,d);
         // Preserve explicit shapes; summarized shelf areas stay a single region.
         const style=r.view3d || (r.pal?'pallet':'shelf');
-        if(shelves){H=shelves.height;steelShelves(shelves);shelfLayouts.push(shelves);}
+        if(isLift){H=parkedLift(x,z,w,d,r);}
+        else if(shelves){H=shelves.height;steelShelves(shelves);shelfLayouts.push(shelves);}
         else if(style==='shelf') { H=3.5; box(x,z,w,d,0,H,panelMat); }
         else if(style==='rack') {
           H=4.73;const nx=Math.max(1,Math.ceil(w/4)),nz=Math.max(1,Math.ceil(d/4));
