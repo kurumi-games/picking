@@ -7,7 +7,7 @@
 <select id="viewpoints" class="viewpoints" aria-label="見始める場所"></select><div id="message" role="status"></div>
 <div id="controls"><button data-walk="forward" aria-label="前へ">↑</button><button data-walk="left" aria-label="左へ">←</button><button data-walk="back" aria-label="後ろへ">↓</button><button data-walk="right" aria-label="右へ">→</button></div>
 <aside id="miniBox"><canvas id="mini" width="260" height="300" aria-label="小地図。通路をタップして移動"></canvas><small>通路をタップして移動</small></aside>
-<p class="hint">スワイプで見回す · 床の矢印で移動<br>ver54 · 写真を参考にしたリフトを配置</p><div id="loading">倉庫を準備しています…</div>
+<p class="hint">スワイプで見回す · 床の矢印で移動<br>ver55 · 写真を参考にした設備／位置は仮配置</p><div id="loading">倉庫を準備しています…</div>
 <dialog id="mapDialog"><div class="dialog-head"><h2>倉庫の全体図</h2><button id="closeMap" type="button">とじる</button></div><p>緑の通路をタップすると、その場所から歩けます。<br>白い区画はパレット、右下は「棚番の品」です。</p><div id="mapSpace"><canvas id="fullMap" width="700" height="820" aria-label="全体図。緑の通路を選ぶ"></canvas></div><div id="mapNote" role="status">配置は送ってもらった全体図をもとにしています。</div></dialog>
 <script src="vendor/three-r128.min.js"></script><script src="vendor/three-r128-reflector.js"></script><script src="warehouse-materials.js"></script><script src="warehouse3d.js"></script><script src="warehouse-walk.js"></script><script src="warehouse-layout.js"></script>
 <script>
