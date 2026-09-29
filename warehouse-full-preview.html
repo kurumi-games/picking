@@ -7,7 +7,7 @@
 <select id="viewpoints" class="viewpoints" aria-label="見始める場所"></select><div id="message" role="status"></div>
 <div id="controls"><button data-walk="forward" aria-label="前へ">↑</button><button data-walk="left" aria-label="左へ">←</button><button data-walk="back" aria-label="後ろへ">↓</button><button data-walk="right" aria-label="右へ">→</button></div>
 <aside id="miniBox"><canvas id="mini" width="260" height="300" aria-label="小地図。通路をタップして移動"></canvas><small>通路をタップして移動</small></aside>
-<p class="hint">スワイプで見回す · 床の矢印で移動<br>全体図から再構成した3D · 高さや細部は近似</p><div id="loading">倉庫を準備しています…</div>
+<p class="hint">スワイプで見回す · 床の矢印で移動<br>ver53 · 棚4列／向き・通路幅は仮設定</p><div id="loading">倉庫を準備しています…</div>
 <dialog id="mapDialog"><div class="dialog-head"><h2>倉庫の全体図</h2><button id="closeMap" type="button">とじる</button></div><p>緑の通路をタップすると、その場所から歩けます。<br>白い区画はパレット、右下は「棚番の品」です。</p><div id="mapSpace"><canvas id="fullMap" width="700" height="820" aria-label="全体図。緑の通路を選ぶ"></canvas></div><div id="mapNote" role="status">配置は送ってもらった全体図をもとにしています。</div></dialog>
 <script src="vendor/three-r128.min.js"></script><script src="vendor/three-r128-reflector.js"></script><script src="warehouse-materials.js"></script><script src="warehouse3d.js"></script><script src="warehouse-walk.js"></script><script src="warehouse-layout.js"></script>
 <script>
@@ -30,6 +30,8 @@ function drawMap(){
     if(r.pal){g.lineWidth=1;g.strokeStyle='#a2adb5';for(let i=2;i<r.w;i+=2){g.beginPath();g.moveTo(x+i*scale,y);g.lineTo(x+i*scale,y+h);g.stroke();}for(let i=2;i<r.h;i+=2){g.beginPath();g.moveTo(x,y+i*scale);g.lineTo(x+w,y+i*scale);g.stroke();}}
     if(r.label){g.save();g.beginPath();g.rect(x+2,y+2,w-4,h-4);g.clip();g.fillStyle='#283c48';g.textAlign='center';g.textBaseline='middle';g.font='bold '+Math.min(15,Math.max(9,w/10))+'px sans-serif';if(w<65&&r.label.length<=3){[...r.label].forEach((ch,i)=>g.fillText(ch,x+w/2,y+h/2+(i-(r.label.length-1)/2)*17));}else g.fillText(r.label,x+w/2,y+h/2,w-6);g.restore();}
   }
+  // Same single area, with its walkable internal aisles shown only in this 3D preview.
+  for(const r of f.rects){const a=Warehouse3D.shelfLayout(r);if(!a)continue;g.fillStyle='#6f9d80';g.fillRect(a.x/2*scale,a.z/2*scale,a.w/2*scale,a.d/2*scale);g.fillStyle='#bdc5be';for(const row of a.rows)g.fillRect(row.x/2*scale,row.z/2*scale,row.w/2*scale,row.d/2*scale);g.strokeStyle='#87949c';g.strokeRect(a.x/2*scale,a.z/2*scale,a.w/2*scale,a.d/2*scale);g.fillStyle='#fff';g.fillRect((r.x+r.w/2)*scale-44,(r.y+r.h/2)*scale-10,88,20);g.fillStyle='#283c48';g.font='bold 13px sans-serif';g.textAlign='center';g.fillText('棚番の品',(r.x+r.w/2)*scale,(r.y+r.h/2)*scale+1);}
   if(walk){const p=walk.getPosition();g.save();g.translate(p.x/2*scale,p.z/2*scale);g.rotate(-p.yaw);g.fillStyle='#1776ff';g.strokeStyle='white';g.lineWidth=3;g.beginPath();g.moveTo(0,-13);g.lineTo(9,10);g.lineTo(0,5);g.lineTo(-9,10);g.closePath();g.fill();g.stroke();g.restore();}
 }
 layout.viewpoints.forEach((p,i)=>{const o=document.createElement('option');o.value=i;o.textContent=p.name;$('viewpoints').append(o);});

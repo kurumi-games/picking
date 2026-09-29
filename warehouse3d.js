@@ -36,6 +36,20 @@
     db.spots[key] = {cells};
     return key;
   }
+  // Four rows are confirmed. Direction and width are provisional, isolated here.
+  // World units: one pallet = 4. No map/localStorage migration is performed.
+  const shelfSettings=Object.freeze({rows:4,direction:'x',aisle:4,depth:2,endClearance:2,height:6.9,levels:5});
+  function shelfLayout(r){
+    if(String(r.label||'').replace(/\s/g,'')!=='棚番の品'||r.type)return null;
+    const x=r.x*2+.06,z=r.y*2+.06,w=r.w*2-.12,d=r.h*2-.12;
+    if(w<=0||d<=0)return null;
+    const cfg=shelfSettings,across=cfg.direction==='x'?d:w,along=cfg.direction==='x'?w:d;
+    const fit=Math.min(1,across/(cfg.rows*cfg.depth+(cfg.rows-1)*cfg.aisle+2*cfg.endClearance));
+    const depth=cfg.depth*fit,gap=cfg.aisle*fit,span=cfg.rows*depth+(cfg.rows-1)*gap;
+    const offset=(across-span)/2,end=Math.min(cfg.endClearance,along*.1),length=along-2*end;
+    const rows=Array.from({length:cfg.rows},(_,i)=>cfg.direction==='x'?{x:x+end,z:z+offset+i*(depth+gap),w:length,d:depth}:{x:x+offset+i*(depth+gap),z:z+end,w:depth,d:length});
+    return {rect:r,x,z,w,d,rows,direction:cfg.direction,gap,height:cfg.height,levels:cfg.levels};
+  }
   function dispose(scene) {
     if (!scene) return;
     const gs=new Set(), ms=new Set(), ts=new Set();
@@ -105,7 +119,7 @@
     const contactMat=kit?new T.MeshBasicMaterial({map:kit.contactMap(),transparent:true,depthWrite:false,color:'#000000',opacity:.62}):null;
     const contacts=[];
     function contact(x,z,w,d){if(contactMat)contacts.push([x+w/2,z+d/2,w+.65,d+.65]);}
-    const blockers=[], heightRects=[], pickZones=[];
+    const blockers=[], heightRects=[], pickZones=[],shelfLayouts=[];
     function border(x,z,w,d,col,y=.035,t=.065){box(x,z,w,t,y,.018,col);box(x,z+d-t,w,t,y,.018,col);box(x,z,t,d,y,.018,col);box(x+w-t,z,t,d,y,.018,col);}
     function pallet(x,z,w,d){
       contact(x,z,w,d);
@@ -132,9 +146,62 @@
       if(!nest){box(x,z,w,.12,4.4,.16,clr,.45);box(x,z+d-.12,w,.12,4.4,.16,clr,.45);}
       return H;
     }
+    function steelShelves(layout){
+      const alongX=layout.direction==='x',H=layout.height;
+      layout.rows.forEach(row=>{
+        const L=alongX?row.w:row.d,B=alongX?row.d:row.w,bays=Math.max(1,Math.ceil(L/6.4)),bay=L/bays;
+        function piece(u,v,a,b,y,h,col,metal=.38){if(alongX)box(row.x+u,row.z+v,a,b,y,h,col,metal);else box(row.x+v,row.z+u,b,a,y,h,col,metal);}
+        contact(row.x,row.z,row.w,row.d);
+        for(let i=0;i<=bays;i++)for(const side of [0,1]){
+          const u=Math.min(L-.13,i*bay),v=side*(B-.13);
+          piece(u,v,.13,.035,.1,H-.1,'#8a918c');piece(u,v,.035,.13,.1,H-.1,'#8a918c');
+          piece(Math.max(0,u-.045),Math.max(0,v-.04),.2,.19,.04,.06,'#747b74');
+          for(let y=.55;y<H-.1;y+=.32)piece(u+.055,v+(side?.133:-.008),.035,.012,y,.065,'#414b46',.05);
+        }
+        for(let level=0;level<layout.levels;level++){
+          const y=.35+level*(H-.65)/(layout.levels-1);
+          for(let i=0;i<bays;i++){
+            piece(i*bay+.055,.055,bay-.11,B-.11,y,.075,'#b1b2a9',.25);
+            for(const v of [.055,B-.11])piece(i*bay+.055,v,bay-.11,.055,y-.12,.16,'#838b84');
+          }
+        }
+        blockers.push([row.x,row.z,row.x+row.w,row.z+row.d]);
+      });
+    }
+    function metalDoor(x,z,w,d){
+      // Closed door is opaque frosted glass, so the existing outer wall never shows through it.
+      const alongX=w>=d,span=Math.min(3.4,alongX?w:d),H=7.4;
+      const origin=(alongX?x:z)+((alongX?w:d)-span)/2;
+      let plane=alongX?z+d/2:x+w/2;
+      if(alongX){if(z<.2)plane=.08;else if(z+d>D-.2)plane=D-.08;}
+      else {if(x<.2)plane=.08;else if(x+w>W-.2)plane=W-.08;}
+      const flip=alongX?plane>D/2:plane<W/2;
+      function piece(u,v,a,b,y,h,col,metal=0){if(flip)u=span-u-a;if(alongX)box(origin+u,plane+v,a,b,y,h,col,metal);else box(plane+v,origin+u,b,a,y,h,col,metal);}
+      const frame=mat('#9a9fa0',.7),leaf=mat('#a1a5a1',.38);
+      const c=document.createElement('canvas');c.width=c.height=128;const g=c.getContext('2d'),pixels=g.createImageData(128,128);
+      let seed=53;for(let i=0;i<128*128;i++){seed=(Math.imul(seed,1664525)+1013904223)>>>0;const n=(seed>>>24)/255*14-7;const y=Math.floor(i/128)/128;pixels.data[i*4]=220+n;pixels.data[i*4+1]=214+n-y*8;pixels.data[i*4+2]=207+n-y*16;pixels.data[i*4+3]=255;}g.putImageData(pixels,0,0);
+      const tex=new T.CanvasTexture(c);tex.encoding=T.sRGBEncoding;
+      const glass=new T.MeshStandardMaterial({map:tex,roughness:.97,metalness:0,emissive:'#d4c5b3',emissiveIntensity:.18});
+      piece(0,-.15,.14,.3,0,H,frame);piece(span-.14,-.15,.14,.3,0,H,frame);piece(0,-.15,span,.3,H-.16,.16,frame);
+      piece(.14,-.1,span-.28,.2,.09,3.43,leaf);
+      piece(.2,-.055,span-.4,.11,3.65,H-3.91,glass);
+      piece(.14,-.11,span-.28,.22,3.5,.15,frame);piece(.14,-.11,.065,.22,3.65,H-3.81,frame);piece(span-.205,-.11,.065,.22,3.65,H-3.81,frame);
+      piece(.03,-.22,span-.06,.44,.025,.07,frame);
+      // Photo reference: round handle, hinges, overhead closer; no extra wall equipment.
+      for(const side of [-1,1]){
+        piece(span-.43,side*.17-.04,.18,.08,3.49,.2,frame);
+        const knob=new T.Mesh(new T.SphereGeometry(.14,12,8),frame);
+        const knobU=flip?.34:span-.34;
+        knob.position.set(alongX?origin+knobU:plane+side*.24,3.59,alongX?plane+side*.24:origin+knobU);scene.add(knob);
+      }
+      for(const y of [1.2,5.8])piece(.02,-.17,.13,.34,y,.3,frame);
+      piece(.32,-.19,.8,.38,H-.44,.18,frame);piece(.75,-.24,.9,.1,H-.36,.055,frame);
+      return H;
+    }
     let warmLights=0;
     f.rects.forEach(r=>{
       const x=r.x*S+.06,z=r.y*S+.06,w=r.w*S-.12,d=r.h*S-.12;
+      const shelves=shelfLayout(r);
       let H=.13;
       if(r.type==='wall') {H=opts.walk?HALL:3.6;box(x,z,w,d,0,H,wallMat);box(x,z,w,d,H,.08,'#c9cbc2');contact(x,z,w,d);}
       else if(r.type==='shut') {
@@ -145,13 +212,14 @@
         else{box(x-.03,z-.12,w+.06,.12,0,H,'#9a9e96',.4);box(x-.03,z+d,w+.06,.12,0,H,'#9a9e96',.4);}
         if(opts.walk&&warmLights++<2){const light=new T.PointLight('#ffd16c',1.1,20,1.5);light.position.set(x+w/2,3,z+d/2);scene.add(light);}
       }
-      else if(r.type==='door'){H=0; border(x,z,w,d,'#e8c976');}
+      else if(r.type==='door'){H=metalDoor(x,z,w,d);border(x,z,w,d,'#e8c976');}
       else if(r.type==='nest'){H=rack(x,z,w,d,true);}
       else {
-        border(x,z,w,d,'#b6a24c',.03,.08);contact(x,z,w,d);
+        border(x,z,w,d,'#b6a24c',.03,.08);if(!shelves)contact(x,z,w,d);
         // Preserve explicit shapes; summarized shelf areas stay a single region.
         const style=r.view3d || (r.pal?'pallet':'shelf');
-        if(style==='shelf') { H=3.5; box(x,z,w,d,0,H,panelMat); }
+        if(shelves){H=shelves.height;steelShelves(shelves);shelfLayouts.push(shelves);}
+        else if(style==='shelf') { H=3.5; box(x,z,w,d,0,H,panelMat); }
         else if(style==='rack') {
           H=4.73;const nx=Math.max(1,Math.ceil(w/4)),nz=Math.max(1,Math.ceil(d/4));
           for(let a=0;a<nx;a++)for(let b=0;b<nz;b++)rack(x+a*w/nx+.08,z+b*d/nz+.08,w/nx-.16,d/nz-.16);
@@ -160,7 +228,7 @@
         }
         // Generic areas and the old "load" shape never fabricate physical boxes.
       }
-      if(r.type!=='door')blockers.push([x,z,x+w,z+d]);
+      if(r.type!=='door'&&!shelves)blockers.push([x,z,x+w,z+d]);
       heightRects.push({x,z,w,d,h:H});
       const hit=new T.Mesh(new T.BoxGeometry(w,Math.max(.2,H),d),new T.MeshBasicMaterial({visible:false}));hit.position.set(x+w/2,Math.max(.2,H)/2,z+d/2);hit.userData.rect=r;scene.add(hit);pickZones.push(hit);
       if(r.label){const sp=label(r.label,'#314c58',Math.min(opts.walk?3:6,Math.max(2.3,w*.6)));sp.position.set(x+w/2,H+.8,z+d/2);scene.add(sp);}
@@ -185,7 +253,7 @@
     if(contacts.length){const mesh=new T.InstancedMesh(new T.PlaneGeometry(1,1),contactMat,contacts.length),o=new T.Object3D();contacts.forEach((a,i)=>{o.position.set(a[0],.029,a[1]);o.rotation.x=-Math.PI/2;o.scale.set(a[2],a[3],1);o.updateMatrix();mesh.setMatrixAt(i,o.matrix);});mesh.frustumCulled=false;scene.add(mesh);}
     let lastLightX=-100,lastLightZ=-100;
     function updateCamera(camera){if(!lampPool.length||Math.hypot(camera.position.x-lastLightX,camera.position.z-lastLightZ)<2)return;lastLightX=camera.position.x;lastLightZ=camera.position.z;const near=lampPositions.slice().sort((a,b)=>a.distanceToSquared(camera.position)-b.distanceToSquared(camera.position));lampPool.forEach((l,i)=>l.position.copy(near[i]));}
-    return {scene,blockers,heightAt,marks,pickZones,W,D,records,markGroup,updateCamera,setReflections:on=>{if(mirror)mirror.visible=on;},hasReflections:!!mirror};
+    return {scene,blockers,heightAt,marks,pickZones,W,D,records,markGroup,shelfLayouts,updateCamera,setReflections:on=>{if(mirror)mirror.visible=on;},hasReflections:!!mirror};
 
   }
   function configure(renderer){const T=root.THREE;renderer.setPixelRatio(Math.min(1.6,root.devicePixelRatio||1));renderer.outputEncoding=T.sRGBEncoding;renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=.92;}
@@ -220,5 +288,5 @@
     stage.addEventListener('pointerdown',down);stage.addEventListener('pointermove',move);stage.addEventListener('pointerup',up);stage.addEventListener('pointercancel',up);stage.addEventListener('wheel',wheel,{passive:false});
     return {world,renderer,cam,fit:()=>{autoFit=true;fit();},zoom:k=>{autoFit=false;dist=Math.max(7,Math.min(Math.max(world.W,world.D)*5,dist*k));schedule();},destroy(){dead=true;cancelAnimationFrame(raf);ro.disconnect();[['pointerdown',down],['pointermove',move],['pointerup',up],['pointercancel',up],['wheel',wheel]].forEach(([n,fn])=>stage.removeEventListener(n,fn));dispose(world.scene);renderer.dispose();renderer.forceContextLoss();renderer.domElement.remove();}};
   }
-  root.Warehouse3D={locations,find,materialize,createWorld,overview,configure,dispose,norm,label};
+  root.Warehouse3D={locations,find,materialize,createWorld,overview,configure,dispose,norm,label,shelfLayout,shelfSettings};
 })(window);
