@@ -45,9 +45,11 @@
     const x=r.x*2+.06,z=r.y*2+.06,w=r.w*2-.12,d=r.h*2-.12;
     if(w<=0||d<=0)return null;
     const cfg=shelfSettings,across=cfg.direction==='x'?d:w,along=cfg.direction==='x'?w:d;
-    const fit=Math.min(1,across/(cfg.rows*cfg.depth*cfg.unitsPerRow+(cfg.rows-1)*cfg.aisle+2*cfg.endClearance));
-    const depth=cfg.depth*cfg.unitsPerRow*fit,gap=cfg.aisle*fit,span=cfg.rows*depth+(cfg.rows-1)*gap;
-    const offset=cfg.align==='start'?0:(across-span)/2,end=Math.min(cfg.endClearance,along*.1),length=along-2*end;
+    // ver58 自分で位置合わせ：区画の r.shelf = {dx:横, dz:縦, gap:通路の増減, dl:長さの増減}（描画単位、地図1マス＝2）
+    const adj=r.shelf||{},aisle=Math.max(.5,cfg.aisle+(+adj.gap||0));
+    const fit=Math.min(1,across/(cfg.rows*cfg.depth*cfg.unitsPerRow+(cfg.rows-1)*aisle+2*cfg.endClearance));
+    const depth=cfg.depth*cfg.unitsPerRow*fit,gap=aisle*fit,span=cfg.rows*depth+(cfg.rows-1)*gap;
+    const offset=(cfg.align==='start'?0:(across-span)/2)+(+(cfg.direction==='x'?adj.dz:adj.dx)||0),endBase=Math.min(cfg.endClearance,along*.1),end=endBase+(+(cfg.direction==='x'?adj.dx:adj.dz)||0),length=Math.max(2,along-2*endBase+(+adj.dl||0));
     const rows=Array.from({length:cfg.rows},(_,i)=>cfg.direction==='x'?{x:x+end,z:z+offset+i*(depth+gap),w:length,d:depth}:{x:x+offset+i*(depth+gap),z:z+end,w:depth,d:length});
     rows.forEach(row=>{row.units=Array.from({length:cfg.unitsPerRow},(_,i)=>cfg.direction==='x'?{x:row.x,z:row.z+i*row.d/cfg.unitsPerRow,w:row.w,d:row.d/cfg.unitsPerRow}:{x:row.x+i*row.w/cfg.unitsPerRow,z:row.z,w:row.w/cfg.unitsPerRow,d:row.d});});
     return {rect:r,x,z,w,d,rows,direction:cfg.direction,gap,height:cfg.height,levels:cfg.levels,unitsPerRow:cfg.unitsPerRow};

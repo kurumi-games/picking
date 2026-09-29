@@ -279,6 +279,18 @@
   html body .ad-f-row b { white-space:nowrap; } html body .ad-f-row b.br { font-size:64px; } html body .ad-f-row { gap:12px; padding:0 14px; box-sizing:border-box; }
   html body .ad-strip button.br { font-size:30px; }
   .ad-hint.small.long { opacity:.5; }
+  /* ver58 棚の位置合わせ */
+  #wkShelfBtn { margin-left:6px; }
+  .wk-shelf { position:absolute; left:10px; right:10px; top:118px; z-index:30; display:none; padding:12px; border-radius:16px; background:rgba(20,34,40,.92); color:#fff; }
+  .wk-shelf.on { display:block; }
+  .wk-shelf-head { display:flex; align-items:center; gap:8px; flex-wrap:wrap; } .wk-shelf-head b { font-size:16px; } .wk-shelf-head small { flex:1; font-size:11px; opacity:.75; min-width:160px; }
+  .wk-shelf-head button { border:none; background:#fff2; color:#fff; width:36px; height:36px; border-radius:10px; font-size:16px; }
+  .wk-shelf-grid { display:grid; grid-template-columns:auto 1fr; gap:10px 12px; align-items:center; margin-top:10px; font-size:13px; font-weight:800; }
+  .wk-shelf-grid div { display:flex; gap:8px; } .wk-shelf-grid button { flex:1; height:46px; border:none; border-radius:12px; background:#2f6b57; color:#fff; font-size:16px; font-weight:900; }
+  .wk-shelf-grid button:active { background:#3f8a70; }
+  .wk-shelf-move button { font-size:22px; }
+  .wk-shelf-foot { display:flex; align-items:center; margin-top:10px; } .wk-shelf-foot small { flex:1; opacity:.7; font-size:11px; }
+  .wk-shelf-foot button { border:1px solid #fff5; background:none; color:#fff; border-radius:10px; padding:8px 12px; font-weight:800; }
   .td-old-btn { display:block; margin:18px auto 10px; border:none; background:none; color:#5b6b7b; font-weight:700; font-size:13px; text-decoration:underline; }
   .ta-intro { padding:14px; border-radius:14px; background:#fff; border:1.5px solid #dfe5eb; font-size:14px; line-height:1.9; color:#33475b; }
   .ta-card { padding:12px; border-radius:16px; background:#fff; border:1.5px solid #dfe5eb; margin-bottom:10px; }
@@ -550,7 +562,7 @@
   <div class="wrap">
     <div class="home-title">
       <h1>ピッキング補助</h1>
-      <div class="ver-tag">ver57.1（手前の棚を黄色い線に合わせた）</div>
+      <div class="ver-tag">ver58（歩く画面の「🔧 棚の位置」で棚を自分で動かせる）</div>
     </div>
     <div class="home-btns">
       <button class="home-btn go" id="goBtn">GO</button>
@@ -568,7 +580,7 @@
   <div class="wrap">
     <div style="text-align:center; padding:14px 0 16px;">
       <h2 style="font-size:22px; font-weight:900;">ピッキング補助</h2>
-      <div class="ver-tag" style="margin:4px 0 0;">ver57.1（手前の棚を黄色い線に合わせた）</div>
+      <div class="ver-tag" style="margin:4px 0 0;">ver58（歩く画面の「🔧 棚の位置」で棚を自分で動かせる）</div>
     </div>
 
     <!-- 機種から選ぶ -->
@@ -778,7 +790,13 @@
   <div class="af-result" id="afResult"></div>
   <div class="wk-pad-keys" id="afKeys"><button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button><button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button><button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button><button data-k="del">⌫</button><button data-k="0">0</button><button data-k="go" class="go">決定</button></div>
 </div></div>
-<div class="wk-modal" id="wkModal"><div id="wkStage"></div><div class="wk-load" id="wkLoad">読み込み中…</div><div class="wk-top"><button id="wkFind" class="wk-find">🔍 部品</button><span id="wkTitle">🚶 倉庫を歩く</span><button id="wkOverview">全体</button><button id="wkClose">とじる</button></div><div class="wk-bar" id="wkBar"><span id="wkBarTxt"></span><button id="wkBarBtn">移動する</button></div><div class="wk-msg" id="wkMsg"></div><div class="wk-tools"><select id="wkFloor" aria-label="表示フロア"></select><button id="wkRegister">＋ 場所登録</button></div>
+<div class="wk-modal" id="wkModal"><div id="wkStage"></div><div class="wk-load" id="wkLoad">読み込み中…</div><div class="wk-top"><button id="wkFind" class="wk-find">🔍 部品</button><span id="wkTitle">🚶 倉庫を歩く</span><button id="wkOverview">全体</button><button id="wkClose">とじる</button></div><div class="wk-bar" id="wkBar"><span id="wkBarTxt"></span><button id="wkBarBtn">移動する</button></div><div class="wk-msg" id="wkMsg"></div><div class="wk-tools"><select id="wkFloor" aria-label="表示フロア"></select><button id="wkRegister">＋ 場所登録</button><button id="wkShelfBtn">🔧 棚の位置</button></div>
+<div class="wk-shelf" id="wkShelf"><div class="wk-shelf-head"><b>棚の位置合わせ</b><small>地図の向きで動く（右下の小さい地図と同じ向き）</small><button id="wkShelfX">✕</button></div>
+<div class="wk-shelf-grid">
+<span>全体を動かす</span><div class="wk-shelf-move"><button data-sh="dx,-1">←</button><button data-sh="dz,-1">↑</button><button data-sh="dz,1">↓</button><button data-sh="dx,1">→</button></div>
+<span>通路の広さ</span><div><button data-sh="gap,-1">せまく</button><button data-sh="gap,1">ひろく</button></div>
+<span>棚の長さ</span><div><button data-sh="dl,-1">みじかく</button><button data-sh="dl,1">ながく</button></div>
+</div><div class="wk-shelf-foot"><small id="wkShelfVal"></small><button id="wkShelfReset">最初に戻す</button></div></div>
 <div class="wk-minimap"><canvas id="wkMini" width="260" height="290" aria-label="倉庫マップ。緑の通路をタップして移動"></canvas><small>通路をタップして移動</small><button id="wkReflection" type="button">床の反射 ON</button></div>
 <div class="wk-controls" id="wkControls"><button data-walk="forward" aria-label="前へ">↑</button><button data-walk="left" aria-label="左へ">←</button><button data-walk="back" aria-label="後ろへ">↓</button><button data-walk="right" aria-label="右へ">→</button></div>
 <p class="wk-hint">スワイプで見回す · 床の矢印で移動<br>地図をもとにした3D表示</p>
@@ -3066,6 +3084,19 @@
   document.querySelectorAll('#afKind [data-p]').forEach(b=>b.onclick=()=>afPick(b.dataset.p));
   $('afBack').onclick=afShow;
 
+
+  /* ver58 棚の位置を自分で合わせる（区画「棚番の品」の r.shelf に保存。控えファイルにも入る） */
+  const WK_SHELF_STEP={dx:.5,dz:.5,gap:.5,dl:1};
+  function wkShelfRect(){ const f=DB.maps.floors[DB.maps.cur]; return f&&f.rects.find(r=>String(r.label||'').replace(/\s/g,'')==='棚番の品'&&!r.type); }
+  function wkShelfVal(){ const r=wkShelfRect(), a=(r&&r.shelf)||{}; const q=v=>((+v||0)/2).toFixed(2).replace(/\.?0+$/,'')||'0';
+    $('wkShelfVal').textContent=r?('横 '+q(a.dx)+'マス・縦 '+q(a.dz)+'マス・通路 '+q(a.gap)+'・長さ '+q(a.dl)):'このフロアに「棚番の品」の区画がありません'; }
+  let wkShelfT=0;
+  function wkShelfApply(k,dir){ const r=wkShelfRect(); if(!r) return; r.shelf=r.shelf||{}; r.shelf[k]=Math.round(((+r.shelf[k]||0)+dir*WK_SHELF_STEP[k])*100)/100; saveDB(); wkShelfVal();
+    clearTimeout(wkShelfT); wkShelfT=setTimeout(()=>{ WK.position=WK.view&&WK.view.getPosition?WK.view.getPosition():WK.position; wkBuild(true); },250); }
+  $('wkShelfBtn').onclick=()=>{ $('wkShelf').classList.toggle('on'); wkShelfVal(); };
+  $('wkShelfX').onclick=()=>$('wkShelf').classList.remove('on');
+  document.querySelectorAll('#wkShelf [data-sh]').forEach(b=>b.onclick=()=>{ const [k,d]=b.dataset.sh.split(','); wkShelfApply(k,+d); });
+  $('wkShelfReset').onclick=()=>{ const r=wkShelfRect(); if(!r||!confirm('棚の位置を最初に戻す？')) return; delete r.shelf; saveDB(); wkShelfVal(); wkBuild(true); };
   /* ===== タップ検数（📸）：写真を撮って部品を1個ずつタップして数える =====
      タップ＝赤丸マーク追加／マークをタップ＝削除／1本指ドラッグ＝移動／2本指＝ズーム */
   let tcMarks = [];               // [{x,y}] 画像に対する%座標
