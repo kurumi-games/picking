@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>個数読取テスト</title>
+<link rel="stylesheet" href="qty-read-test.css?v=68">
+<script defer src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
+<script defer src="qty-read-test.js?v=68"></script></head>
+<body><main>
+<header><a href="index.html">← ホーム</a><span>ver68・テスト専用</span></header>
+<h1>個数読取テスト</h1><p>個数の数字だけを枠に入れて「読む」。結果を採点してください。</p>
+<div class="actions"><button id="camera">カメラを開く</button><label class="button secondary">写真で試す<input id="photo" type="file" accept="image/*" hidden></label></div>
+<div id="stage"><video id="video" playsinline muted hidden></video><img id="photoView" alt="読み取りに使う写真" hidden><div id="placeholder">カメラまたは写真を選択</div><div id="roi" hidden></div></div>
+<p class="hint">映像をタップすると枠が移動します。単位の「個」や別の数字は枠の外へ。</p>
+<div id="adjust"><label>枠の横幅 <input id="width" type="range" min="15" max="95" value="60"></label><label>枠の高さ <input id="height" type="range" min="8" max="65" value="25"></label></div>
+<button id="read" class="primary wide" disabled>枠の中を読む</button>
+<p id="status" role="status" aria-live="polite">最初の読み取りは準備に時間がかかります。インターネット接続が必要です。</p>
+<section id="answer" hidden>
+<h2>アプリの回答</h2><div id="number" aria-live="polite">—</div><p id="detail"></p>
+<img id="cropPreview" alt="実際に読み取った範囲">
+<div id="grade" class="actions"><button id="correct" class="good">正解</button><button id="incorrect" class="bad">不正解</button></div>
+<form id="correction" hidden><label>正しい個数<input id="actual" type="text" inputmode="numeric" pattern="[0-9]{1,7}" maxlength="7" autocomplete="off" required placeholder="例：50"></label><button type="submit" class="primary">正しい個数を記録</button></form>
+<p id="feedback" role="status"></p>
+</section>
+<section class="records"><h2>テスト記録</h2><p id="summary">読み込み中…</p><div class="actions"><button id="export" class="secondary" disabled>記録をダウンロード</button><button id="share" class="secondary" disabled>記録を共有</button></div><p class="hint">元画像・読取画像・回答・正しい個数を、この端末のブラウザに保存します。書き出したJSONをチャットに添付してください。写真はOCR処理のために送信しません。自動学習や自動送信はしません。</p><ol id="history"></ol></section>
+</main></body></html>
