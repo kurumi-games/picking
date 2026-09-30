@@ -466,11 +466,6 @@
         const mouse=c.mesh(new T.SphereGeometry(1,12,8),black,cx+1,3.015,cz+.56);mouse.scale.set(.14,.07,.21);
         c.block(cx-1.12,1.29,cz-.03,.73,2.07,1.27,mat('#6b7370',.2));c.block(cx-1.12,1.83,cz+.625,.56,.3,.028,black);
         for(let yy=.55;yy<1.4;yy+=.1)c.block(cx-1.12,yy,cz+.622,.49,.022,.017,black);
-        // Blue padded swivel chair with five feet and casters.
-        const chairZ=cz+2.08,seat=c.mesh(new T.SphereGeometry(1,20,12),blue,cx,1.68,chairZ);seat.scale.set(.74,.15,.67);
-        c.rounded(cx,2.68,chairZ+.46,1.3,1.12,.18,blue);c.rod([cx,1.05,chairZ],[cx,1.57,chairZ],.09,metal);c.rod([cx,1.55,chairZ+.29],[cx,2.59,chairZ+.5],.055,black);
-        for(let i=0;i<5;i++){const a=i*Math.PI*2/5,xx=cx+Math.cos(a)*.71,zz=chairZ+Math.sin(a)*.71;c.rod([cx,.49,chairZ],[xx,.2,zz],.05,black);const wheel=c.mesh(new T.CylinderGeometry(.12,.12,.15,12),black,xx,.15,zz);wheel.rotation.x=Math.PI/2;}
-        c.rod([cx,.31,chairZ],[cx,1.11,chairZ],.095,black);
         // Back desk uprights and a small task-light fitting, as seen in the reference.
         for(const xx of [cx-1.6,cx+1.6])c.block(xx,4.52,.45,.065,4.67,.065,metal);c.block(cx,6.84,.45,3.3,.09,.12,metal);
         c.block(cx,6.56,.64,2.3,.11,.32,cream);c.block(cx,6.49,.65,2.15,.035,.22,new T.MeshBasicMaterial({color:'#e1e6d8'}));
