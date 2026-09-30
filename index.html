@@ -567,12 +567,12 @@
   .mp-line-edge.left,.mp-line-edge.right{top:0;bottom:0;width:8px;}
   .mp-line-edge.left{left:0}.mp-line-edge.right{right:0}
 </style>
-<link rel="stylesheet" href="warehouse3d.css?v=51">
+<link rel="stylesheet" href="warehouse3d.css?v=66-jump">
 <script src="warehouse-materials.js?v=56"></script>
 <script src="warehouse-ver57.js?v=57-cart-room"></script>
 <script src="warehouse-office-fixtures.js?v=64-material-shelf"></script>
 <script src="warehouse3d.js?v=63-office-fixtures"></script>
-<script src="warehouse-walk.js?v=61-yellowline"></script>
+<script src="warehouse-walk.js?v=66-jump"></script>
 </head>
 <body>
 
@@ -581,7 +581,7 @@
   <div class="wrap">
     <div class="home-title">
       <h1>ピッキング補助</h1>
-      <div class="ver-tag">ver65（地図を動かしても部品が動かないように）</div>
+      <div class="ver-tag">ver66（ストリートビューでジャンプ）</div>
     </div>
     <div class="home-btns">
       <button class="home-btn go" id="goBtn">GO</button>
@@ -599,7 +599,7 @@
   <div class="wrap">
     <div style="text-align:center; padding:14px 0 16px;">
       <h2 style="font-size:22px; font-weight:900;">ピッキング補助</h2>
-      <div class="ver-tag" style="margin:4px 0 0;">ver65（地図を動かしても部品が動かないように）</div>
+      <div class="ver-tag" style="margin:4px 0 0;">ver66（ストリートビューでジャンプ）</div>
     </div>
 
     <!-- 機種から選ぶ -->
@@ -830,8 +830,8 @@
 <span>棚の長さ</span><div><button data-sh="dl,-1">みじかく</button><button data-sh="dl,1">ながく</button></div>
 </div><div class="wk-shelf-foot"><small id="wkShelfVal"></small><button id="wkShelfReset">最初に戻す</button></div></div>
 <div class="wk-minimap"><canvas id="wkMini" width="260" height="290" aria-label="倉庫マップ。緑の通路をタップして移動"></canvas><small>通路をタップして移動</small><button id="wkReflection" type="button">床の反射 ON</button></div>
-<div class="wk-controls" id="wkControls"><button data-walk="forward" aria-label="前へ">↑</button><button data-walk="left" aria-label="左へ">←</button><button data-walk="back" aria-label="後ろへ">↓</button><button data-walk="right" aria-label="右へ">→</button></div>
-<p class="wk-hint">スワイプで見回す · 床の矢印で移動<br>地図をもとにした3D表示</p>
+<div class="wk-controls" id="wkControls"><button data-walk="forward" aria-label="前へ">↑</button><button data-walk="left" aria-label="左へ">←</button><button data-walk="back" aria-label="後ろへ">↓</button><button data-walk="right" aria-label="右へ">→</button><button type="button" data-jump aria-label="ジャンプ" aria-keyshortcuts="Space">ジャンプ</button></div>
+<p class="wk-hint">スワイプで見回す · 床の矢印で移動<br>ジャンプ：ボタン / PCはスペース</p>
 <div class="wk-place" id="wkPlace"><form id="wkPlaceForm"><strong>このパレットに場所登録</strong><p>選んだパレットを黄色で表示しています。</p><label>部品コード<input id="wkPlaceCode" placeholder="例：C00004765" autocomplete="off" required pattern="[A-Za-z][A-Za-z0-9-]*"></label><label>置き方<select id="wkPlaceState"><option value="r">定位置</option><option value="p">仮置き</option><option value="b">引越し</option></select></label><p id="wkPlaceNote"></p><div><button type="button" id="wkPlaceCancel">キャンセル</button><button type="submit">ここに登録</button></div></form></div><div class="wk-pad" id="wkPad"><div class="wk-pad-box"><div class="wk-pad-head"><b id="wkPadTitle">番号を入力</b><button id="wkPadX">✕</button></div><form id="wkSearchForm" class="wk-search-form"><input id="wkSearchCode" aria-label="部品コード" placeholder="C00004765 を貼り付け" autocomplete="off"><button type="submit">検索</button></form><div class="wk-pad-code" id="wkPadCode"> </div><div class="wk-pad-note" id="wkPadNote"></div><div class="wk-kind" id="wkKind"><button data-p="C"><b>C</b>部品<small></small></button><button data-p="B"><b>B</b>中間品<small></small></button><button data-p="A"><b>A</b>完成品<small></small></button><button id="wkKindBack" class="back">← 番号を直す</button></div><div class="wk-pad-keys" id="wkPadKeys"><button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button><button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button><button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button><button data-k="del">⌫</button><button data-k="0">0</button><button data-k="go" class="go">決定</button></div></div></div></div>
 <div class="w3-modal" id="w3Modal">
   <div class="w3-head"><h2>倉庫ナビ</h2><button class="w3-walk" id="w3Walk">歩く</button><button class="w3-close" id="w3Close">とじる</button></div>

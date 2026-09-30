@@ -61,6 +61,8 @@
 .wk-controls button:first-child {grid-column:2;}
 .wk-controls button:nth-child(2) {grid-column:1;}
 .wk-controls button:active {background:#147b5f;}
+.wk-controls button[data-jump] {grid-column:1 / -1;width:100%;font-size:15px;font-weight:800;background:#12694fe8;}
+.wk-controls button[data-jump]:disabled {opacity:.55;}
 .wk-hint {font-size:11px;line-height:1.7;background:#16372ee0;padding:6px 13px;border-radius:12px;white-space:nowrap;}
 .wk-place {position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:#102a3566;z-index:4;padding:20px;}
 .wk-place.on {display:flex;}

@@ -1,7 +1,7 @@
 /* Continuous map-based warehouse view. One pallet = two map cells. */
 (function(root){
   'use strict';
-  const S=2, STEP=.5, R=.45, EYE=5.6;
+  const S=2, STEP=.5, R=.45, EYE=5.6, JUMP_SPEED=8, GRAVITY=24;
   function navigation(W,D,blocks){
     const nx=Math.floor(W/STEP),nz=Math.floor(D/STEP),size=nx*nz,free=new Uint8Array(size);
     const point=i=>[(i%nx+.5)*STEP,(Math.floor(i/nx)+.5)*STEP];
@@ -29,6 +29,13 @@
     let start=nav.nearest(opts.position?.x??(door?(door.x+door.w/2)*S:W/2),opts.position?.z??(door?(door.y+door.h/2)*S:D-2));
     if(start<0){root.Warehouse3D.dispose(scene);renderer.dispose();renderer.forceContextLoss();renderer.domElement.remove();throw new Error('歩ける通路がありません。マップの通路を確認してください。');}
     let [x,z]=nav.point(start),yaw=opts.position?.yaw??0,pitch=opts.position?.pitch??-.3,reachable=nav.flood(start),target=null,route=[],dead=false,raf=0,last=performance.now(),miniAt=0,keys={},held='',placing=false;
+    let jumpHeight=0,jumpVelocity=0,heldPointer=null;
+    const jumpButton=opts.controls?.querySelector('[data-jump]');
+    function land(){jumpHeight=0;jumpVelocity=0;}
+    function jump(){
+      if(dead||placing||opts.isPaused?.()||jumpHeight>0||jumpVelocity>0)return false;
+      jumpVelocity=JUMP_SPEED;return true;
+    }
     const arrowGroup=new T.Group();scene.add(arrowGroup);
     let targetBase=0,targetCenter=null,selection=null;
     const red=new T.MeshBasicMaterial({color:new T.Color('#ed182d').convertSRGBToLinear(),toneMapped:false});
@@ -51,6 +58,7 @@
     function face(cx,cz,cy=1){yaw=Math.atan2(x-cx,z-cz);pitch=Math.atan2(cy-EYE,Math.hypot(cx-x,cz-z));pitch=Math.max(-1,Math.min(.8,pitch));}
     function showFootprint(c,color){const y=world.heightAt((c.x+c.w/2)*S,(c.y+c.h/2)*S)+.07;footprint.geometry.dispose();footprint.geometry=new T.BufferGeometry().setFromPoints([[c.x,c.y],[c.x+c.w,c.y],[c.x+c.w,c.y+c.h],[c.x,c.y+c.h]].map(p=>new T.Vector3(p[0]*S,y,p[1]*S)));footprint.material.color.set(color);footprint.visible=true;}
     function focus(c,jump=true){
+      land();
       target=c;selection=null;placing=false;route=[];updateRoute();if(!c){arrowGroup.visible=footprint.visible=false;targetCenter=null;return;}
       targetCenter=[(c.x+c.w/2)*S,(c.y+c.h/2)*S];targetBase=world.heightAt(...targetCenter)+.15;
       arrowGroup.position.set(targetCenter[0],targetBase,targetCenter[1]);arrowGroup.visible=true;showFootprint(c,'#ff2638');
@@ -76,11 +84,14 @@
     function move(e){if(!pointer||pointer.id!==e.pointerId)return;const dx=e.clientX-pointer.x,dy=e.clientY-pointer.y;if(Math.hypot(e.clientX-pointer.startX,e.clientY-pointer.startY)>6)pointer.moved=true;yaw-=dx*.005;pitch=Math.max(-1.25,Math.min(1.1,pitch-dy*.004));pointer.x=e.clientX;pointer.y=e.clientY;}
     function up(e){if(!pointer||pointer.id!==e.pointerId)return;const tap=!pointer.moved;pointer=null;if(tap&&e.type==='pointerup')pick(e);updateSteps();}
     const listeners=[['pointerdown',down],['pointermove',move],['pointerup',up],['pointercancel',up]];listeners.forEach(([n,fn])=>stage.addEventListener(n,fn));
-    function keyboard(e){if(opts.isPaused?.()||/INPUT|SELECT|TEXTAREA/.test(e.target.tagName))return;const key=e.key.toLowerCase();if(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright'].includes(key)){e.preventDefault();keys[key]=e.type==='keydown';}}
-    function reset(){keys={};held='';pointer=null;route=[];updateRoute();}
+    function keyboard(e){if(opts.isPaused?.()||/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)||e.target.isContentEditable)return;const key=e.key.toLowerCase();if(e.code==='Space'||key===' '){e.preventDefault();if(e.type==='keydown'&&!e.repeat)jump();return;}if(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright'].includes(key)){e.preventDefault();keys[key]=e.type==='keydown';}}
+    function reset(){keys={};held='';heldPointer=null;pointer=null;route=[];land();updateRoute();}
     root.addEventListener('keydown',keyboard);root.addEventListener('keyup',keyboard);root.addEventListener('blur',reset);
-    const control=opts.controls;function controlDown(e){const b=e.target.closest('[data-walk]');if(!b)return;e.preventDefault();b.setPointerCapture(e.pointerId);held=b.dataset.walk;route=[];updateRoute();}function controlUp(){held='';}
-    control?.addEventListener('pointerdown',controlDown);control?.addEventListener('pointerup',controlUp);control?.addEventListener('pointercancel',controlUp);
+    const control=opts.controls;function controlDown(e){const b=e.target.closest('[data-walk]');if(!b)return;e.preventDefault();b.setPointerCapture(e.pointerId);heldPointer=e.pointerId;held=b.dataset.walk;route=[];updateRoute();}function controlUp(e){if(e.pointerId!==heldPointer)return;held='';heldPointer=null;}
+    control?.addEventListener('pointerdown',controlDown);control?.addEventListener('pointerup',controlUp);control?.addEventListener('pointercancel',controlUp);control?.addEventListener('lostpointercapture',controlUp);
+    function jumpDown(e){e.preventDefault();jump();}
+    function jumpClick(e){if(e.detail===0)jump();}
+    jumpButton?.addEventListener('pointerdown',jumpDown);jumpButton?.addEventListener('click',jumpClick);
     function resize(){const w=stage.clientWidth,h=stage.clientHeight;if(!w||!h)return;renderer.setSize(w,h);cam.aspect=w/h;cam.updateProjectionMatrix();}
     const ro=new ResizeObserver(resize);ro.observe(stage);resize();
     if(opts.target)focus(opts.target,opts.jump!==false);else {updateSteps();drawMini();}
@@ -90,13 +101,15 @@
         if(keys.arrowleft)yaw+=dt*1.6;if(keys.arrowright)yaw-=dt*1.6;
         if(forward||side){route=[];routeLine.visible=false;const scale=8*dt/Math.max(1,Math.hypot(forward,side)),vx=(-Math.sin(yaw)*forward+Math.cos(yaw)*side)*scale,vz=(-Math.cos(yaw)*forward-Math.sin(yaw)*side)*scale;if(!nav.blocked(x+vx,z))x+=vx;if(!nav.blocked(x,z+vz))z+=vz;}
         else if(route.length){const p=route[0],dist=Math.hypot(p[0]-x,p[1]-z),step=12*dt;if(dist<=step){[x,z]=p;route.shift();if(!route.length){routeLine.visible=false;if(targetCenter)face(...targetCenter,targetBase+1.1);}}else{const desired=Math.atan2(x-p[0],z-p[1]),delta=Math.atan2(Math.sin(desired-yaw),Math.cos(desired-yaw));yaw+=delta*Math.min(1,dt*9);x+=(p[0]-x)/dist*step;z+=(p[1]-z)/dist*step;}}
-      }else {held='';keys={};}
-      cam.position.set(x,EYE,z);cam.rotation.order='YXZ';cam.rotation.set(pitch,yaw,0,'YXZ');arrowGroup.position.y=targetBase+Math.sin(now*.003)*.14;
+        if(jumpVelocity||jumpHeight){jumpHeight+=jumpVelocity*dt-.5*GRAVITY*dt*dt;jumpVelocity-=GRAVITY*dt;if(jumpHeight<=0)land();}
+      }else {held='';heldPointer=null;keys={};land();}
+      if(jumpButton)jumpButton.disabled=placing||!!opts.isPaused?.()||jumpHeight>0||jumpVelocity>0;
+      cam.position.set(x,EYE+jumpHeight,z);cam.rotation.order='YXZ';cam.rotation.set(pitch,yaw,0,'YXZ');arrowGroup.position.y=targetBase+Math.sin(now*.003)*.14;
       if(now-miniAt>100){miniAt=now;updateSteps();drawMini();}
       world.updateCamera?.(cam);renderer.render(scene,cam);
     }
     raf=requestAnimationFrame(loop);
-    return {world,nav,cam,renderer,focus,setWide(on){cam.fov=on?95:60;cam.updateProjectionMatrix();},getPosition:()=>({x,z,yaw,pitch,f:fi}),setPlacing(on){placing=on;selection=null;route=[];updateRoute();if(on){arrowGroup.visible=footprint.visible=false;tell('登録したい黒いパレットをタップ');}else focus(target,false);updateSteps();},destroy(){dead=true;cancelAnimationFrame(raf);ro.disconnect();listeners.forEach(([n,fn])=>stage.removeEventListener(n,fn));mini?.removeEventListener('click',miniClick);root.removeEventListener('keydown',keyboard);root.removeEventListener('keyup',keyboard);root.removeEventListener('blur',reset);control?.removeEventListener('pointerdown',controlDown);control?.removeEventListener('pointerup',controlUp);control?.removeEventListener('pointercancel',controlUp);root.Warehouse3D.dispose(scene);renderer.dispose();renderer.forceContextLoss();renderer.domElement.remove();}};
+    return {world,nav,cam,renderer,focus,jump,setWide(on){cam.fov=on?95:60;cam.updateProjectionMatrix();},getPosition:()=>({x,z,yaw,pitch,f:fi}),setPlacing(on){land();placing=on;selection=null;route=[];updateRoute();if(on){arrowGroup.visible=footprint.visible=false;tell('登録したい黒いパレットをタップ');}else focus(target,false);updateSteps();},destroy(){dead=true;land();cancelAnimationFrame(raf);ro.disconnect();listeners.forEach(([n,fn])=>stage.removeEventListener(n,fn));mini?.removeEventListener('click',miniClick);root.removeEventListener('keydown',keyboard);root.removeEventListener('keyup',keyboard);root.removeEventListener('blur',reset);control?.removeEventListener('pointerdown',controlDown);control?.removeEventListener('pointerup',controlUp);control?.removeEventListener('pointercancel',controlUp);control?.removeEventListener('lostpointercapture',controlUp);jumpButton?.removeEventListener('pointerdown',jumpDown);jumpButton?.removeEventListener('click',jumpClick);root.Warehouse3D.dispose(scene);renderer.dispose();renderer.forceContextLoss();renderer.domElement.remove();}};
   }
   root.WarehouseWalk={navigation,palletCell,create};
 })(window);
