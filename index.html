@@ -581,7 +581,7 @@
   <div class="wrap">
     <div class="home-title">
       <h1>ピッキング補助</h1>
-      <div class="ver-tag">ver64（資材棚の配置・向き変更）</div>
+      <div class="ver-tag">ver65（地図を動かしても部品が動かないように）</div>
     </div>
     <div class="home-btns">
       <button class="home-btn go" id="goBtn">GO</button>
@@ -599,7 +599,7 @@
   <div class="wrap">
     <div style="text-align:center; padding:14px 0 16px;">
       <h2 style="font-size:22px; font-weight:900;">ピッキング補助</h2>
-      <div class="ver-tag" style="margin:4px 0 0;">ver64（資材棚の配置・向き変更）</div>
+      <div class="ver-tag" style="margin:4px 0 0;">ver65（地図を動かしても部品が動かないように）</div>
     </div>
 
     <!-- 機種から選ぶ -->
@@ -2834,9 +2834,14 @@
         start={x:e.clientX,y:e.clientY,w:tgt.w,h:tgt.h};
       } else if(relDown){
         const id=parseInt(relDown.dataset.id,10);
-        if(id!==mpSel) mpSelect(id);
-        mode='move'; tgt=mpGetSel();
-        start={x:e.clientX,y:e.clientY,rx:tgt.x,ry:tgt.y};
+        if(id!==mpSel){
+          // ver65：選んでない部品の上をなぞったら地図が動く（部品は動かない）。タップで選ぶ
+          mode='pan';
+          start={x:e.clientX,y:e.clientY,tx:mpTx,ty:mpTy};
+        } else {
+          mode='move'; tgt=mpGetSel();
+          start={x:e.clientX,y:e.clientY,rx:tgt.x,ry:tgt.y};
+        }
       } else {
         mode='pan';
         start={x:e.clientX,y:e.clientY,tx:mpTx,ty:mpTy};
@@ -2892,6 +2897,8 @@
           const rectEl = tapped.el.closest('.mp-rect');
           if(!rectEl){
             mpSelect(null);
+          } else if(parseInt(rectEl.dataset.id,10)!==mpSel){
+            mpSelect(parseInt(rectEl.dataset.id,10));
           } else if(lastSelAtDown===parseInt(rectEl.dataset.id,10)){
             const r=mpGetSel();
             if(r && r.pal && !r.type){
