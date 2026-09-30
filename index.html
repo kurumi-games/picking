@@ -549,11 +549,17 @@
   .part-row .pmove { display:flex; flex-direction:column; gap:2px; flex:0 0 auto; }
   .part-row .pmv { background:var(--panel-2); border:1px solid var(--line); color:var(--code); border-radius:6px; width:30px; height:20px; font-size:13px; line-height:1; cursor:pointer; padding:0; display:flex; align-items:center; justify-content:center; }
   .part-row .pmv:disabled { opacity:.3; cursor:default; }
+
+  /* ver57 requested additions only */
+  .mp-rect.t-cartbay{background:repeating-linear-gradient(135deg,#c5d1d0 0 8px,#dce4e2 8px 16px)!important;border:2px solid #627a79!important;color:#263c3b;}
+  #wkWide[aria-pressed="true"]{background:#c4f0e0;color:#164c3f;}
+  @media(max-width:480px){.wk-top{gap:5px;padding-left:8px;padding-right:8px}.wk-top button{padding:9px 10px;font-size:13px}.wk-top span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}}
 </style>
 <link rel="stylesheet" href="warehouse3d.css?v=51">
 <script src="warehouse-materials.js?v=56"></script>
-<script src="warehouse3d.js?v=57"></script>
-<script src="warehouse-walk.js?v=56"></script>
+<script src="warehouse-ver57.js?v=57-cart-room"></script>
+<script src="warehouse3d.js?v=57-cart-room"></script>
+<script src="warehouse-walk.js?v=57-cart-room"></script>
 </head>
 <body>
 
@@ -562,7 +568,7 @@
   <div class="wrap">
     <div class="home-title">
       <h1>ピッキング補助</h1>
-      <div class="ver-tag">ver58（歩く画面の「🔧 棚の位置」で棚を自分で動かせる）</div>
+      <div class="ver-tag">ver58＋ver57追加（台車・資材室・消火器・広角）</div>
     </div>
     <div class="home-btns">
       <button class="home-btn go" id="goBtn">GO</button>
@@ -580,7 +586,7 @@
   <div class="wrap">
     <div style="text-align:center; padding:14px 0 16px;">
       <h2 style="font-size:22px; font-weight:900;">ピッキング補助</h2>
-      <div class="ver-tag" style="margin:4px 0 0;">ver58（歩く画面の「🔧 棚の位置」で棚を自分で動かせる）</div>
+      <div class="ver-tag" style="margin:4px 0 0;">ver58＋ver57追加（台車・資材室・消火器・広角）</div>
     </div>
 
     <!-- 機種から選ぶ -->
@@ -710,6 +716,7 @@
       <button class="mp-tb" id="mpAddDoor">＋ 扉</button>
       <button class="mp-tb" id="mpAddShut">＋ シャッター</button>
       <button class="mp-tb" id="mpAddPC">＋ PC机</button>
+      <button class="mp-tb" id="mpAddCartBay">＋ 台車置き場</button>
       <button class="mp-tb" id="mpAddNest">＋ ネステナー</button>
       <button class="mp-tb" id="mpAddLoad">＋ 荷物</button>
     </div>
@@ -719,6 +726,7 @@
       <button class="mp-tb" id="mpColor">色</button>
       <button class="mp-tb" id="mpPal">切り込み</button>
       <button class="mp-tb" id="mpRot">回転</button>
+      <button class="mp-tb" id="mpCartSize" style="display:none">台車置き場の寸法</button>
       <label id="mpDeskDirection" class="mp-tb" style="display:none">机の背 <select id="mpDeskBack" style="font:inherit;padding:4px" aria-label="PC机の背を向ける方向"><option value="north">上 ↑</option><option value="east">右 →</option><option value="south">下 ↓</option><option value="west">左 ←</option></select></label>
       <button class="mp-tb" id="mpDup">複製</button>
       <button class="mp-tb" id="mpParts">部品</button>
@@ -729,6 +737,7 @@
     <div class="mp-tools" id="mpCfgTools">
       <button class="mp-tb" id="mpFloorC">床材</button>
       <button class="mp-tb" id="mpRoom">奥の部屋</button>
+      <button class="mp-tb" id="mpMaterialRoom">資材の部屋</button>
       <button class="mp-tb" id="mpSize">外枠</button>
       <button class="mp-tb" id="mpFloorAdd">＋地図追加</button>
       <button class="mp-tb warn" id="mpFloorDel">フロア削除</button>
@@ -790,7 +799,7 @@
   <div class="af-result" id="afResult"></div>
   <div class="wk-pad-keys" id="afKeys"><button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button><button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button><button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button><button data-k="del">⌫</button><button data-k="0">0</button><button data-k="go" class="go">決定</button></div>
 </div></div>
-<div class="wk-modal" id="wkModal"><div id="wkStage"></div><div class="wk-load" id="wkLoad">読み込み中…</div><div class="wk-top"><button id="wkFind" class="wk-find">🔍 部品</button><span id="wkTitle">🚶 倉庫を歩く</span><button id="wkOverview">全体</button><button id="wkClose">とじる</button></div><div class="wk-bar" id="wkBar"><span id="wkBarTxt"></span><button id="wkBarBtn">移動する</button></div><div class="wk-msg" id="wkMsg"></div><div class="wk-tools"><select id="wkFloor" aria-label="表示フロア"></select><button id="wkRegister">＋ 場所登録</button><button id="wkShelfBtn">🔧 棚の位置</button></div>
+<div class="wk-modal" id="wkModal"><div id="wkStage"></div><div class="wk-load" id="wkLoad">読み込み中…</div><div class="wk-top"><button id="wkFind" class="wk-find">🔍 部品</button><span id="wkTitle">🚶 倉庫を歩く</span><button id="wkWide" aria-pressed="false">広角</button><button id="wkOverview">全体</button><button id="wkClose">とじる</button></div><div class="wk-bar" id="wkBar"><span id="wkBarTxt"></span><button id="wkBarBtn">移動する</button></div><div class="wk-msg" id="wkMsg"></div><div class="wk-tools"><select id="wkFloor" aria-label="表示フロア"></select><button id="wkRegister">＋ 場所登録</button><button id="wkShelfBtn">🔧 棚の位置</button></div>
 <div class="wk-shelf" id="wkShelf"><div class="wk-shelf-head"><b>棚の位置合わせ</b><small>地図の向きで動く（右下の小さい地図と同じ向き）</small><button id="wkShelfX">✕</button></div>
 <div class="wk-shelf-grid">
 <span>全体を動かす</span><div class="wk-shelf-move"><button data-sh="dx,-1">←</button><button data-sh="dz,-1">↑</button><button data-sh="dz,1">↓</button><button data-sh="dx,1">→</button></div>
@@ -1904,6 +1913,7 @@
       });
     }
     const selected=mpGetSel(),isPC=selected?.type==='pcdesk';
+    $('mpCartSize').style.display=selected?.type==='cartbay'?'':'none';
     $('mpDeskDirection').style.display=isPC?'block':'none';if(isPC)$('mpDeskBack').value=selected.back||'north';
     const on = mpSel!=null;
     $('mpSelTools').style.display = on ? 'flex' : 'none';
@@ -2477,7 +2487,7 @@
     const f=mpFloor();
     const cx=((st.width/2)-mpTx)/mpScale/MP_CELL, cy=((st.height/2)-mpTy)/mpScale/MP_CELL;
     const r={ id:mpSeq(), x:Math.max(0,Math.min(f.cols-w,Math.round(cx-w/2))), y:Math.max(0,Math.min(Warehouse3D.planRows(f)-h,Math.round(cy-h/2))), w, h, label:label||'', color:MP_COLORS[0] };
-    if(type) r.type=type;if(type==='pcdesk')r.back='north';
+    if(type) r.type=type;if(type==='pcdesk')r.back='north';if(type==='cartbay')r.cartTurn=0;
     f.rects.push(r); mpSelect(r.id); saveDB();
   }
 
@@ -2491,6 +2501,7 @@
   $('mpAddDoor').onclick = ()=> mpAddRect(2,1,'door','扉');
   $('mpAddShut').onclick = ()=> mpAddRect(5,1,'shut');
   $('mpAddPC').onclick = ()=> mpAddRect(2,3,'pcdesk','PC机');
+  $('mpAddCartBay').onclick = ()=> mpAddRect(4,3,'cartbay','台車置き場');
   $('mpAddNest').onclick = ()=> mpAddRect(2,2,'nest');
   $('mpAddLoad').onclick = ()=> mpAddRect(2,2,'load');
   $('mpName').onclick = ()=>{
@@ -2539,6 +2550,7 @@
     r.x=Math.max(0, Math.min(f.cols-w, r.x));
     r.y=Math.max(0, Math.min(Warehouse3D.planRows(f)-h, r.y));
     r.w=w; r.h=h;
+    if(r.type==='cartbay')r.cartTurn=((r.cartTurn||0)+1)%4;
     mpRender(); saveDB();
   };
   $('mpDup').onclick = ()=>{
@@ -2576,6 +2588,26 @@
     for(let py=Math.min(a.y,y);py<=Math.max(a.y,y);py++)for(let px=Math.min(a.x,x);px<=Math.max(a.x,x);px++)if(Warehouse3D.insidePlan(f,px,py)){const key=px+','+py;if(mpSurface==='erase')delete f.floorTiles[key];else f.floorTiles[key]=mpSurface;}
     mpSurfaceCorner=null;saveDB();surfaceNote();mpRender();
   }
+  $('mpCartSize').onclick=()=>{
+    const r=mpGetSel();if(r?.type!=='cartbay')return;const f=mpFloor();
+    const ov=document.createElement('dialog');ov.id='mpCartSizeDialog';ov.style.cssText='border:0;border-radius:16px;padding:20px;width:min(420px,92vw);font-size:17px';
+    ov.innerHTML='<form><h3>台車置き場の寸法</h3><p>地図のマス数で指定</p><label>横 <input name="w" type="number" min="1" step="1" required style="width:80px;font:inherit"></label> <label>縦 <input name="h" type="number" min="1" step="1" required style="width:80px;font:inherit"></label><p id="mpCartSizeError" role="alert"></p><button class="mp-tb" type="submit">適用</button> <button class="mp-tb" type="button" data-close>とじる</button></form>';
+    document.body.append(ov);const form=ov.querySelector('form');form.elements.w.value=r.w;form.elements.h.value=r.h;
+    ov.querySelector('[data-close]').onclick=()=>ov.close();ov.onclose=()=>ov.remove();
+    form.onsubmit=e=>{e.preventDefault();const w=Number(form.elements.w.value),h=Number(form.elements.h.value);if(!Number.isInteger(w)||!Number.isInteger(h)||w<1||h<1||w>f.cols||h>Warehouse3D.planRows(f)){$('mpCartSizeError').textContent='外枠に収まる1以上の整数を入力してください';return;}r.w=w;r.h=h;r.x=Math.max(0,Math.min(r.x,f.cols-w));r.y=Math.max(0,Math.min(r.y,Warehouse3D.planRows(f)-h));saveDB();mpRender();ov.close();};ov.showModal();
+  };
+  $('mpMaterialRoom').onclick=()=>{
+    const f=mpFloor(),rooms=f.rects.filter(WarehouseV57.isMaterialRoom);if(!rooms.length){alert('このフロアには「資材」という名前の四角がありません。');return;}
+    const ov=document.createElement('dialog');ov.id='mpMaterialRoomDialog';ov.style.cssText='border:0;border-radius:16px;padding:20px;width:min(440px,92vw);font-size:17px';
+    ov.innerHTML='<form><h3>資材の部屋</h3><label>区画 <select name="room" style="font:inherit;max-width:100%"></select></label><p>入口は地図の下側の壁です。</p><label>入口を左右へ <input name="offset" type="range" step="0.01" style="display:block;width:100%;margin:18px 0"></label><output style="display:block;margin:12px 0"></output><p style="font-size:14px">−で左、＋で右。部屋の中には入れません。</p><button class="mp-tb" type="submit">適用</button> <button class="mp-tb" type="button" data-auto>パレットの空きに合わせる</button> <button class="mp-tb" type="button" data-close>とじる</button></form>';
+    document.body.append(ov);const form=ov.querySelector('form'),select=form.elements.room,slider=form.elements.offset;
+    rooms.forEach((r,i)=>{const o=document.createElement('option');o.value=i;o.textContent='資材（左 '+r.x+'・上 '+r.y+'）';select.append(o);});
+    const report=()=>{ov.querySelector('output').textContent='中央から '+Number(slider.value).toFixed(2)+' マス';};
+    const sync=()=>{const a=WarehouseV57.materialRoomLayout(rooms[Number(select.value)],f);slider.min=-a.maxOffset;slider.max=a.maxOffset;slider.value=a.doorOffset;report();};select.onchange=sync;slider.oninput=report;
+    ov.querySelector('[data-auto]').onclick=()=>{const r=rooms[Number(select.value)],a=WarehouseV57.materialRoomLayout({...r,materialRoom:undefined},f);slider.value=a.doorOffset;report();};
+    ov.querySelector('[data-close]').onclick=()=>ov.close();ov.onclose=()=>ov.remove();form.onsubmit=e=>{e.preventDefault();const r=rooms[Number(select.value)];r.materialRoom={...r.materialRoom,doorOffset:Number(slider.value)};saveDB();mpRender();ov.close();};sync();ov.showModal();
+  };
+
   $('mpRoom').onclick=()=>{
     const f=mpFloor(),a=Warehouse3D.annexLayout(f)||{x:0,width:Math.min(10,f.cols),depth:8,openingX:2,openingWidth:2.5};
     const ov=document.createElement('dialog');ov.id='mpRoomDialog';ov.style.cssText='border:0;border-radius:16px;padding:20px;width:min(460px,94vw);max-height:90dvh;overflow:auto;font-size:17px;';
@@ -2902,7 +2934,7 @@
   });
 
   /* ===== ver50 地図から歩ける倉庫ストリートビュー ===== */
-  const WK={on:false,target:null,view:null,location:0,placing:false,selected:null};
+  const WK={on:false,target:null,view:null,location:0,placing:false,selected:null,wide:false};
   let wkThreePromise=null;
   function wkThree(){
     if(!wkThreePromise){
@@ -2930,7 +2962,7 @@
     const target=cells[WK.location]?.f===fi?cells[WK.location]:null;
     $('wkTitle').textContent=WK.target?WK.target.code:'倉庫を歩く';$('wkBar').classList.toggle('on',!!WK.target);
     if(WK.target){$('wkBarTxt').textContent=target?'登録場所 '+(WK.location+1)+' / '+cells.length:'別フロアに登録場所があります';$('wkBarBtn').textContent=cells.length>1?'次の場所':'場所を見る';$('wkBarBtn').onclick=()=>{if(target&&cells.length>1)WK.location=(WK.location+1)%cells.length;DB.maps.cur=cells[WK.location].f;wkBuild(false);};}
-    try{WK.view=WarehouseWalk.create($('wkStage'),DB,fi,{target,jump:!keepPos,position:keepPos&&WK.position?.f===fi?WK.position:null,minimap:$('wkMini'),controls:$('wkControls'),isPaused:()=>$('wkPad').classList.contains('on')||$('wkPlace').classList.contains('on'),onMessage:wkMsg,onPick:c=>{WK.selected=c;$('wkPlaceCode').value=WK.target?.code||'';$('wkPlaceState').value='r';$('wkPlaceNote').textContent='同じ部品のほかの登録場所は残ります。';$('wkPlace').classList.add('on');}});WK.on=true;WK.view.world.setReflections(!WK.reflectionOff);}
+    try{WK.view=WarehouseWalk.create($('wkStage'),DB,fi,{target,wide:WK.wide,jump:!keepPos,position:keepPos&&WK.position?.f===fi?WK.position:null,minimap:$('wkMini'),controls:$('wkControls'),isPaused:()=>$('wkPad').classList.contains('on')||$('wkPlace').classList.contains('on'),onMessage:wkMsg,onPick:c=>{WK.selected=c;$('wkPlaceCode').value=WK.target?.code||'';$('wkPlaceState').value='r';$('wkPlaceNote').textContent='同じ部品のほかの登録場所は残ります。';$('wkPlace').classList.add('on');}});WK.on=true;WK.view.world.setReflections(!WK.reflectionOff);}
     catch(e){wkClose();alert(e.message||'3Dを表示できません。');}
   }
   // 🔍 数字パッド：数字を打って「決定」→ C 部品／B 中間品／A 完成品 を選ぶ
@@ -2957,6 +2989,7 @@
       if(/^[0-9]$/.test(e.key))wkPadKey(e.key);else if(/^[abc]$/i.test(e.key)&&$('wkKind').style.display==='grid')wkPickKind(e.key.toUpperCase());else if(e.key==='Backspace')wkPadKey('del');else if(e.key==='Enter')wkPadKey('go');else if(e.key==='Escape')$('wkPad').classList.remove('on');
     });
     $('w3Walk').onclick=()=>{const target=n3Selected?Warehouse3D.find(DB,n3Selected):null;n3Close();wkOpen(target);};
+    $('wkWide').onclick=()=>{WK.wide=!WK.wide;WK.view?.setWide(WK.wide);$('wkWide').setAttribute('aria-pressed',String(WK.wide));$('wkWide').textContent=WK.wide?'広角 ON':'広角';};
     $('wkOverview').onclick=()=>{const code=WK.target&&WK.target.code;wkClose();n3Open(code);};
     $('walkBtn').onclick=()=>wkOpen(null);$('mpWalk').onclick=()=>wkOpen(mpPart?Warehouse3D.find(DB,mpPart):null);$('wkClose').onclick=wkClose;
     $('wkFind').onclick=()=>{wkCode='';wkPadShow();$('wkPadNote').textContent='';$('wkSearchCode').value='';$('wkPad').classList.add('on');};

@@ -24,7 +24,7 @@
     const T=root.THREE,f=db.maps.floors[fi],world=root.Warehouse3D.createWorld(db,fi,{walk:true});
     const {scene,W,D}=world,nav=navigation(W,D,world.blockers);
     const renderer=new T.WebGLRenderer({antialias:true});root.Warehouse3D.configure(renderer);renderer.shadowMap.enabled=false;renderer.toneMappingExposure=1.05;stage.replaceChildren(renderer.domElement);
-    const cam=new T.PerspectiveCamera(68,1,.08,Math.max(W,D)*3),ray=new T.Raycaster();
+    const cam=new T.PerspectiveCamera(opts.wide?95:60,1,.08,Math.max(W,D)*3),ray=new T.Raycaster();
     const door=f.rects.find(r=>r.type==='door');
     let start=nav.nearest(opts.position?.x??(door?(door.x+door.w/2)*S:W/2),opts.position?.z??(door?(door.y+door.h/2)*S:D-2));
     if(start<0){root.Warehouse3D.dispose(scene);renderer.dispose();renderer.forceContextLoss();renderer.domElement.remove();throw new Error('歩ける通路がありません。マップの通路を確認してください。');}
@@ -96,7 +96,7 @@
       world.updateCamera?.(cam);renderer.render(scene,cam);
     }
     raf=requestAnimationFrame(loop);
-    return {world,nav,cam,renderer,focus,getPosition:()=>({x,z,yaw,pitch,f:fi}),setPlacing(on){placing=on;selection=null;route=[];updateRoute();if(on){arrowGroup.visible=footprint.visible=false;tell('登録したい黒いパレットをタップ');}else focus(target,false);updateSteps();},destroy(){dead=true;cancelAnimationFrame(raf);ro.disconnect();listeners.forEach(([n,fn])=>stage.removeEventListener(n,fn));mini?.removeEventListener('click',miniClick);root.removeEventListener('keydown',keyboard);root.removeEventListener('keyup',keyboard);root.removeEventListener('blur',reset);control?.removeEventListener('pointerdown',controlDown);control?.removeEventListener('pointerup',controlUp);control?.removeEventListener('pointercancel',controlUp);root.Warehouse3D.dispose(scene);renderer.dispose();renderer.forceContextLoss();renderer.domElement.remove();}};
+    return {world,nav,cam,renderer,focus,setWide(on){cam.fov=on?95:60;cam.updateProjectionMatrix();},getPosition:()=>({x,z,yaw,pitch,f:fi}),setPlacing(on){placing=on;selection=null;route=[];updateRoute();if(on){arrowGroup.visible=footprint.visible=false;tell('登録したい黒いパレットをタップ');}else focus(target,false);updateSteps();},destroy(){dead=true;cancelAnimationFrame(raf);ro.disconnect();listeners.forEach(([n,fn])=>stage.removeEventListener(n,fn));mini?.removeEventListener('click',miniClick);root.removeEventListener('keydown',keyboard);root.removeEventListener('keyup',keyboard);root.removeEventListener('blur',reset);control?.removeEventListener('pointerdown',controlDown);control?.removeEventListener('pointerup',controlUp);control?.removeEventListener('pointercancel',controlUp);root.Warehouse3D.dispose(scene);renderer.dispose();renderer.forceContextLoss();renderer.domElement.remove();}};
   }
   root.WarehouseWalk={navigation,palletCell,create};
 })(window);

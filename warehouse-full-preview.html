@@ -9,7 +9,8 @@
 <aside id="miniBox"><canvas id="mini" width="260" height="300" aria-label="小地図。通路をタップして移動"></canvas><small>通路をタップして移動</small></aside>
 <p class="hint">スワイプで見回す · 床の矢印で移動<br>ver57 · 棚番エリアは2台を背中合わせにした4列</p><div id="loading">倉庫を準備しています…</div>
 <dialog id="mapDialog"><div class="dialog-head"><h2>倉庫の全体図</h2><button id="closeMap" type="button">とじる</button></div><p>通路をタップすると、その場所から歩けます。<br>白い区画はパレット、右下は「棚番の品」です。</p><label>操作 <select id="mapTool"><option value="move">通路を選んで移動</option><option value="concrete">コンクリートに塗る</option><option value="green">緑の床に塗る</option></select></label><div id="mapSpace"><canvas id="fullMap" width="700" height="820" aria-label="全体図。通路を選ぶ"></canvas></div><div id="mapNote" role="status">配置は送ってもらった全体図をもとにしています。</div></dialog>
-<script src="vendor/three-r128.min.js"></script><script src="vendor/three-r128-reflector.js"></script><script src="warehouse-materials.js"></script><script src="warehouse3d.js"></script><script src="warehouse-walk.js"></script><script src="warehouse-layout.js"></script>
+<script src="vendor/three-r128.min.js"></script><script src="vendor/three-r128-reflector.js"></script><script src="warehouse-materials.js"></script><script src="warehouse-ver57.js?v=57-cart-room"></script>
+<script src="warehouse3d.js"></script><script src="warehouse-walk.js"></script><script src="warehouse-layout.js"></script>
 <script>
 (()=>{
 'use strict';
