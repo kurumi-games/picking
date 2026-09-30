@@ -5,7 +5,14 @@
   const specs=Object.freeze({ductunit:{label:'ダクト機器',w:1.85,d:1.8,h:6.7},printerstand:{label:'プリンター台',w:1.65,d:1.8,h:3.0},papercabinet:{label:'書類棚',w:1.9,d:1.9,h:3.0},materialshelf:{label:'資材棚',w:5.8,d:1.9,h:7.2}});
   function layout(r){
     const spec=specs[r.fixture];if(r.type!=='officefixture'||!spec||![r.x,r.y,r.w,r.h].every(Number.isFinite)||r.w<=0||r.h<=0)return null;
-    const dirs=['north','east','south','west'],turn=Math.max(0,dirs.indexOf(r.back||'north')),w=turn%2?spec.d:spec.w,d=turn%2?spec.w:spec.d,scale=Math.min(r.w*2/w,r.h*2/d);
+    const dirs=['north','east','south','west'];let turn=Math.max(0,dirs.indexOf(r.back||'north'));
+    if(r.fixture==='materialshelf'){
+      // Legacy rectangles can be resized lengthwise without changing back. Keep the rack's front along its long edge.
+      if(r.w!==r.h&&turn%2!==Number(r.h>r.w))turn=(turn+1)%4;
+      const scaleX=(turn%2?r.h:r.w)*2/spec.w,scaleZ=(turn%2?r.w:r.h)*2/spec.d;
+      return {x:(r.x+r.w/2)*2,z:(r.y+r.h/2)*2,w:r.w*2,d:r.h*2,h:spec.h,scaleX,scaleZ,angle:-turn*Math.PI/2};
+    }
+    const w=turn%2?spec.d:spec.w,d=turn%2?spec.w:spec.d,scale=Math.min(r.w*2/w,r.h*2/d);
     return {x:(r.x+r.w/2)*2,z:(r.y+r.h/2)*2,w:w*scale,d:d*scale,h:spec.h,scale,angle:-turn*Math.PI/2};
   }
   function create(T,r){
@@ -68,7 +75,7 @@
       const cv=document.createElement('canvas');cv.width=128;cv.height=512;const g=cv.getContext('2d');g.fillStyle='#eeeeea';g.fillRect(0,0,128,512);g.fillStyle='#4a5555';g.font='48px sans-serif';g.textAlign='center';['A3','A4','B4',''].forEach((s,i)=>g.fillText(s,64,82+i*128));const tex=new T.CanvasTexture(cv);tex.encoding=T.sRGBEncoding;mesh(new T.PlaneGeometry(.23,1.16),new T.MeshStandardMaterial({map:tex,roughness:.85}),-.79,2.06,.91);
     }
     for(const [m,items] of batches){const inst=new T.InstancedMesh(boxGeo,m,items.length);items.forEach((v,i)=>{dummy.position.set(v[0],v[1],v[2]);dummy.scale.set(v[3],v[4],v[5]);dummy.quaternion.identity();dummy.updateMatrix();inst.setMatrixAt(i,dummy.matrix);});inst.frustumCulled=false;inst.castShadow=inst.receiveShadow=true;group.add(inst);}
-    group.position.set(a.x,0,a.z);group.rotation.y=a.angle;group.scale.set(a.scale,1,a.scale);return group;
+    group.position.set(a.x,0,a.z);group.rotation.y=a.angle;group.scale.set(a.scaleX??a.scale,1,a.scaleZ??a.scale);return group;
   }
   root.WarehouseOfficeFixtures={specs,layout,create};
 })(window);
