@@ -555,6 +555,7 @@
   #wkWide[aria-pressed="true"]{background:#c4f0e0;color:#164c3f;}
   @media(max-width:480px){.wk-top{gap:5px;padding-left:8px;padding-right:8px}.wk-top button{padding:9px 10px;font-size:13px}.wk-top span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}}
   .mp-rect.t-cartreturn{background:rgba(255,255,255,.06)!important;border:3px solid #fff!important;box-shadow:0 0 0 1px #65746d,inset 0 0 0 1px #65746d;color:#1f3930;}
+  .mp-rect.t-officefixture{background:#bac6bd!important;border-color:#596f65;color:#233b31;}
   /* Independent floor marking: no fill; only its edges receive editor gestures. */
   .mp-rect.t-yellowline{background:transparent!important;border:3px solid #b6a24c!important;border-radius:0;pointer-events:none;z-index:5;}
   .mp-rect.t-yellowline.sel{z-index:8;}
@@ -569,7 +570,8 @@
 <link rel="stylesheet" href="warehouse3d.css?v=51">
 <script src="warehouse-materials.js?v=56"></script>
 <script src="warehouse-ver57.js?v=57-cart-room"></script>
-<script src="warehouse3d.js?v=62.1"></script>
+<script src="warehouse-office-fixtures.js?v=63"></script>
+<script src="warehouse3d.js?v=63-office-fixtures"></script>
 <script src="warehouse-walk.js?v=61-yellowline"></script>
 </head>
 <body>
@@ -579,7 +581,7 @@
   <div class="wrap">
     <div class="home-title">
       <h1>ピッキング補助</h1>
-      <div class="ver-tag">ver62.1（PC椅子を削除）</div>
+      <div class="ver-tag">ver63（PC周辺設備を個別に配置・微調整）</div>
     </div>
     <div class="home-btns">
       <button class="home-btn go" id="goBtn">GO</button>
@@ -597,7 +599,7 @@
   <div class="wrap">
     <div style="text-align:center; padding:14px 0 16px;">
       <h2 style="font-size:22px; font-weight:900;">ピッキング補助</h2>
-      <div class="ver-tag" style="margin:4px 0 0;">ver62.1（PC椅子を削除）</div>
+      <div class="ver-tag" style="margin:4px 0 0;">ver63（PC周辺設備を個別に配置・微調整）</div>
     </div>
 
     <!-- 機種から選ぶ -->
@@ -727,6 +729,9 @@
       <button class="mp-tb" id="mpAddDoor">＋ 扉</button>
       <button class="mp-tb" id="mpAddShut">＋ シャッター</button>
       <button class="mp-tb" id="mpAddPC">＋ PC机</button>
+      <button class="mp-tb" id="mpAddDuctUnit">＋ ダクト機器</button>
+      <button class="mp-tb" id="mpAddPrinterStand">＋ プリンター台</button>
+      <button class="mp-tb" id="mpAddPaperCabinet">＋ 書類棚</button>
       <button class="mp-tb" id="mpAddCartBay">＋ 台車置き場</button>
       <button class="mp-tb" id="mpAddCartReturn">＋ 空台車返却</button>
       <button class="mp-tb" id="mpAddYellowLine">＋ 黄線</button>
@@ -741,6 +746,7 @@
       <button class="mp-tb" id="mpColor">色</button>
       <button class="mp-tb" id="mpPal">切り込み</button>
       <button class="mp-tb" id="mpRot">回転</button>
+      <button class="mp-tb" id="mpEquipmentPosition" style="display:none">位置・寸法（微調整）</button>
       <button class="mp-tb" id="mpCartSize" style="display:none">台車置き場の寸法</button>
       <label id="mpDeskDirection" class="mp-tb" style="display:none">机の背 <select id="mpDeskBack" style="font:inherit;padding:4px" aria-label="PC机の背を向ける方向"><option value="north">上 ↑</option><option value="east">右 →</option><option value="south">下 ↓</option><option value="west">左 ←</option></select></label>
       <button class="mp-tb" id="mpDup">複製</button>
@@ -1934,13 +1940,14 @@
       });
     }
     const selected=mpGetSel(),isPC=selected?.type==='pcdesk';
+    $('mpEquipmentPosition').style.display=isPC||selected?.type==='officefixture'?'':'none';
     $('mpCartSize').style.display=['cartbay','cartreturn','yellowline'].includes(selected?.type)?'':'none';
     $('mpCartSize').textContent=selected?.type==='yellowline'?'黄線枠の寸法':selected?.type==='cartreturn'?'返却区画の寸法':'台車置き場の寸法';
     const canYellow=!!selected&&!selected.type;
     $('mpYellowBorder').style.display=canYellow?'':'none';
     $('mpYellowBorder').textContent=selected&&Warehouse3D.areaYellowLine(selected)?'区画の黄線：描く':'区画の黄線：描かない';
     $('mpYellowBorder').setAttribute('aria-pressed',String(!!selected&&Warehouse3D.areaYellowLine(selected)));
-    for(const id of ['mpParts','mpShape','mpColor','mpPal'])$(id).style.display=selected?.type==='yellowline'?'none':'';
+    for(const id of ['mpParts','mpShape','mpColor','mpPal'])$(id).style.display=['yellowline','officefixture'].includes(selected?.type)?'none':'';
     $('mpDeskDirection').style.display=isPC?'block':'none';if(isPC)$('mpDeskBack').value=selected.back||'north';
     const on = mpSel!=null;
     $('mpSelTools').style.display = on ? 'flex' : 'none';
@@ -2509,12 +2516,13 @@
   $('mpsClose').onclick=stopMapScan;
   function mpGetSel(){ return mpFloor().rects.find(r=>r.id===mpSel); }
   function mpSelect(id){ mpSel=id; mpRender(); }
-  function mpAddRect(w,h,type,label){
+  function mpAddRect(w,h,type,label,extra){
     const st=$('mpStage').getBoundingClientRect();
     const f=mpFloor();
     const cx=((st.width/2)-mpTx)/mpScale/MP_CELL, cy=((st.height/2)-mpTy)/mpScale/MP_CELL;
     const r={ id:mpSeq(), x:Math.max(0,Math.min(f.cols-w,Math.round(cx-w/2))), y:Math.max(0,Math.min(Warehouse3D.planRows(f)-h,Math.round(cy-h/2))), w, h, label:label||'', color:MP_COLORS[0] };
     if(type) r.type=type;if(type==='pcdesk')r.back='north';if(type==='cartbay')r.cartTurn=0;
+    if(extra)Object.assign(r,extra);
     f.rects.push(r); mpSelect(r.id); saveDB();
   }
 
@@ -2528,6 +2536,7 @@
   $('mpAddDoor').onclick = ()=> mpAddRect(2,1,'door','扉');
   $('mpAddShut').onclick = ()=> mpAddRect(5,1,'shut');
   $('mpAddPC').onclick = ()=> mpAddRect(2,3,'pcdesk','PC机');
+  for(const [id,fixture] of [['mpAddDuctUnit','ductunit'],['mpAddPrinterStand','printerstand'],['mpAddPaperCabinet','papercabinet']])$(id).onclick=()=>mpAddRect(1,1,'officefixture',WarehouseOfficeFixtures.specs[fixture].label,{fixture,back:'north'});
   $('mpAddCartBay').onclick = ()=> mpAddRect(4,3,'cartbay','台車置き場');
   $('mpAddCartReturn').onclick = ()=> mpAddRect(2,4,'cartreturn','空台車返却');
   $('mpAddYellowLine').onclick = ()=> mpAddRect(4,3,'yellowline','黄線');
@@ -2541,7 +2550,7 @@
   $('mpYellowBorder').onclick=()=>{const r=mpGetSel();if(!r||r.type)return;r.drawYellowLine=!Warehouse3D.areaYellowLine(r);mpRender();saveDB();};
   $('mpParts').onclick = ()=>{
     const r=mpGetSel(); if(!r) return;
-    if(r.type==='yellowline')return;
+    if(['yellowline','officefixture'].includes(r.type))return;
     const cur=(r.parts||[]).join(' ');
     const v=prompt('この場所に置く部品コード（スペース区切りで複数OK）\n例: C00007300 C00006846', cur);
     if(v===null) return;
@@ -2575,7 +2584,7 @@
   $('mpDeskBack').onchange=e=>{const r=mpGetSel();if(r?.type==='pcdesk')mpDeskTurn(r,e.target.value);};
   $('mpRot').onclick = ()=>{
     const r=mpGetSel(); if(!r) return;
-    if(r.type==='pcdesk'){const dirs=['north','east','south','west'];mpDeskTurn(r,dirs[(dirs.indexOf(r.back||'north')+1)%4]);return;}
+    if(['pcdesk','officefixture'].includes(r.type)){const dirs=['north','east','south','west'];mpDeskTurn(r,dirs[(dirs.indexOf(r.back||'north')+1)%4]);return;}
     const f=mpFloor();
     const w=r.h, h=r.w;
     r.x=Math.max(0, Math.min(f.cols-w, r.x));
@@ -2630,6 +2639,18 @@
     for(let py=Math.min(a.y,y);py<=Math.max(a.y,y);py++)for(let px=Math.min(a.x,x);px<=Math.max(a.x,x);px++)if(Warehouse3D.insidePlan(f,px,py)){const key=px+','+py;if(mpSurface==='erase')delete f.floorTiles[key];else f.floorTiles[key]=mpSurface;}
     mpSurfaceCorner=null;saveDB();surfaceNote();mpRender();
   }
+
+  $('mpEquipmentPosition').onclick=()=>{
+    const r=mpGetSel();if(!['pcdesk','officefixture'].includes(r?.type))return;const f=mpFloor();
+    const ov=document.createElement('dialog');ov.id='mpEquipmentDialog';ov.style.cssText='border:0;border-radius:16px;padding:20px;width:min(420px,92vw);font-size:17px';
+    ov.innerHTML='<form><h3>位置・寸法（微調整）</h3><p>0.25マスずつ調整できます</p>'+[['x','左から'],['y','上から'],['w','横幅'],['h','奥行き']].map(([key,title])=>'<label style="display:flex;justify-content:space-between;gap:12px;margin:10px 0">'+title+'<input name="'+key+'" type="number" min="'+(['w','h'].includes(key)?'.25':'0')+'" step=".25" required style="font:inherit;width:110px;padding:6px"></label>').join('')+'<label>背面の向き <select name="back" style="font:inherit"><option value="north">上 ↑</option><option value="east">右 →</option><option value="south">下 ↓</option><option value="west">左 ←</option></select></label><p id="mpEquipmentError" role="alert" style="color:#a22"></p><button class="mp-tb" type="submit">適用</button> <button class="mp-tb" type="button" data-close>とじる</button></form>';
+    document.body.append(ov);const form=ov.querySelector('form');for(const key of ['x','y','w','h'])form.elements[key].value=r[key];form.elements.back.value=r.back||'north';
+    let lastBack=form.elements.back.value;form.elements.back.onchange=()=>{const dirs=['north','east','south','west'],next=form.elements.back.value;if(Math.abs(dirs.indexOf(next)-dirs.indexOf(lastBack))%2){const w=form.elements.w.value;form.elements.w.value=form.elements.h.value;form.elements.h.value=w;}lastBack=next;};
+    ov.querySelector('[data-close]').onclick=()=>ov.close();ov.onclose=()=>ov.remove();
+    form.onsubmit=e=>{e.preventDefault();const values=Object.fromEntries(['x','y','w','h'].map(k=>[k,Number(form.elements[k].value)])),{x,y,w,h}=values;
+      if(!Object.values(values).every(Number.isFinite)||x<0||y<0||w<.25||h<.25||x+w>f.cols||y+h>Warehouse3D.planRows(f)){$('mpEquipmentError').textContent='地図の外枠に収まる位置と寸法を指定してください';return;}
+      Object.assign(r,values,{back:form.elements.back.value});mpRender();saveDB();ov.close();};ov.showModal();
+  };
   $('mpCartSize').onclick=()=>{
     const r=mpGetSel();if(!['cartbay','cartreturn','yellowline'].includes(r?.type))return;const f=mpFloor();
     const ov=document.createElement('dialog');ov.id='mpCartSizeDialog';ov.style.cssText='border:0;border-radius:16px;padding:20px;width:min(420px,92vw);font-size:17px';
@@ -2840,16 +2861,19 @@
         return;
       }
       if(mode==='move' && tgt){
-        const dx=Math.round((e.clientX-start.x)/mpScale/MP_CELL);
-        const dy=Math.round((e.clientY-start.y)/mpScale/MP_CELL);
+        const step=tgt.type==='officefixture'?.25:1;
+        const dx=Math.round((e.clientX-start.x)/mpScale/MP_CELL/step)*step;
+        const dy=Math.round((e.clientY-start.y)/mpScale/MP_CELL/step)*step;
         const nx=Math.max(0,Math.min(f.cols-tgt.w, start.rx+dx));
         const ny=Math.max(0,Math.min(Warehouse3D.planRows(f)-tgt.h, start.ry+dy));
-        if(nx!==tgt.x || ny!==tgt.y){ tgt.x=nx; tgt.y=ny; mpRender(); }
+        if(nx!==tgt.x || ny!==tgt.y){if(tgt.type==='officefixture')tapped=null; tgt.x=nx; tgt.y=ny; mpRender(); }
       } else if(mode==='resize' && tgt){
-        const dw=Math.round((e.clientX-start.x)/mpScale/MP_CELL);
-        const dh=Math.round((e.clientY-start.y)/mpScale/MP_CELL);
-        tgt.w=Math.max(1,Math.min(f.cols-tgt.x, start.w+dw));
-        tgt.h=Math.max(1,Math.min(Warehouse3D.planRows(f)-tgt.y, start.h+dh));
+        const step=tgt.type==='officefixture'?.25:1;
+        const dw=Math.round((e.clientX-start.x)/mpScale/MP_CELL/step)*step;
+        const dh=Math.round((e.clientY-start.y)/mpScale/MP_CELL/step)*step;
+        if(tgt.type==='officefixture'&&(dw||dh))tapped=null;
+        tgt.w=Math.max(step,Math.min(f.cols-tgt.x, start.w+dw));
+        tgt.h=Math.max(step,Math.min(Warehouse3D.planRows(f)-tgt.y, start.h+dh));
         mpRender();
       } else if(mode==='pan'){
         mpTx=start.tx+(e.clientX-start.x);
