@@ -555,12 +555,22 @@
   #wkWide[aria-pressed="true"]{background:#c4f0e0;color:#164c3f;}
   @media(max-width:480px){.wk-top{gap:5px;padding-left:8px;padding-right:8px}.wk-top button{padding:9px 10px;font-size:13px}.wk-top span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}}
   .mp-rect.t-cartreturn{background:rgba(255,255,255,.06)!important;border:3px solid #fff!important;box-shadow:0 0 0 1px #65746d,inset 0 0 0 1px #65746d;color:#1f3930;}
+  /* Independent floor marking: no fill; only its edges receive editor gestures. */
+  .mp-rect.t-yellowline{background:transparent!important;border:3px solid #b6a24c!important;border-radius:0;pointer-events:none;z-index:5;}
+  .mp-rect.t-yellowline.sel{z-index:8;}
+  .mp-rect.t-yellowline .lbl,.mp-rect.t-yellowline .mp-pn{display:none;}
+  .t-yellowline .mp-line-edge,.t-yellowline .mp-handle{pointer-events:auto;}
+  .mp-line-edge{position:absolute;}
+  .mp-line-edge.top,.mp-line-edge.bottom{left:0;right:0;height:8px;}
+  .mp-line-edge.top{top:0}.mp-line-edge.bottom{bottom:0}
+  .mp-line-edge.left,.mp-line-edge.right{top:0;bottom:0;width:8px;}
+  .mp-line-edge.left{left:0}.mp-line-edge.right{right:0}
 </style>
 <link rel="stylesheet" href="warehouse3d.css?v=51">
 <script src="warehouse-materials.js?v=56"></script>
 <script src="warehouse-ver57.js?v=57-cart-room"></script>
-<script src="warehouse3d.js?v=60-cart-return"></script>
-<script src="warehouse-walk.js?v=60-cart-return"></script>
+<script src="warehouse3d.js?v=61-yellowline"></script>
+<script src="warehouse-walk.js?v=61-yellowline"></script>
 </head>
 <body>
 
@@ -569,7 +579,7 @@
   <div class="wrap">
     <div class="home-title">
       <h1>ピッキング補助</h1>
-      <div class="ver-tag">ver60（空台車の返却区画・白線）</div>
+      <div class="ver-tag">ver61（独立した黄線枠・区画の黄線切替）</div>
     </div>
     <div class="home-btns">
       <button class="home-btn go" id="goBtn">GO</button>
@@ -587,7 +597,7 @@
   <div class="wrap">
     <div style="text-align:center; padding:14px 0 16px;">
       <h2 style="font-size:22px; font-weight:900;">ピッキング補助</h2>
-      <div class="ver-tag" style="margin:4px 0 0;">ver60（空台車の返却区画・白線）</div>
+      <div class="ver-tag" style="margin:4px 0 0;">ver61（独立した黄線枠・区画の黄線切替）</div>
     </div>
 
     <!-- 機種から選ぶ -->
@@ -719,6 +729,7 @@
       <button class="mp-tb" id="mpAddPC">＋ PC机</button>
       <button class="mp-tb" id="mpAddCartBay">＋ 台車置き場</button>
       <button class="mp-tb" id="mpAddCartReturn">＋ 空台車返却</button>
+      <button class="mp-tb" id="mpAddYellowLine">＋ 黄線</button>
       <button class="mp-tb" id="mpAddNest">＋ ネステナー</button>
       <button class="mp-tb" id="mpAddLoad">＋ 荷物</button>
       <button class="mp-tb" id="mpUndo" disabled title="1つ前の状態に戻す">↩ 1つ戻す</button>
@@ -735,6 +746,7 @@
       <button class="mp-tb" id="mpDup">複製</button>
       <button class="mp-tb" id="mpParts">部品</button>
       <button class="mp-tb" id="mpShape">3D形状</button>
+      <button class="mp-tb" id="mpYellowBorder" style="display:none" aria-pressed="true">区画の黄線：描く</button>
       <button class="mp-tb warn" id="mpDel">削除</button>
     </div>
     <!-- 地図の設定（何も選んでない時だけ出る） -->
@@ -1877,7 +1889,7 @@
     if(mpSurfaceCorner&&mpSurfaceFloor===f)g.innerHTML+='<rect x="'+mpSurfaceCorner.x*MP_CELL+'" y="'+mpSurfaceCorner.y*MP_CELL+'" width="'+MP_CELL+'" height="'+MP_CELL+'" fill="#ffd843" stroke="#805500" stroke-width="2"/>';
     // かぶり検出（選択中とマスを共有する四角）
     const s = f.rects.find(q=>q.id===mpSel);
-    const ovl = s ? f.rects.filter(q=> q.id!==s.id &&
+    const ovl = s&&s.type!=='yellowline' ? f.rects.filter(q=> q.type!=='yellowline' && q.id!==s.id &&
       q.x < s.x+s.w && s.x < q.x+q.w && q.y < s.y+s.h && s.y < q.y+q.h
     ).map(q=>q.id) : [];
     // 四角
@@ -1906,6 +1918,7 @@
       const linked=Warehouse3D.locations(DB).filter(c=>c.f===DB.maps.cur&&c.x<r.x+r.w&&c.x+c.w>r.x&&c.y<r.y+r.h&&c.y+c.h>r.y);
       const pn=linked.length?'<span class="mp-pn">📍'+new Set(linked.map(c=>c.code)).size+'</span>':'';
       d.innerHTML=corners+pn+'<div class="lbl">'+String(r.label||'').replace(/</g,'&lt;')+'</div><div class="mp-handle"></div>';
+      if(r.type==='yellowline'){d.title='黄線：枠の縁をドラッグして移動';d.innerHTML=['top','right','bottom','left'].map(edge=>'<div class="mp-line-edge '+edge+'"></div>').join('')+'<div class="mp-handle"></div>';}
       $('mpWorld').appendChild(d);
     });
     // 部品モード：その部品の塗りマスを重ねる
@@ -1921,8 +1934,13 @@
       });
     }
     const selected=mpGetSel(),isPC=selected?.type==='pcdesk';
-    $('mpCartSize').style.display=['cartbay','cartreturn'].includes(selected?.type)?'':'none';
-    $('mpCartSize').textContent=selected?.type==='cartreturn'?'返却区画の寸法':'台車置き場の寸法';
+    $('mpCartSize').style.display=['cartbay','cartreturn','yellowline'].includes(selected?.type)?'':'none';
+    $('mpCartSize').textContent=selected?.type==='yellowline'?'黄線枠の寸法':selected?.type==='cartreturn'?'返却区画の寸法':'台車置き場の寸法';
+    const canYellow=!!selected&&!selected.type;
+    $('mpYellowBorder').style.display=canYellow?'':'none';
+    $('mpYellowBorder').textContent=selected?.drawYellowLine===false?'区画の黄線：描かない':'区画の黄線：描く';
+    $('mpYellowBorder').setAttribute('aria-pressed',String(selected?.drawYellowLine!==false));
+    for(const id of ['mpParts','mpShape','mpColor','mpPal'])$(id).style.display=selected?.type==='yellowline'?'none':'';
     $('mpDeskDirection').style.display=isPC?'block':'none';if(isPC)$('mpDeskBack').value=selected.back||'north';
     const on = mpSel!=null;
     $('mpSelTools').style.display = on ? 'flex' : 'none';
@@ -2512,6 +2530,7 @@
   $('mpAddPC').onclick = ()=> mpAddRect(2,3,'pcdesk','PC机');
   $('mpAddCartBay').onclick = ()=> mpAddRect(4,3,'cartbay','台車置き場');
   $('mpAddCartReturn').onclick = ()=> mpAddRect(2,4,'cartreturn','空台車返却');
+  $('mpAddYellowLine').onclick = ()=> mpAddRect(4,3,'yellowline','黄線');
   $('mpAddNest').onclick = ()=> mpAddRect(2,2,'nest');
   $('mpAddLoad').onclick = ()=> mpAddRect(2,2,'load');
   $('mpName').onclick = ()=>{
@@ -2519,8 +2538,10 @@
     const v=prompt('名前（例: ⑩、資材、A-①）', r.label||'');
     if(v!==null){ r.label=v.trim(); mpRender(); saveDB(); }
   };
+  $('mpYellowBorder').onclick=()=>{const r=mpGetSel();if(!r||r.type)return;r.drawYellowLine=r.drawYellowLine===false;mpRender();saveDB();};
   $('mpParts').onclick = ()=>{
     const r=mpGetSel(); if(!r) return;
+    if(r.type==='yellowline')return;
     const cur=(r.parts||[]).join(' ');
     const v=prompt('この場所に置く部品コード（スペース区切りで複数OK）\n例: C00007300 C00006846', cur);
     if(v===null) return;
@@ -2610,10 +2631,11 @@
     mpSurfaceCorner=null;saveDB();surfaceNote();mpRender();
   }
   $('mpCartSize').onclick=()=>{
-    const r=mpGetSel();if(!['cartbay','cartreturn'].includes(r?.type))return;const f=mpFloor();
+    const r=mpGetSel();if(!['cartbay','cartreturn','yellowline'].includes(r?.type))return;const f=mpFloor();
     const ov=document.createElement('dialog');ov.id='mpCartSizeDialog';ov.style.cssText='border:0;border-radius:16px;padding:20px;width:min(420px,92vw);font-size:17px';
     ov.innerHTML='<form><h3>台車置き場の寸法</h3><p>地図のマス数で指定</p><label>横 <input name="w" type="number" min="1" step="1" required style="width:80px;font:inherit"></label> <label>縦 <input name="h" type="number" min="1" step="1" required style="width:80px;font:inherit"></label><p id="mpCartSizeError" role="alert"></p><button class="mp-tb" type="submit">適用</button> <button class="mp-tb" type="button" data-close>とじる</button></form>';
     if(r.type==='cartreturn')ov.querySelector('h3').textContent='返却区画の寸法';
+    if(r.type==='yellowline')ov.querySelector('h3').textContent='黄線枠の寸法';
     document.body.append(ov);const form=ov.querySelector('form');form.elements.w.value=r.w;form.elements.h.value=r.h;
     ov.querySelector('[data-close]').onclick=()=>ov.close();ov.onclose=()=>ov.remove();
     form.onsubmit=e=>{e.preventDefault();const w=Number(form.elements.w.value),h=Number(form.elements.h.value);if(!Number.isInteger(w)||!Number.isInteger(h)||w<1||h<1||w>f.cols||h>Warehouse3D.planRows(f)){$('mpCartSizeError').textContent='外枠に収まる1以上の整数を入力してください';return;}r.w=w;r.h=h;r.x=Math.max(0,Math.min(r.x,f.cols-w));r.y=Math.max(0,Math.min(r.y,Warehouse3D.planRows(f)-h));saveDB();mpRender();ov.close();};ov.showModal();
