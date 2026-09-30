@@ -568,7 +568,7 @@
   <div class="wrap">
     <div class="home-title">
       <h1>ピッキング補助</h1>
-      <div class="ver-tag">ver58＋ver57追加（台車・資材室・消火器・広角）</div>
+      <div class="ver-tag">ver59（マップに「↩ 1つ戻す」・台車・資材室・消火器・広角）</div>
     </div>
     <div class="home-btns">
       <button class="home-btn go" id="goBtn">GO</button>
@@ -586,7 +586,7 @@
   <div class="wrap">
     <div style="text-align:center; padding:14px 0 16px;">
       <h2 style="font-size:22px; font-weight:900;">ピッキング補助</h2>
-      <div class="ver-tag" style="margin:4px 0 0;">ver58＋ver57追加（台車・資材室・消火器・広角）</div>
+      <div class="ver-tag" style="margin:4px 0 0;">ver59（マップに「↩ 1つ戻す」・台車・資材室・消火器・広角）</div>
     </div>
 
     <!-- 機種から選ぶ -->
@@ -719,6 +719,8 @@
       <button class="mp-tb" id="mpAddCartBay">＋ 台車置き場</button>
       <button class="mp-tb" id="mpAddNest">＋ ネステナー</button>
       <button class="mp-tb" id="mpAddLoad">＋ 荷物</button>
+      <button class="mp-tb" id="mpUndo" disabled title="1つ前の状態に戻す">↩ 1つ戻す</button>
+      <button class="mp-tb" id="mpRedo" disabled style="display:none" title="戻したのを取り消す">↪ 戻すのを取消</button>
     </div>
     <!-- 選択中だけ出る操作 -->
     <div class="mp-tools" id="mpSelTools" style="display:none; background:var(--panel-2); border-radius:10px; padding:8px;">
@@ -1818,6 +1820,10 @@
   };
   let mpScale=1, mpTx=0, mpTy=0, mpSel=null;
   let mpHits=[];   // 検索でヒットした四角のid
+  /* 戻す（Undo）の状態。saveDB側で積む */
+  const UNDO_KEY=DB_KEY+'_undo', UNDO_MAX=30, UNDO_PERSIST=5;
+  let undoStack=[], redoStack=[], undoLastAt=0, undoLastJSON=null;
+  try{ const u=JSON.parse(localStorage.getItem(UNDO_KEY)||'[]'); if(Array.isArray(u)) undoStack=u.filter(x=>typeof x==='string'); }catch(_){}
   function mpFloor(){ return DB.maps.floors[DB.maps.cur]; }
   function mpSeq(){ return DB.maps.floors.reduce((m,f)=>f.rects.reduce((mm,r)=>Math.max(mm,r.id||0),m),0)+1; }
   function mpApply(){ $('mpWorld').style.transform='translate('+mpTx+'px,'+mpTy+'px) scale('+mpScale+')'; }
@@ -2568,6 +2574,17 @@
     f.rects=f.rects.filter(q=>q.id!==mpSel);
     mpSelect(null); saveDB();
   };
+  $('mpUndo').onclick = ()=>{
+    if(!undoStack.length) return;
+    if(mpSurface) surfaceClose();
+    if(undoApply(undoStack, redoStack)){ mpSel=null; mpHits=[]; mpRender(); }
+  };
+  $('mpRedo').onclick = ()=>{
+    if(!redoStack.length) return;
+    if(mpSurface) surfaceClose();
+    if(undoApply(redoStack, undoStack)){ mpSel=null; mpHits=[]; mpRender(); }
+  };
+  undoButtons();
   let mpSurface=null,mpSurfaceCorner=null,mpSurfaceFloor=null,mpSurfaceUndo=[];
   const surfaceBar=document.createElement('div');surfaceBar.id='mpSurfaceBar';surfaceBar.hidden=true;surfaceBar.style.cssText='padding:10px;background:#fff;border:2px solid #26866a;border-radius:12px;margin:8px;';
   surfaceBar.innerHTML='<div id="mpSurfaceNote" role="status">塗る範囲の端を2か所タップ</div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px"><button class="mp-tb" data-surface="green">緑の床</button><button class="mp-tb" data-surface="concrete">コンクリート</button><button class="mp-tb" data-surface="erase">塗り分けを消す</button><button class="mp-tb" data-surface="hand">地図を動かす</button><button class="mp-tb" id="mpSurfaceUndo">1つ戻す</button><button class="mp-tb" id="mpSurfaceBase">全体の床材</button><button class="mp-tb" id="mpSurfaceDone">完了</button></div>';
@@ -3922,11 +3939,47 @@
   /* =================================================================
      部品登録（第2段階）
      ================================================================= */
-  function saveDB(){
+  /* ----- 戻す（Undo）：保存のたびに直前の状態を積んでおく ----- */
+  function undoPersist(){
+    if(!canLS) return;
+    try{ localStorage.setItem(UNDO_KEY, JSON.stringify(undoStack.slice(-UNDO_PERSIST))); }catch(_){ try{ localStorage.removeItem(UNDO_KEY); }catch(__){} }
+  }
+  function undoButtons(){
+    const u=$('mpUndo'), r=$('mpRedo'); if(!u) return;
+    u.disabled=!undoStack.length; u.textContent='↩ 1つ戻す'+(undoStack.length?'（'+undoStack.length+'）':'');
+    if(r){ r.disabled=!redoStack.length; r.style.display=redoStack.length?'':'none'; }
+  }
+  function undoPush(prevJSON){
+    if(!prevJSON || prevJSON===undoLastJSON) return;
+    const now=Date.now();
+    // ドラッグ中みたいに連続で保存されるときは、最初の1回だけ積む
+    if(now-undoLastAt<1200 && undoStack.length){ undoLastAt=now; return; }
+    undoStack.push(prevJSON); if(undoStack.length>UNDO_MAX) undoStack.shift();
+    redoStack=[]; undoLastAt=now; undoLastJSON=prevJSON;
+    undoPersist(); undoButtons();
+  }
+  function saveDB(opt){
     if(!DB.meaning) DB.meaning={}; if(!DB.place) DB.place={}; if(!DB.products) DB.products={};
-    if(canLS){ try{ localStorage.setItem(DB_KEY, JSON.stringify(DB)); }catch(e){ window.__memDB=DB; } }
+    const json=JSON.stringify(DB);
+    if(!(opt&&opt.noUndo)){
+      let prev=null;
+      if(canLS){ try{ prev=localStorage.getItem(DB_KEY); }catch(_){} }
+      else if(window.__memDBJSON) prev=window.__memDBJSON;
+      if(prev && prev!==json) undoPush(prev);
+    }
+    if(canLS){ try{ localStorage.setItem(DB_KEY, json); }catch(e){ window.__memDB=DB; } }
     else window.__memDB=DB;
+    window.__memDBJSON=json;
     dispatchEvent(new Event('warehouse-data-changed'));
+  }
+  function undoApply(fromStack, toStack){
+    if(!fromStack.length) return false;
+    const cur=JSON.stringify(DB);
+    let obj; try{ obj=JSON.parse(fromStack.pop()); }catch(_){ undoButtons(); return false; }
+    toStack.push(cur);
+    DB=obj; undoLastJSON=null; undoLastAt=0;
+    saveDB({noUndo:true}); undoPersist(); undoButtons();
+    return true;
   }
 
   /* ----- register sub-screen nav ----- */
