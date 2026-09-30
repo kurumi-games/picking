@@ -1,8 +1,8 @@
-/* Photo-referenced PC-area equipment. Dimensions are visual estimates, not measurements.
+/* Photo-referenced warehouse equipment and material shelves. Dimensions are visual estimates, not measurements.
    One map cell = 2 drawing units. Nothing is placed until a floor rectangle is added. */
 (function(root){
   'use strict';
-  const specs=Object.freeze({ductunit:{label:'ダクト機器',w:1.85,d:1.8,h:6.7},printerstand:{label:'プリンター台',w:1.65,d:1.8,h:3.0},papercabinet:{label:'書類棚',w:1.9,d:1.9,h:3.0}});
+  const specs=Object.freeze({ductunit:{label:'ダクト機器',w:1.85,d:1.8,h:6.7},printerstand:{label:'プリンター台',w:1.65,d:1.8,h:3.0},papercabinet:{label:'書類棚',w:1.9,d:1.9,h:3.0},materialshelf:{label:'資材棚',w:5.8,d:1.9,h:7.2}});
   function layout(r){
     const spec=specs[r.fixture];if(r.type!=='officefixture'||!spec||![r.x,r.y,r.w,r.h].every(Number.isFinite)||r.w<=0||r.h<=0)return null;
     const dirs=['north','east','south','west'],turn=Math.max(0,dirs.indexOf(r.back||'north')),w=turn%2?spec.d:spec.w,d=turn%2?spec.w:spec.d,scale=Math.min(r.w*2/w,r.h*2/d);
@@ -38,6 +38,26 @@
       box(0,1.69,.12,1.35,.15,1.36,blue);box(0,1.78,.15,1.14,.028,1.07,tan);
       box(0,2.21,0,1.56,.51,1.49,dark);box(0,2.5,-.05,1.57,.1,1.5,mat('#383d3d'));box(0,2.1,.76,1.1,.15,.04,mat('#111819'));box(0,2.02,.86,.87,.04,.05,dark);
       box(0,2.67,-.65,.96,.51,.08,dark);box(0,2.75,-.58,.8,.38,.015,paper);box(.57,2.55,.24,.2,.018,.47,mat('#505a59'));for(let i=0;i<3;i++)box(.58,2.566,.07+i*.11,.04,.015,.04,paper);
+    } else if(r.fixture==='materialshelf'){
+      // One empty, five-level grey steel rack. Adjacent racks remain independent map objects.
+      const painted=mat('#b8bdb6',.32),board=mat('#adb5b0',.26),holes=mat('#59645f'),bolt=mat('#9da8a2',.65);
+      for(const x of [-2.78,2.78])for(const z of [-.84,.84]){
+        // Punched angle uprights and flat feet, rather than round wire-cart pipes.
+        box(x,3.6,z,.105,7.2,.105,painted);
+        box(x+(x<0?.053:-.053),3.6,z,.11,7.2,.036,painted);
+        box(x,.055,z,.2,.11,.2,painted);
+        for(let y=.52;y<7.08;y+=.23)box(x,y,z+(z>0?.055:-.055),.031,.07,.009,holes);
+      }
+      for(const y of [.32,2.01,3.7,5.39,7.08]){
+        box(0,y,0,5.55,.065,1.68,board);
+        for(const z of [-.845,.845])box(0,y-.085,z,5.6,.19,.055,painted);
+        for(const x of [-2.765,2.765])box(x,y-.085,0,.065,.19,1.68,painted);
+        for(const x of [-1.5,0,1.5])box(x,y-.06,0,.07,.12,1.59,painted);
+        for(const x of [-2.78,2.78])for(const z of [-.901,.901])box(x,y-.035,z,.055,.055,.015,bolt);
+      }
+      // Slender rear braces establish the back; the front stays fully open.
+      rod([-2.7,.47,-.88],[2.7,3.55,-.88],.025,painted);
+      rod([2.7,.47,-.88],[-2.7,3.55,-.88],.025,painted);
     } else {
       // Open document slots over a closed lower cabinet. A3/A4/B4 labels are legible up close.
       for(const x of [-.88,.88])box(x,1.41,0,.12,2.78,1.79,cream);box(0,1.41,-.84,1.78,2.78,.1,cream);box(0,.08,0,1.88,.13,1.9,cream);box(0,2.86,0,1.9,.15,1.9,metal);

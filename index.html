@@ -570,7 +570,7 @@
 <link rel="stylesheet" href="warehouse3d.css?v=51">
 <script src="warehouse-materials.js?v=56"></script>
 <script src="warehouse-ver57.js?v=57-cart-room"></script>
-<script src="warehouse-office-fixtures.js?v=63"></script>
+<script src="warehouse-office-fixtures.js?v=64-material-shelf"></script>
 <script src="warehouse3d.js?v=63-office-fixtures"></script>
 <script src="warehouse-walk.js?v=61-yellowline"></script>
 </head>
@@ -581,7 +581,7 @@
   <div class="wrap">
     <div class="home-title">
       <h1>ピッキング補助</h1>
-      <div class="ver-tag">ver63（PC周辺設備を個別に配置・微調整）</div>
+      <div class="ver-tag">ver64（資材棚の配置・向き変更）</div>
     </div>
     <div class="home-btns">
       <button class="home-btn go" id="goBtn">GO</button>
@@ -599,7 +599,7 @@
   <div class="wrap">
     <div style="text-align:center; padding:14px 0 16px;">
       <h2 style="font-size:22px; font-weight:900;">ピッキング補助</h2>
-      <div class="ver-tag" style="margin:4px 0 0;">ver63（PC周辺設備を個別に配置・微調整）</div>
+      <div class="ver-tag" style="margin:4px 0 0;">ver64（資材棚の配置・向き変更）</div>
     </div>
 
     <!-- 機種から選ぶ -->
@@ -732,6 +732,7 @@
       <button class="mp-tb" id="mpAddDuctUnit">＋ ダクト機器</button>
       <button class="mp-tb" id="mpAddPrinterStand">＋ プリンター台</button>
       <button class="mp-tb" id="mpAddPaperCabinet">＋ 書類棚</button>
+      <button class="mp-tb" id="mpAddMaterialShelf">＋ 資材棚</button>
       <button class="mp-tb" id="mpAddCartBay">＋ 台車置き場</button>
       <button class="mp-tb" id="mpAddCartReturn">＋ 空台車返却</button>
       <button class="mp-tb" id="mpAddYellowLine">＋ 黄線</button>
@@ -2537,6 +2538,7 @@
   $('mpAddShut').onclick = ()=> mpAddRect(5,1,'shut');
   $('mpAddPC').onclick = ()=> mpAddRect(2,3,'pcdesk','PC机');
   for(const [id,fixture] of [['mpAddDuctUnit','ductunit'],['mpAddPrinterStand','printerstand'],['mpAddPaperCabinet','papercabinet']])$(id).onclick=()=>mpAddRect(1,1,'officefixture',WarehouseOfficeFixtures.specs[fixture].label,{fixture,back:'north'});
+  $('mpAddMaterialShelf').onclick=()=>mpAddRect(3,1,'officefixture','資材棚',{fixture:'materialshelf',back:'north'});
   $('mpAddCartBay').onclick = ()=> mpAddRect(4,3,'cartbay','台車置き場');
   $('mpAddCartReturn').onclick = ()=> mpAddRect(2,4,'cartreturn','空台車返却');
   $('mpAddYellowLine').onclick = ()=> mpAddRect(4,3,'yellowline','黄線');
