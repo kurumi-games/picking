@@ -569,7 +569,7 @@
 <link rel="stylesheet" href="warehouse3d.css?v=51">
 <script src="warehouse-materials.js?v=56"></script>
 <script src="warehouse-ver57.js?v=57-cart-room"></script>
-<script src="warehouse3d.js?v=61-yellowline"></script>
+<script src="warehouse3d.js?v=62-desk-lines"></script>
 <script src="warehouse-walk.js?v=61-yellowline"></script>
 </head>
 <body>
@@ -579,7 +579,7 @@
   <div class="wrap">
     <div class="home-title">
       <h1>ピッキング補助</h1>
-      <div class="ver-tag">ver61（独立した黄線枠・区画の黄線切替）</div>
+      <div class="ver-tag">ver62（PC机のサイズ・黄線の二重表示を修正）</div>
     </div>
     <div class="home-btns">
       <button class="home-btn go" id="goBtn">GO</button>
@@ -597,7 +597,7 @@
   <div class="wrap">
     <div style="text-align:center; padding:14px 0 16px;">
       <h2 style="font-size:22px; font-weight:900;">ピッキング補助</h2>
-      <div class="ver-tag" style="margin:4px 0 0;">ver61（独立した黄線枠・区画の黄線切替）</div>
+      <div class="ver-tag" style="margin:4px 0 0;">ver62（PC机のサイズ・黄線の二重表示を修正）</div>
     </div>
 
     <!-- 機種から選ぶ -->
@@ -1938,8 +1938,8 @@
     $('mpCartSize').textContent=selected?.type==='yellowline'?'黄線枠の寸法':selected?.type==='cartreturn'?'返却区画の寸法':'台車置き場の寸法';
     const canYellow=!!selected&&!selected.type;
     $('mpYellowBorder').style.display=canYellow?'':'none';
-    $('mpYellowBorder').textContent=selected?.drawYellowLine===false?'区画の黄線：描かない':'区画の黄線：描く';
-    $('mpYellowBorder').setAttribute('aria-pressed',String(selected?.drawYellowLine!==false));
+    $('mpYellowBorder').textContent=selected&&Warehouse3D.areaYellowLine(selected)?'区画の黄線：描く':'区画の黄線：描かない';
+    $('mpYellowBorder').setAttribute('aria-pressed',String(!!selected&&Warehouse3D.areaYellowLine(selected)));
     for(const id of ['mpParts','mpShape','mpColor','mpPal'])$(id).style.display=selected?.type==='yellowline'?'none':'';
     $('mpDeskDirection').style.display=isPC?'block':'none';if(isPC)$('mpDeskBack').value=selected.back||'north';
     const on = mpSel!=null;
@@ -2538,7 +2538,7 @@
     const v=prompt('名前（例: ⑩、資材、A-①）', r.label||'');
     if(v!==null){ r.label=v.trim(); mpRender(); saveDB(); }
   };
-  $('mpYellowBorder').onclick=()=>{const r=mpGetSel();if(!r||r.type)return;r.drawYellowLine=r.drawYellowLine===false;mpRender();saveDB();};
+  $('mpYellowBorder').onclick=()=>{const r=mpGetSel();if(!r||r.type)return;r.drawYellowLine=!Warehouse3D.areaYellowLine(r);mpRender();saveDB();};
   $('mpParts').onclick = ()=>{
     const r=mpGetSel(); if(!r) return;
     if(r.type==='yellowline')return;

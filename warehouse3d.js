@@ -80,12 +80,16 @@
     const anchor=gap?Math.max(gap[0]+1.9,Math.min(gap[1]-1.9,preferred)):preferred;
     return {preferred,wall:'north',ventX:Math.max(1.25,Math.min(W-1.25,anchor-2.5))};
   }
+  // Pallet/area outlines are opt-in; retain the existing forklift marking default.
+  function areaYellowLine(r){return r.drawYellowLine===true||(r.drawYellowLine!==false&&!r.type&&['リフト','フォークリフト'].includes(String(r.label||'').replace(/\s/g,'')));}
   function officeLayout(f){
     // Only explicit map objects create workstations. Back points to the chosen map edge.
     return {desks:f.rects.filter(r=>r.type==='pcdesk'&&[r.x,r.y,r.w,r.h].every(Number.isFinite)&&r.w>0&&r.h>0).map(r=>{
       const back=['north','east','south','west'].includes(r.back)?r.back:'north';
       const turn=['north','east','south','west'].indexOf(back),width=turn%2?4.4:3.8,depth=turn%2?3.8:4.4;
-      return {rect:r,x:(r.x+r.w/2)*2,z:(r.y+r.h/2)*2,angle:-turn*Math.PI/2,scale:Math.min(1,r.w*2/width,r.h*2/depth),back};
+      // Desk + chair footprint: half of one 4-by-4 world-unit pallet; preserve height.
+      const scale=Math.min(Math.sqrt(8/(3.8*4.4)),r.w*2/width,r.h*2/depth);
+      return {rect:r,x:(r.x+r.w/2)*2,z:(r.y+r.h/2)*2,angle:-turn*Math.PI/2,scale,width:width*scale,depth:depth*scale,back};
     })};
   }
   // The annex is a view extension: original rows/rectangles/part coordinates are retained.
@@ -377,7 +381,7 @@
       else if(r.type==='cartbay'){const a=root.WarehouseV57.cartLayout(r);if(a){scene.add(root.WarehouseV57.createCartBay(T,r));H=6.15*Math.max(...a.carts.map(c=>c.scale));contact(x,z,w,d);}border(x,z,w,d,'#b6a24c',.03,.08);}
       else if(r.type==='nest'){H=rack(x,z,w,d,true);}
       else {
-        if(r.drawYellowLine!==false)border(x,z,w,d,'#b6a24c',.03,.08);if(!shelves&&!isLift)contact(x,z,w,d);
+        if(areaYellowLine(r))border(x,z,w,d,'#b6a24c',.03,.08);if(!shelves&&!isLift)contact(x,z,w,d);
         // Preserve explicit shapes; summarized shelf areas stay a single region.
         const style=r.view3d || (r.pal?'pallet':'shelf');
         if(root.WarehouseV57.isMaterialRoom(r)){
@@ -472,9 +476,10 @@
         c.block(cx,6.56,.64,2.3,.11,.32,cream);c.block(cx,6.49,.65,2.15,.035,.22,new T.MeshBasicMaterial({color:'#e1e6d8'}));
         const cable=new T.CatmullRomCurve3([new T.Vector3(cx+.4,3.64,cz-.47),new T.Vector3(cx+.63,3.08,cz-.58),new T.Vector3(cx+.44,2.66,cz-.55),new T.Vector3(cx-.84,1.75,cz-.3)]);c.mesh(new T.TubeGeometry(cable,18,.018,6,false),black,0,0,0);
         c.done();
-        const r=desk.rect;blockers.push([r.x*S,r.y*S,(r.x+r.w)*S,(r.y+r.h)*S]);
-        heightRects.push({x:r.x*S,z:r.y*S,w:r.w*S,d:r.h*S,h:3});
-        const hit=new T.Mesh(new T.BoxGeometry(r.w*S,3,r.h*S),new T.MeshBasicMaterial({visible:false}));hit.position.set(desk.x,1.5,desk.z);hit.userData.rect=r;scene.add(hit);pickZones.push(hit);
+        const r=desk.rect,dx=desk.x-desk.width/2,dz=desk.z-desk.depth/2;
+        blockers.push([dx,dz,dx+desk.width,dz+desk.depth]);
+        heightRects.push({x:dx,z:dz,w:desk.width,d:desk.depth,h:3});
+        const hit=new T.Mesh(new T.BoxGeometry(desk.width,3,desk.depth),new T.MeshBasicMaterial({visible:false}));hit.position.set(desk.x,1.5,desk.z);hit.userData.rect=r;scene.add(hit);pickZones.push(hit);
         const shadow=new T.Mesh(new T.PlaneGeometry(w+.3,4.15),contactMat||new T.MeshBasicMaterial({color:'#000000',transparent:true,opacity:.14,depthWrite:false}));shadow.rotation.x=-Math.PI/2;shadow.position.set(0,.032,.09);anchor.add(shadow);
       }
     }
@@ -533,5 +538,5 @@
     stage.addEventListener('pointerdown',down);stage.addEventListener('pointermove',move);stage.addEventListener('pointerup',up);stage.addEventListener('pointercancel',up);stage.addEventListener('wheel',wheel,{passive:false});
     return {world,renderer,cam,fit:()=>{autoFit=true;fit();},zoom:k=>{autoFit=false;dist=Math.max(7,Math.min(Math.max(world.W,world.D)*5,dist*k));schedule();},destroy(){dead=true;cancelAnimationFrame(raf);ro.disconnect();[['pointerdown',down],['pointermove',move],['pointerup',up],['pointercancel',up],['wheel',wheel]].forEach(([n,fn])=>stage.removeEventListener(n,fn));dispose(world.scene);renderer.dispose();renderer.forceContextLoss();renderer.domElement.remove();}};
   }
-  root.Warehouse3D={locations,find,materialize,createWorld,overview,configure,dispose,norm,label,shelfLayout,shelfSettings,officeLayout,wallFixtureLayout,annexLayout,planRows,insidePlan,floorRegions,floorSVG,floorCanvas};
+  root.Warehouse3D={locations,find,materialize,createWorld,overview,configure,dispose,norm,label,shelfLayout,shelfSettings,areaYellowLine,officeLayout,wallFixtureLayout,annexLayout,planRows,insidePlan,floorRegions,floorSVG,floorCanvas};
 })(window);

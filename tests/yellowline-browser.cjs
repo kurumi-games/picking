@@ -25,7 +25,7 @@ await page.mouse.move(h.x+h.width*.35,h.y+h.height*.35);await page.mouse.down();
 const resized=(await read()).maps.floors[0].rects[0];assert.deepEqual([resized.w,resized.h],[prev.w+1,prev.h+1]);
 await page.addScriptTag({url:url+'/vendor/three-r128.min.js'});await page.evaluate(()=>WarehouseMaterials.load());
 const checks=await page.evaluate(async()=>{
- const f={cols:20,rows:20,annex:false,rects:[{id:1,x:5,y:5,w:4,h:4,label:'パレット'}]},db={maps:{floors:[f]},spots:{}},create=()=>Warehouse3D.createWorld(db,0,{walk:true}),count=w=>{let n=0;w.scene.traverse(o=>{if(o.isInstancedMesh)n+=o.count;});return n;};
+ const f={cols:20,rows:20,annex:false,rects:[{id:1,x:5,y:5,w:4,h:4,label:'パレット',drawYellowLine:true}]},db={maps:{floors:[f]},spots:{}},create=()=>Warehouse3D.createWorld(db,0,{walk:true}),count=w=>{let n=0;w.scene.traverse(o=>{if(o.isInstancedMesh)n+=o.count;});return n;};
  const normal=create(),n=count(normal),blocks=JSON.stringify(normal.blockers),picks=normal.pickZones.length;
  f.rects[0].drawYellowLine=false;const off=create();
  f.rects.unshift({id:2,type:'yellowline',label:'黄線',x:3,y:3,w:10,h:10});const framed=create();
