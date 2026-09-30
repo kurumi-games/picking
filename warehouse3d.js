@@ -68,10 +68,10 @@
   function wallFixtureLayout(f){
     // Preserve ver55 wall fixtures, including the vent anchor. This never places a workstation.
     // Ignore explicit desks so dragging one cannot move windows/AC/vent/duct.
-    const pcs=f.rects.filter(r=>r.type!=='pcdesk'&&r.type!=='cartbay'&&/PC|パソコン/i.test(r.label||'')&&r.y<=2);
+    const pcs=f.rects.filter(r=>r.type!=='pcdesk'&&r.type!=='cartbay'&&r.type!=='cartreturn'&&/PC|パソコン/i.test(r.label||'')&&r.y<=2);
     if(!pcs.length)return null;
     const W=f.cols*2,depth=4.5,preferred=(Math.min(...pcs.map(r=>r.x*2))+Math.max(...pcs.map(r=>(r.x+r.w)*2)))/2;
-    const occupied=f.rects.filter(r=>r.y*2<depth+.5&&r.type!=='door'&&r.type!=='pcdesk'&&r.type!=='cartbay').map(r=>[Math.max(.65,r.x*2-.35),Math.min(W-.65,(r.x+r.w)*2+.35)]).sort((a,b)=>a[0]-b[0]);
+    const occupied=f.rects.filter(r=>r.y*2<depth+.5&&r.type!=='door'&&r.type!=='pcdesk'&&r.type!=='cartbay'&&r.type!=='cartreturn').map(r=>[Math.max(.65,r.x*2-.35),Math.min(W-.65,(r.x+r.w)*2+.35)]).sort((a,b)=>a[0]-b[0]);
     // Door thresholds also remain empty even though doors are not navigation blockers.
     f.rects.filter(r=>r.type==='door'&&r.y*2<depth+.5).forEach(r=>occupied.push([r.x*2-.5,(r.x+r.w)*2+.5]));occupied.sort((a,b)=>a[0]-b[0]);
     let cursor=.65;const gaps=[];for(const [a,b] of occupied){if(a>cursor)gaps.push([cursor,a]);cursor=Math.max(cursor,b);}if(cursor<W-.65)gaps.push([cursor,W-.65]);
@@ -93,8 +93,8 @@
     if(f.annex===false)return null;
     let a=f.annex;
     if(!a){
-      if(!f.rects.some(r=>r.type!=='pcdesk'&&r.type!=='cartbay'&&/PC|パソコン/i.test(r.label||''))||!f.rects.some(r=>r.label==='棚番の品')||!f.rects.some(r=>r.type==='door'&&r.x<=1))return null;
-      const taken=f.rects.filter(r=>r.type!=='pcdesk'&&r.type!=='cartbay'&&r.y<f.rows&&r.y+r.h>=f.rows-.1).map(r=>[r.x,r.x+r.w]).sort((a,b)=>a[0]-b[0]);
+      if(!f.rects.some(r=>r.type!=='pcdesk'&&r.type!=='cartbay'&&r.type!=='cartreturn'&&/PC|パソコン/i.test(r.label||''))||!f.rects.some(r=>r.label==='棚番の品')||!f.rects.some(r=>r.type==='door'&&r.x<=1))return null;
+      const taken=f.rects.filter(r=>r.type!=='pcdesk'&&r.type!=='cartbay'&&r.type!=='cartreturn'&&r.y<f.rows&&r.y+r.h>=f.rows-.1).map(r=>[r.x,r.x+r.w]).sort((a,b)=>a[0]-b[0]);
       let left=0;const gaps=[];for(const [x,end] of taken){if(x-left>=2)gaps.push([left,x]);left=Math.max(left,end);}if(f.cols-left>=2)gaps.push([left,f.cols]);
       if(!gaps.length)return null;const gap=gaps[0],openingWidth=Math.min(2.5,gap[1]-gap[0]),openingX=gap[0];
       a={x:Math.max(0,openingX-2),width:Math.min(10,f.cols),depth:8,openingX,openingWidth};
@@ -359,6 +359,7 @@
     let warmLights=0;
     f.rects.forEach(r=>{
       if(r.type==='pcdesk')return;
+      if(r.type==='cartreturn'){border(r.x*S+.02,r.y*S+.02,r.w*S-.04,r.h*S-.04,'#eeefea',.065,.12);return;}
       const x=r.x*S+.06,z=r.y*S+.06,w=r.w*S-.12,d=r.h*S-.12;
       const shelves=shelfLayout(r),isLift=!r.type&&['リフト','フォークリフト'].includes(String(r.label||'').replace(/\s/g,''));
       let H=.13;

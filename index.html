@@ -554,12 +554,13 @@
   .mp-rect.t-cartbay{background:repeating-linear-gradient(135deg,#c5d1d0 0 8px,#dce4e2 8px 16px)!important;border:2px solid #627a79!important;color:#263c3b;}
   #wkWide[aria-pressed="true"]{background:#c4f0e0;color:#164c3f;}
   @media(max-width:480px){.wk-top{gap:5px;padding-left:8px;padding-right:8px}.wk-top button{padding:9px 10px;font-size:13px}.wk-top span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}}
+  .mp-rect.t-cartreturn{background:rgba(255,255,255,.06)!important;border:3px solid #fff!important;box-shadow:0 0 0 1px #65746d,inset 0 0 0 1px #65746d;color:#1f3930;}
 </style>
 <link rel="stylesheet" href="warehouse3d.css?v=51">
 <script src="warehouse-materials.js?v=56"></script>
 <script src="warehouse-ver57.js?v=57-cart-room"></script>
-<script src="warehouse3d.js?v=57-cart-room"></script>
-<script src="warehouse-walk.js?v=57-cart-room"></script>
+<script src="warehouse3d.js?v=60-cart-return"></script>
+<script src="warehouse-walk.js?v=60-cart-return"></script>
 </head>
 <body>
 
@@ -568,7 +569,7 @@
   <div class="wrap">
     <div class="home-title">
       <h1>ピッキング補助</h1>
-      <div class="ver-tag">ver59（マップに「↩ 1つ戻す」・台車・資材室・消火器・広角）</div>
+      <div class="ver-tag">ver60（空台車の返却区画・白線）</div>
     </div>
     <div class="home-btns">
       <button class="home-btn go" id="goBtn">GO</button>
@@ -586,7 +587,7 @@
   <div class="wrap">
     <div style="text-align:center; padding:14px 0 16px;">
       <h2 style="font-size:22px; font-weight:900;">ピッキング補助</h2>
-      <div class="ver-tag" style="margin:4px 0 0;">ver59（マップに「↩ 1つ戻す」・台車・資材室・消火器・広角）</div>
+      <div class="ver-tag" style="margin:4px 0 0;">ver60（空台車の返却区画・白線）</div>
     </div>
 
     <!-- 機種から選ぶ -->
@@ -717,6 +718,7 @@
       <button class="mp-tb" id="mpAddShut">＋ シャッター</button>
       <button class="mp-tb" id="mpAddPC">＋ PC机</button>
       <button class="mp-tb" id="mpAddCartBay">＋ 台車置き場</button>
+      <button class="mp-tb" id="mpAddCartReturn">＋ 空台車返却</button>
       <button class="mp-tb" id="mpAddNest">＋ ネステナー</button>
       <button class="mp-tb" id="mpAddLoad">＋ 荷物</button>
       <button class="mp-tb" id="mpUndo" disabled title="1つ前の状態に戻す">↩ 1つ戻す</button>
@@ -1919,7 +1921,8 @@
       });
     }
     const selected=mpGetSel(),isPC=selected?.type==='pcdesk';
-    $('mpCartSize').style.display=selected?.type==='cartbay'?'':'none';
+    $('mpCartSize').style.display=['cartbay','cartreturn'].includes(selected?.type)?'':'none';
+    $('mpCartSize').textContent=selected?.type==='cartreturn'?'返却区画の寸法':'台車置き場の寸法';
     $('mpDeskDirection').style.display=isPC?'block':'none';if(isPC)$('mpDeskBack').value=selected.back||'north';
     const on = mpSel!=null;
     $('mpSelTools').style.display = on ? 'flex' : 'none';
@@ -2508,6 +2511,7 @@
   $('mpAddShut').onclick = ()=> mpAddRect(5,1,'shut');
   $('mpAddPC').onclick = ()=> mpAddRect(2,3,'pcdesk','PC机');
   $('mpAddCartBay').onclick = ()=> mpAddRect(4,3,'cartbay','台車置き場');
+  $('mpAddCartReturn').onclick = ()=> mpAddRect(2,4,'cartreturn','空台車返却');
   $('mpAddNest').onclick = ()=> mpAddRect(2,2,'nest');
   $('mpAddLoad').onclick = ()=> mpAddRect(2,2,'load');
   $('mpName').onclick = ()=>{
@@ -2606,9 +2610,10 @@
     mpSurfaceCorner=null;saveDB();surfaceNote();mpRender();
   }
   $('mpCartSize').onclick=()=>{
-    const r=mpGetSel();if(r?.type!=='cartbay')return;const f=mpFloor();
+    const r=mpGetSel();if(!['cartbay','cartreturn'].includes(r?.type))return;const f=mpFloor();
     const ov=document.createElement('dialog');ov.id='mpCartSizeDialog';ov.style.cssText='border:0;border-radius:16px;padding:20px;width:min(420px,92vw);font-size:17px';
     ov.innerHTML='<form><h3>台車置き場の寸法</h3><p>地図のマス数で指定</p><label>横 <input name="w" type="number" min="1" step="1" required style="width:80px;font:inherit"></label> <label>縦 <input name="h" type="number" min="1" step="1" required style="width:80px;font:inherit"></label><p id="mpCartSizeError" role="alert"></p><button class="mp-tb" type="submit">適用</button> <button class="mp-tb" type="button" data-close>とじる</button></form>';
+    if(r.type==='cartreturn')ov.querySelector('h3').textContent='返却区画の寸法';
     document.body.append(ov);const form=ov.querySelector('form');form.elements.w.value=r.w;form.elements.h.value=r.h;
     ov.querySelector('[data-close]').onclick=()=>ov.close();ov.onclose=()=>ov.remove();
     form.onsubmit=e=>{e.preventDefault();const w=Number(form.elements.w.value),h=Number(form.elements.h.value);if(!Number.isInteger(w)||!Number.isInteger(h)||w<1||h<1||w>f.cols||h>Warehouse3D.planRows(f)){$('mpCartSizeError').textContent='外枠に収まる1以上の整数を入力してください';return;}r.w=w;r.h=h;r.x=Math.max(0,Math.min(r.x,f.cols-w));r.y=Math.max(0,Math.min(r.y,Warehouse3D.planRows(f)-h));saveDB();mpRender();ov.close();};ov.showModal();
