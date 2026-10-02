@@ -1,7 +1,7 @@
 /* Isolated evaluation tool. Never reads or writes the picking DB or auto-accepts a quantity. */
 (()=>{
 'use strict';
-const $=id=>document.getElementById(id),VERSION='68',ENGINE='tesseract.js 5.1.1 / eng LSTM',DB='pickingQtyReadTests_v1';
+const $=id=>document.getElementById(id),VERSION='69',ENGINE='tesseract.js 5.1.1 / eng LSTM',DB='pickingQtyReadTests_v1';
 let stream=null,source=null,busy=false,current=null,workerPromise=null,epoch=0,saving=false,records=[];
 const roi={x:.5,y:.5,w:.6,h:.25};
 const dbPromise=new Promise((resolve,reject)=>{const req=indexedDB.open(DB,1);req.onupgradeneeded=()=>req.result.createObjectStore('reads',{keyPath:'id'});req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);});
@@ -45,17 +45,67 @@ function capture(){
  const scale=Math.min(1,1280/Math.max(w,h)),frame=canvas(w*scale,h*scale);frame.getContext('2d').drawImage(source,0,0,frame.width,frame.height);
  return {crop,frame:frame.toDataURL('image/jpeg',.8),region:{x,y,width:cw,height:ch,sourceWidth:w,sourceHeight:h}};
 }
+function isolateDigits(binary,method){
+ const ctx=binary.getContext('2d'),w=binary.width,h=binary.height,im=ctx.getImageData(0,0,w,h),d=im.data,seen=new Uint8Array(w*h),components=[];
+ const isInk=i=>d[i*4]<96;
+ for(let start=0;start<w*h;start++){
+  if(seen[start]||!isInk(start))continue;
+  let stack=[start],area=0,minX=w,minY=h,maxX=0,maxY=0;seen[start]=1;
+  while(stack.length){
+   const p=stack.pop(),x=p%w,y=(p-x)/w;area++;if(x<minX)minX=x;if(x>maxX)maxX=x;if(y<minY)minY=y;if(y>maxY)maxY=y;
+   const ns=[];if(x>0)ns.push(p-1);if(x<w-1)ns.push(p+1);if(y>0)ns.push(p-w);if(y<h-1)ns.push(p+w);
+   for(const n of ns){if(!seen[n]&&isInk(n)){seen[n]=1;stack.push(n);}}
+  }
+  const cw=maxX-minX+1,ch=maxY-minY+1;
+  if(area>=18)components.push({x:minX,y:minY,w:cw,h:ch,area});
+ }
+ const usable=components.filter(c=>!(c.w>w*.85&&c.h<h*.12)&&!(c.w>w*.85&&c.h>h*.85));
+ const maxH=Math.max(0,...usable.map(c=>c.h)),maxArea=Math.max(0,...usable.map(c=>c.area));
+ let digits=usable.filter(c=>c.h>=maxH*.52&&c.area>=Math.max(18,maxArea*.08)&&c.w>=2).sort((a,b)=>a.x-b.x);
+ if(digits.length>7)digits=digits.filter(c=>c.area>=maxArea*.18);
+ if(!digits.length){
+  const padded=canvas(binary.width+32,binary.height+32),p=padded.getContext('2d');p.fillStyle='white';p.fillRect(0,0,padded.width,padded.height);p.drawImage(binary,16,16);
+  return {image:padded,estimatedDigits:0,components:components.length,method};
+ }
+ const minX=Math.max(0,Math.min(...digits.map(c=>c.x))-14),minY=Math.max(0,Math.min(...digits.map(c=>c.y))-14),maxX=Math.min(w,Math.max(...digits.map(c=>c.x+c.w))+14),maxY=Math.min(h,Math.max(...digits.map(c=>c.y+c.h))+14);
+ const srcW=Math.max(1,maxX-minX),srcH=Math.max(1,maxY-minY),targetH=190,scale=Math.min(4,Math.max(1,targetH/srcH)),out=canvas(srcW*scale+36,srcH*scale+36),o=out.getContext('2d');
+ o.fillStyle='white';o.fillRect(0,0,out.width,out.height);o.imageSmoothingEnabled=false;o.drawImage(binary,minX,minY,srcW,srcH,18,18,srcW*scale,srcH*scale);
+ return {image:out,estimatedDigits:digits.length,components:components.length,method};
+}
 function preprocess(crop,method){
- const scale=Math.min(3,Math.max(1,120/crop.height)),small=canvas(crop.width*scale,crop.height*scale),ctx=small.getContext('2d');ctx.drawImage(crop,0,0,small.width,small.height);
+ const scale=Math.min(3,Math.max(.45,260/crop.height)),small=canvas(crop.width*scale,crop.height*scale),ctx=small.getContext('2d');ctx.drawImage(crop,0,0,small.width,small.height);
  const im=ctx.getImageData(0,0,small.width,small.height),d=im.data;
+ let sum=0;for(let i=0;i<d.length;i+=4)sum+=.299*d[i]+.587*d[i+1]+.114*d[i+2];const avg=sum/(d.length/4);
  for(let i=0;i<d.length;i+=4){const r=d[i],g=d[i+1],b=d[i+2];let v;
-  if(method==='yellow')v=(r>70&&g>65&&Math.min(r,g)-b>25&&r/g>.65&&r/g<1.9)?0:255;
-  else v=255-Math.round(.299*r+.587*g+.114*b);
+  const lum=.299*r+.587*g+.114*b;
+  if(method==='yellow')v=(r>70&&g>55&&Math.min(r,g)-b>22&&r/g>.55&&r/g<2.15)?0:255;
+  else if(method==='dark')v=lum<avg*.82?0:255;
+  else v=lum>Math.min(245,avg*1.22+18)?0:255;
   d[i]=d[i+1]=d[i+2]=v;
  }ctx.putImageData(im,0,0);
- const padded=canvas(small.width+32,small.height+32),p=padded.getContext('2d');p.fillStyle='white';p.fillRect(0,0,padded.width,padded.height);p.drawImage(small,16,16);return padded;
+ return isolateDigits(small,method);
 }
-function parse(text){const t=String(text??'').trim();return /^\d{1,7}$/.test(t)?String(Number(t)):null;}
+function parse(text){const groups=String(text??'').match(/\d+/g)||[];if(groups.length!==1||!/^\d{1,7}$/.test(groups[0]))return null;return String(Number(groups[0]));}
+function qualify(candidate){
+ if(candidate.value===null){candidate.accepted=false;candidate.rejectReason=String(candidate.rawText??'').match(/\d+/g)?.length>1?'multiple-number-groups':'no-number';return candidate;}
+ const expected=candidate.expectedDigits||candidate.estimatedDigits||0;
+ if(expected>=2&&candidate.value.length<expected){candidate.accepted=false;candidate.rejectReason='digit-count-mismatch';return candidate;}
+ candidate.accepted=true;candidate.rejectReason=null;return candidate;
+}
+function choosePrediction(candidates){
+ const accepted=candidates.filter(c=>c.accepted);
+ if(!accepted.length)return {predicted:null,agreement:false,rejection:candidates.find(c=>c.rejectReason==='digit-count-mismatch')?.rejectReason||candidates.find(c=>c.rejectReason)?.rejectReason||'no-number'};
+ const byValue=new Map();
+ for(const c of accepted){const prev=byValue.get(c.value)||{value:c.value,count:0,bestConfidence:-1};prev.count++;prev.bestConfidence=Math.max(prev.bestConfidence,c.confidence||0);byValue.set(c.value,prev);}
+ const ranked=[...byValue.values()].sort((a,b)=>b.count-a.count||b.bestConfidence-a.bestConfidence);
+ return {predicted:ranked[0].value,agreement:ranked[0].count>=2,rejection:null};
+}
+function expectedDigitCount(variants){
+ const dark=variants.find(v=>v.method==='dark')?.estimatedDigits||0;
+ if(dark>=2)return dark;
+ const usable=variants.map(v=>v.estimatedDigits).filter(n=>n>=2&&n<=4);
+ return usable.length?Math.max(...usable):0;
+}
 function getWorker(){
  if(!workerPromise){workerPromise=(async()=>{
   if(!window.Tesseract)throw new Error('読取機能を読み込めません。ネット接続を確認して、このページを開き直してください。');
@@ -65,7 +115,7 @@ function getWorker(){
 }
 function renderAnswer(){
  $('answer').hidden=false;$('number').textContent=current.predicted??'読取できず';$('number').style.fontSize=current.predicted?'64px':'34px';
- $('detail').textContent=current.agreement?'2つの画像処理で回答が一致しました（正解の保証ではありません）。':current.predicted?'画像処理によって回答が異なります。表示をよく確認してください。':'数字を確定できませんでした。不正解から正しい個数を教えてください。';
+ $('detail').textContent=current.agreement?'複数の画像処理で回答が一致しました（正解の保証ではありません）。':current.predicted?'画像処理によって回答が異なります。表示をよく確認してください。':current.rejection==='digit-count-mismatch'?'2桁以上に見えるのにOCRが1桁だけ返したため、回答として採用しませんでした。不正解から正しい個数を教えてください。':'数字を確定できませんでした。不正解から正しい個数を教えてください。';
  $('cropPreview').src=current.images.crop;$('grade').hidden=false;$('correct').disabled=current.predicted===null;$('incorrect').disabled=false;$('correction').hidden=true;$('actual').value='';$('feedback').textContent='';
 }
 $('read').onclick=async()=>{
@@ -73,10 +123,10 @@ $('read').onclick=async()=>{
  if(current?.verdict==='unreviewed'&&!confirm('前の結果は未採点です。未採点のまま次を読みますか？'))return;
  setBusy(true);$('answer').hidden=true;current=null;
  try{
-  const shot=capture(),sourceType=source===$('video')?'camera':'photo',cameraSettings=stream?.getVideoTracks()[0]?.getSettings()||null,started=performance.now(),capturedAt=new Date().toISOString(),variants=['yellow','inverted'].map(method=>({method,image:preprocess(shot.crop,method)})),w=await getWorker(),candidates=[];
-  for(const v of variants){const {data}=await w.recognize(v.image);candidates.push({method:v.method,rawText:data.text,value:parse(data.text),confidence:data.confidence});}
-  const valid=candidates.filter(c=>c.value!==null).sort((a,b)=>(b.confidence||0)-(a.confidence||0));
-  current={id:crypto.randomUUID(),schemaVersion:1,appVersion:VERSION,engine:ENGINE,capturedAt,source:sourceType,region:shot.region,frameImageMaxSide:1280,roi:{...roi},cameraSettings,userAgent:navigator.userAgent,elapsedMs:Math.round(performance.now()-started),candidates,predicted:valid[0]?.value??null,agreement:valid.length===2&&valid[0].value===valid[1].value,verdict:'unreviewed',actual:null,images:{frame:shot.frame,crop:shot.crop.toDataURL('image/jpeg',.9),yellow:variants[0].image.toDataURL('image/png'),inverted:variants[1].image.toDataURL('image/png')}};
+  const shot=capture(),sourceType=source===$('video')?'camera':'photo',cameraSettings=stream?.getVideoTracks()[0]?.getSettings()||null,started=performance.now(),capturedAt=new Date().toISOString(),variants=['yellow','dark','bright'].map(method=>preprocess(shot.crop,method)),expectedDigits=expectedDigitCount(variants),w=await getWorker(),candidates=[];
+  for(const v of variants){const {data}=await w.recognize(v.image);candidates.push(qualify({method:v.method,rawText:data.text,value:parse(data.text),confidence:data.confidence,estimatedDigits:v.estimatedDigits,expectedDigits,componentCount:v.components}));}
+  const picked=choosePrediction(candidates);
+  current={id:crypto.randomUUID(),schemaVersion:1,appVersion:VERSION,engine:ENGINE,capturedAt,source:sourceType,region:shot.region,frameImageMaxSide:1280,roi:{...roi},cameraSettings,userAgent:navigator.userAgent,elapsedMs:Math.round(performance.now()-started),candidates,predicted:picked.predicted,agreement:picked.agreement,rejection:picked.rejection,verdict:'unreviewed',actual:null,images:{frame:shot.frame,crop:shot.crop.toDataURL('image/jpeg',.9),yellow:variants[0].image.toDataURL('image/png'),dark:variants[1].image.toDataURL('image/png'),inverted:variants[2].image.toDataURL('image/png')}};
   await store(current);await refresh();renderAnswer();$('status').textContent='読み取り完了。結果を採点してください。';$('answer').scrollIntoView({behavior:'smooth',block:'nearest'});
  }catch(e){current=null;$('answer').hidden=true;$('status').textContent='読み取り・保存が完了しませんでした。 '+errorText(e);}
  finally{setBusy(false);}
