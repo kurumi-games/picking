@@ -22,11 +22,30 @@ const server=http.createServer((req,res)=>{const p=path.resolve(root,'.'+req.url
  assert.equal(await page.locator('#workTitle').textContent(),'部品を確認');assert.equal(await page.locator('#postponeBtn').count(),0);
  await page.locator('#mapBadge').click();assert(await page.locator('#wmModal').evaluate(e=>e.classList.contains('on')));await page.locator('#wmClose').click();
  const shot=async name=>{if(process.env.PICKING_SCREENSHOTS){await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:path.join(process.env.PICKING_SCREENSHOTS,name+'.png'),fullPage:true});}};
- await shot('picking-v72-part');
+ assert(!await page.locator('#camArea').isVisible());
+ for(const [width,height] of [[360,640],[393,720],[412,915]]){
+  await page.setViewportSize({width,height});
+  assert(await page.evaluate(()=>document.documentElement.scrollHeight<=innerHeight+1),'part screen should fit '+width+'x'+height);
+  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'no horizontal overflow');
+ }
+ await shot('picking-v74-part');
+ const before=await page.locator('#partStage').boundingBox();
+ await page.locator('#camStartBtn').click();assert(!await page.locator('#target').isVisible());
+ assert.deepEqual(await page.locator('#camArea').boundingBox(),before);
+ await shot('picking-v74-camera');
+ await page.evaluate(()=>window.oldScanCode=window.scanCode);
+ await page.locator('#camArea').click({position:{x:12,y:12}});assert(await page.locator('#target').isVisible());
+ await page.evaluate(()=>oldScanCode('C00004259'));assert.equal(await page.locator('#workTitle').textContent(),'部品を確認');
+ // A rejected camera request restores the part card and permits a retry.
+ await page.evaluate(()=>{window.decode=ZXing.BrowserMultiFormatReader.prototype.decodeFromVideoDevice;ZXing.BrowserMultiFormatReader.prototype.decodeFromVideoDevice=async()=>{throw Error('denied')};});
+ await page.locator('#camStartBtn').click();assert(await page.locator('#target').isVisible());assert.match(await page.locator('#verdict').textContent(),/カメラを開けません/);
+ await page.evaluate(()=>ZXing.BrowserMultiFormatReader.prototype.decodeFromVideoDevice=window.decode);
+ await page.locator('#camStartBtn').click();
+
  await page.evaluate(()=>scanCode('C00004259'));await page.waitForFunction(()=>!document.getElementById('ocrShoot').disabled);
  assert.equal(await page.locator('#workTitle').textContent(),'個数を確認');assert.equal(await page.locator('#targetCode').textContent(),'C00004259');
  assert(await page.locator('#targetName').isVisible());assert.equal(await page.locator('#ocrModal').evaluate(el=>getComputedStyle(el).position),'static');
- await page.locator('#ocrShoot').click();await page.waitForFunction(()=>!document.getElementById('ocrShoot').disabled);await shot('picking-v72-quantity');
+ await page.locator('#ocrShoot').click();await page.waitForFunction(()=>!document.getElementById('ocrShoot').disabled);await shot('picking-v74-quantity');
  await page.locator('#manualQtyBtn').click();assert(await page.locator('#nextBtn').isDisabled());await page.locator('#manualQtyConfirm').click();await page.locator('#nextBtn').click();
  assert.equal(await page.locator('#targetCode').textContent(),'C00000003');await page.locator('#missBtn').click();
  assert.equal(await page.locator('#targetCode').textContent(),'C00000001');await page.locator('#excludeBtn').click();

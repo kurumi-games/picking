@@ -18,7 +18,7 @@ const server=http.createServer((req,res)=>{const p=path.resolve(root,'.'+req.url
   await page.locator('#rows .c-in').nth(1).fill('C00000050');await page.locator('#rows .q-in').nth(1).fill('50');
   await page.locator('#startBtn').click();await page.locator('#ssUnits').fill(units);await page.locator('#ssList .ss-row').first().click();
  }
- async function scan(code='C00000040'){await page.evaluate(code=>window.scanCode(code),code);}
+ async function scan(code='C00000040'){if(await page.locator('#camStartBtn').isVisible())await page.locator('#camStartBtn').click();await page.evaluate(code=>window.scanCode(code),code);}
  async function ready(){await page.waitForFunction(()=>!document.getElementById('ocrShoot').disabled);}
  async function read(values){await page.evaluate(values=>window.answers=values,values);await ready();await page.locator('#ocrShoot').click();}
  async function settled(){await page.waitForFunction(()=>!document.getElementById('ocrShoot').disabled);}

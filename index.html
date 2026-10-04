@@ -559,7 +559,7 @@
 <script src="warehouse3d.js?v=63-office-fixtures"></script>
 <script src="warehouse-walk.js?v=66-jump"></script>
 <link rel="stylesheet" href="qty-verify.css?v=72">
-<link rel="stylesheet" href="picking-work.css?v=72">
+<link rel="stylesheet" href="picking-work.css?v=74">
 </head>
 <body>
 
@@ -568,7 +568,7 @@
   <div class="wrap">
     <div class="home-title">
       <h1>ピッキング補助</h1>
-      <div class="ver-tag">ver73（一覧からタップして開始）</div>
+      <div class="ver-tag">ver74（部品カードとカメラを切り替え）</div>
     </div>
     <div class="home-btns">
       <button class="home-btn go" id="goBtn">GO</button>
@@ -586,7 +586,7 @@
   <div class="wrap">
     <div style="text-align:center; padding:14px 0 16px;">
       <h2 style="font-size:22px; font-weight:900;">ピッキング補助</h2>
-      <div class="ver-tag" style="margin:4px 0 0;">ver73（一覧からタップして開始）</div>
+      <div class="ver-tag" style="margin:4px 0 0;">ver74（部品カードとカメラを切り替え）</div>
     </div>
 
     <a href="qty-read-test.html" class="btn" style="display:block;text-align:center;text-decoration:none;margin:0 0 18px;">📷 個数読取テスト</a>
@@ -855,17 +855,29 @@
       <h2 id="workTitle">部品を確認</h2>
       <span class="progress-text" id="prog">1 / 1</span>
     </div>
+    <div id="pickExceptions" class="pick-exceptions">
+      <button class="btn ghost" id="excludeBtn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 9 5v9l-9 5-9-5V8zM3 8l9 5 9-5M12 13v9M7.5 5.5l9 5"/></svg>出庫不要</button>
+      <button class="btn" id="missBtn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 10 18H2zM12 9v5M12 17v1"/></svg>在庫不足</button>
+    </div>
     <div class="pick-steps" aria-label="確認の手順">
       <span id="partStep" class="active"><b>1</b> 部品確認</span><i></i><span id="quantityStep"><b>2</b> 個数確認</span>
     </div>
     <div id="matchBanner" class="match-banner" hidden>✓ 部品が一致しました</div>
+    <div class="part-stage" id="partStage">
     <div class="target" id="target">
+      <div class="part-card-head"><span>部品</span><button id="camStartBtn" aria-label="部品のバーコードを読み取る" title="カメラを起動"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h4l2-3h4l2 3h4a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Z"/><circle cx="12" cy="13" r="4"/></svg></button></div>
       <div class="target-name" id="targetName"></div>
       <div class="code" id="targetCode">—</div>
       <div class="pick-location" id="pickLocation">
         <div class="pick-shelf"><span>棚番</span><button class="loc-l empty" id="shelfBadge">未登録</button></div>
-        <button class="loc-r" id="mapBadge">地図を見る</button>
+        <button class="loc-r" id="mapBadge"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-8 8-14a8 8 0 0 0-16 0c0 6 8 14 8 14Z"/><circle cx="12" cy="8" r="2.5"/></svg>地図</button>
       </div>
+    </div>
+    <div class="cam-area" id="camArea" role="button" tabindex="0" aria-label="カメラを閉じて部品情報に戻る" hidden>
+      <video id="video" playsinline muted></video>
+      <div class="scan-line"></div>
+      <div class="cam-shutter" id="camShutter"></div>
+    </div>
     </div>
     <p id="scanInstruction" class="pick-instruction">部品のバーコードを<br>読み取ってください</p>
 
@@ -878,12 +890,6 @@
       </div>
     </div>
 
-    <div class="cam-area" id="camArea">
-      <video id="video" playsinline muted></video>
-      <div class="scan-line"></div>
-      <div class="cam-shutter" id="camShutter"></div>
-      <button class="cam-start" id="camStartBtn">📷 読み取り開始</button>
-    </div>
     <div class="verdict" id="verdict"></div>
 
     <!-- 地図パネル（地図ボタンを押すと出る／カメラ枠は消える） -->
@@ -914,13 +920,9 @@
       </div>
     </div>
 
-    <div id="pickExceptions" class="pick-exceptions">
-      <button class="btn ghost" id="excludeBtn">出庫不要<small>作業者が集める部品</small></button>
-      <button class="btn" id="missBtn">⚠ 在庫不足</button>
-    </div>
     <div class="work-foot">
       <button class="btn scanbtn" id="scanBtn" style="display:none;">📷 バーコードを読み取る</button>
-      <button class="btn ghost" id="skipBtn" style="margin-top:10px;">バーコードがない部品はこちら</button>
+      <button class="btn ghost" id="skipBtn" style="margin-top:10px;">バーコードなし</button>
       <button class="btn ok locked" id="nextBtn" style="margin-top:10px; display:none;">次へ</button>
       <button class="btn ghost sm" id="redoBtn" style="margin-top:10px; display:none;">↩ まちがえた・もう一度</button>
     </div>
@@ -1421,7 +1423,10 @@
     $('prog').textContent = (doneCount+1)+' / '+activeTotal();
     $('targetCode').innerHTML = fmtCode(cur.code);
     $('targetName').style.display='block';
-    $('targetName').textContent = (cur.name||'').trim() || '品名未登録';
+    const name=(cur.name||'').trim() || '品名未登録';
+    const detailAt=name.search(/[ 　]+RB-/);
+    $('targetName').textContent=detailAt<0?name:name.slice(0,detailAt);
+    if(detailAt>=0){const detail=document.createElement('span');detail.className='target-detail';detail.textContent=name.slice(detailAt);$('targetName').appendChild(detail);}
     setWorkPhase(false);
     $('target').className = 'target';
     $('verdict').textContent=''; $('verdict').className='verdict';
@@ -1437,7 +1442,6 @@
     matched=false;
     stopScan();
     lastVal=null; lastTime=0;
-    startScan();
   }
 
   // 読み取り画面に登録場所を表示（棚番=左バッジ、地図=右ボタン）
@@ -1489,7 +1493,7 @@
     $('camArea').style.display='none';   // 入力中はカメラ枠を消す
       setTimeout(()=>$('shelfInput').focus(),50);
     } else {
-      if(!matched){ $('camArea').style.display='block'; if(!running)startScan(); }
+      // カメラは右上のボタンから起動する。
     }
   };
   // 棚番を保存
@@ -1504,7 +1508,7 @@
     if(val){ badge.textContent=val; badge.classList.remove('empty'); }
     else { badge.textContent='棚番'; badge.classList.add('empty'); }
     $('shelfPanel').style.display='none';
-    if(!matched){ $('camArea').style.display='block'; if(!running)startScan(); }
+    // カメラは右上のボタンから起動する。
   };
 
   // 地図ボタン → この部品の場所（塗り絵）をモーダルで表示
@@ -1583,7 +1587,7 @@
       $('wmWorld').style.transform='translate('+((st.width-W*s)/2)+'px,'+((st.height-H*s)/2)+'px) scale('+s+')';
     });
   }
-  function closeWorkMap(){ $('wmModal').classList.remove('on');if($('work').classList.contains('on')&&!matched&&!running)startScan(); }
+  function closeWorkMap(){ $('wmModal').classList.remove('on'); }
   $('wmClose').onclick=closeWorkMap;
   $('wmModal').onclick=(e)=>{ if(e.target===$('wmModal'))closeWorkMap(); };
 
@@ -3439,7 +3443,9 @@
       reader = new ZXing.BrowserMultiFormatReader();
       const activeReader=reader;
       $('camArea').classList.add('scanning');
-      $('camStartBtn').textContent='■ 止める'; running=true;
+      $('partStage').classList.add('camera-on');
+      $('target').hidden=true; $('camArea').hidden=false;
+      $('camArea').style.display='block'; running=true;
       $('verdict').className='verdict'; $('verdict').textContent='部品のバーコードを枠に合わせてください';
       await activeReader.decodeFromVideoDevice(null,'video',(result)=>{ if(result && token===scanEpoch && job[idx]===item && $('work').classList.contains('on')) onScan(result.getText()); });
       if(token!==scanEpoch)activeReader.reset();
@@ -3455,11 +3461,14 @@
     reader=null;
     const stream=$('video').srcObject;if(stream)stream.getTracks().forEach(t=>t.stop());$('video').srcObject=null;
     running=false; $('camArea').classList.remove('scanning');
-    $('camStartBtn').textContent='📷 読み取り開始';
+    $('partStage').classList.remove('camera-on');
+    $('target').hidden=false; $('camArea').hidden=true;
   }
   $('camStartBtn').onclick = (e)=>{ e.stopPropagation(); startScan(); };
-  // カメラ枠ぜんたいタップでシャッター開閉（開く=起動、閉じる=停止）
-  $('camArea').onclick = ()=>{ startScan(); };
+  // カメラ枠のどこを押しても停止して部品情報に戻る。
+  function closePartCamera(){ stopScan(); $('verdict').textContent=''; $('camStartBtn').focus({preventScroll:true}); }
+  $('camArea').onclick = closePartCamera;
+  $('camArea').onkeydown = e=>{ if(e.key==='Enter'||e.key===' '){e.preventDefault();closePartCamera();} };
   function onScan(val){
     if(matched || !$('work').classList.contains('on') || !job[idx]) return;
     const now=Date.now();
