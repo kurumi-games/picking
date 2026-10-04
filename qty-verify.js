@@ -1,4 +1,4 @@
-/* Camera-only verification for picking; no manual success or image-upload bypass. */
+/* Camera verification: only two matching live reads can pass OCR. Self-confirmation is a separate picking action. */
 (()=>{
 'use strict';
 const $=id=>document.getElementById(id),roi={x:.5,y:.5,w:.52,h:.25};
@@ -15,11 +15,13 @@ function setBusy(value){
  $('ocrShoot').textContent=value?'個数を確認中…':'枠の中を読む';
 }
 function close(){
+ const previous=session;
  epoch++;stopStream();session=null;setBusy(false);
  if($('ocrModal').classList.contains('on')){
-  $('ocrModal').classList.remove('on');document.body.style.overflow=oldOverflow;
-  if(returnFocus?.isConnected)returnFocus.focus({preventScroll:true});
+  $('ocrModal').classList.remove('on');if(!previous?.inline)document.body.style.overflow=oldOverflow;
+  if(!previous?.inline && returnFocus?.isConnected)returnFocus.focus({preventScroll:true});
  }
+ previous?.onClose?.();
 }
 async function startCamera(){
  if(!session)return;
@@ -40,10 +42,10 @@ async function startCamera(){
 }
 function open(options){
  close();if(!/^\d{1,7}$/.test(options.expected))return;
- session={...options,passed:false};returnFocus=document.activeElement;oldOverflow=document.body.style.overflow;document.body.style.overflow='hidden';
+ session={...options,passed:false};returnFocus=document.activeElement;oldOverflow=document.body.style.overflow;if(!options.inline)document.body.style.overflow='hidden';
  $('ocrPart').textContent=options.code;$('ocrTarget').textContent=options.expected;$('ocrBatch').textContent=options.batch;
  $('ocrResult').textContent='—';$('ocrResult').className='ocr-result';
- $('ocrModal').classList.add('on');position();$('ocrCancel').focus();startCamera();
+ $('ocrModal').classList.add('on');position();if(!options.inline)$('ocrCancel').focus();startCamera();
 }
 function capture(){
  const video=$('ocrVideo'),w=video.videoWidth,h=video.videoHeight;
@@ -88,7 +90,7 @@ $('ocrWidth').oninput=$('ocrHeight').oninput=position;
 $('ocrStage').onclick=e=>{if(busy||!stream||session?.passed)return;const r=$('ocrStage').getBoundingClientRect();roi.x=(e.clientX-r.left)/r.width;roi.y=(e.clientY-r.top)/r.height;position();};
 document.addEventListener('keydown',e=>{
  if(!session)return;if(e.key==='Escape'){close();return;}
- if(e.key==='Tab'){
+ if(e.key==='Tab' && !session.inline){
   const buttons=[...$('ocrModal').querySelectorAll('button,input')].filter(el=>!el.disabled&&!el.hidden);
   const first=buttons[0],last=buttons.at(-1);
   if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}

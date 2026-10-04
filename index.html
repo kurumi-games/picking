@@ -559,7 +559,8 @@
 <script src="warehouse-office-fixtures.js?v=67-material-shelf-size"></script>
 <script src="warehouse3d.js?v=63-office-fixtures"></script>
 <script src="warehouse-walk.js?v=66-jump"></script>
-<link rel="stylesheet" href="qty-verify.css?v=71">
+<link rel="stylesheet" href="qty-verify.css?v=72">
+<link rel="stylesheet" href="picking-work.css?v=72">
 </head>
 <body>
 
@@ -568,7 +569,7 @@
   <div class="wrap">
     <div class="home-title">
       <h1>ピッキング補助</h1>
-      <div class="ver-tag">ver71（部品集めの個数を自動照合）</div>
+      <div class="ver-tag">ver72（部品・個数を見やすく確認）</div>
     </div>
     <div class="home-btns">
       <button class="home-btn go" id="goBtn">GO</button>
@@ -586,7 +587,7 @@
   <div class="wrap">
     <div style="text-align:center; padding:14px 0 16px;">
       <h2 style="font-size:22px; font-weight:900;">ピッキング補助</h2>
-      <div class="ver-tag" style="margin:4px 0 0;">ver71（部品集めの個数を自動照合）</div>
+      <div class="ver-tag" style="margin:4px 0 0;">ver72（部品・個数を見やすく確認）</div>
     </div>
 
     <a href="qty-read-test.html" class="btn" style="display:block;text-align:center;text-decoration:none;margin:0 0 18px;">📷 個数読取テスト</a>
@@ -855,21 +856,23 @@
 <section class="screen" id="work">
   <div class="wrap">
     <div class="topbar">
-      <button class="back" data-home>←</button>
-      <div class="work-acts">
-        <button class="wact postpone" id="postponeBtn" title="後回し">⏭</button>
-        <button class="wact skip" id="missBtn" title="欠品">⚠</button>
-      </div>
+      <button class="back" data-home aria-label="ホームへ戻る">←</button>
+      <h2 id="workTitle">部品を確認</h2>
       <span class="progress-text" id="prog">1 / 1</span>
     </div>
-
-    <div class="target" id="target">
-      <button class="loc-l empty" id="shelfBadge">棚番</button>
-      <button class="loc-r" id="mapBadge"><span class="pin">📍</span>地図</button>
-      <div class="lbl">これを読み取ってください</div>
-      <div class="code" id="targetCode">—</div>
-      <div class="target-name" id="targetName" style="display:none;"></div>
+    <div class="pick-steps" aria-label="確認の手順">
+      <span id="partStep" class="active"><b>1</b> 部品確認</span><i></i><span id="quantityStep"><b>2</b> 個数確認</span>
     </div>
+    <div id="matchBanner" class="match-banner" hidden>✓ 部品が一致しました</div>
+    <div class="target" id="target">
+      <div class="target-name" id="targetName"></div>
+      <div class="code" id="targetCode">—</div>
+      <div class="pick-location" id="pickLocation">
+        <div class="pick-shelf"><span>棚番</span><button class="loc-l empty" id="shelfBadge">未登録</button></div>
+        <button class="loc-r" id="mapBadge">地図を見る</button>
+      </div>
+    </div>
+    <p id="scanInstruction" class="pick-instruction">部品のバーコードを<br>読み取ってください</p>
 
     <!-- 棚番の入力パネル（棚番ボタンを押すと出る） -->
     <div class="shelf-panel" id="shelfPanel" style="display:none;">
@@ -902,12 +905,27 @@
     <div class="confirm-box" id="confirmBox">
       <div class="chk" id="chk3" style="display:none;"><div class="box">✓</div><div class="txt">品名を目で見て、合ってるか確認した？</div></div>
       <div class="cnt-note" id="cntNote" style="display:none;"></div>
+      <p class="quantity-label">必要個数 <span id="qtyTotal"></span></p>
       <div id="qtyRows"></div>
+      <p id="activeQtyBatch" hidden></p>
+      <div id="quantityReaderHost"></div>
+      <button class="btn ghost" id="quantityResume" hidden>計量器の個数を読み取る</button>
+      <button class="btn ghost manual-qty" id="manualQtyBtn">自分で個数を確認する</button>
+      <p class="manual-hint" id="manualQtyHint">計量器で測れない部品はこちら</p>
+      <div id="manualQtyPanel" class="manual-qty-panel" hidden>
+        <p id="manualQtyText"></p>
+        <button class="btn" id="manualQtyConfirm">必要数を確認した</button>
+        <button class="btn ghost sm" id="manualQtyCancel">カメラでの確認に戻る</button>
+      </div>
     </div>
 
+    <div id="pickExceptions" class="pick-exceptions">
+      <button class="btn ghost" id="excludeBtn">出庫不要<small>作業者が集める部品</small></button>
+      <button class="btn" id="missBtn">⚠ 在庫不足</button>
+    </div>
     <div class="work-foot">
       <button class="btn scanbtn" id="scanBtn" style="display:none;">📷 バーコードを読み取る</button>
-      <button class="btn ghost" id="skipBtn" style="margin-top:10px;">⏭ バーコードなし（手動で確認）</button>
+      <button class="btn ghost" id="skipBtn" style="margin-top:10px;">バーコードがない部品はこちら</button>
       <button class="btn ok locked" id="nextBtn" style="margin-top:10px; display:none;">次へ</button>
       <button class="btn ghost sm" id="redoBtn" style="margin-top:10px; display:none;">↩ まちがえた・もう一度</button>
     </div>
@@ -955,12 +973,13 @@
 <section class="screen" id="finish">
   <div class="wrap">
     <div class="check">✓</div>
-    <h2>全部そろった！</h2>
+    <h2 id="finishTitle">部品の確認が完了</h2>
     <p id="finishCount">0個 完了</p>
     <div class="miss-card" id="missCard" style="display:none;">
       <h3 id="missTitle">⚠ 欠品だった部品</h3>
       <div id="missList"></div>
     </div>
+    <div class="miss-card" id="excludedCard" hidden><h3>出庫不要（作業者が集める部品）</h3><div id="excludedList"></div></div>
     <button class="btn" id="homeBtn2" style="max-width:280px;">ホームに戻る</button>
   </div>
 </section>
@@ -1181,16 +1200,16 @@
   <button class="undo-btn" id="undoBtn">もどす</button>
 </div>
 
-<!-- 個数照合：手動の正解操作は置かない -->
-<div class="ocr-modal" id="ocrModal" role="dialog" aria-modal="true" aria-labelledby="ocrTitle">
+<!-- 個数読取パネル：作業画面内へ配置。自己確認は読取結果と区別する -->
+<div class="ocr-modal" id="ocrModal" role="region" aria-labelledby="ocrTitle">
   <div class="ocr-card">
-    <div class="ocr-head"><h2 id="ocrTitle">② 個数を読み取る</h2><button id="ocrCancel" class="ocr-close" aria-label="個数読取を閉じる">✕</button></div>
+    <div class="ocr-head"><h2 id="ocrTitle">計量器の「個数」を読み取ってください</h2><button id="ocrCancel" class="ocr-close" aria-label="個数読取を閉じる">✕</button></div>
     <p id="ocrPart"></p>
     <div class="ocr-target">必要数 <b id="ocrTarget">—</b> 個 <span id="ocrBatch"></span></div>
     <p class="ocr-hint">計量器の「個数」の数字だけを枠へ。重さ・単位は枠の外にしてください。</p>
     <div class="ocr-cam" id="ocrStage"><video id="ocrVideo" playsinline muted></video><div id="ocrFrame"></div></div>
-    <div class="ocr-adjust"><label>枠の横幅<input id="ocrWidth" type="range" min="15" max="95" value="52"></label><label>枠の高さ<input id="ocrHeight" type="range" min="8" max="65" value="25"></label></div>
-    <p class="ocr-hint">映像をタップすると枠を動かせます。</p>
+    <details class="ocr-settings"><summary>読み取り枠を調整</summary><div class="ocr-adjust"><label>枠の横幅<input id="ocrWidth" type="range" min="15" max="95" value="52"></label><label>枠の高さ<input id="ocrHeight" type="range" min="8" max="65" value="25"></label></div>
+    <p class="ocr-hint">映像をタップすると枠を動かせます。</p></details>
     <div class="ocr-result" id="ocrResult" aria-live="polite">—</div>
     <p class="ocr-status" id="ocrStatus" role="status"></p>
     <button class="btn ok" id="ocrShoot" disabled>枠の中を読む</button>
@@ -1198,7 +1217,7 @@
   </div>
 </div>
 <script src="quantity-ocr.js?v=71"></script>
-<script src="qty-verify.js?v=71"></script>
+<script src="qty-verify.js?v=72"></script>
 
 <script>
   const $ = id => document.getElementById(id);
@@ -1335,6 +1354,7 @@
   let job = [];  // [{code, qty, name}]
   let runUnits = 0;   // 製造台数（50台単位の分割に使う。0=分割なし）
   let idx = 0;
+  let completed = [], excluded = [], qtyMethods = [], manualQtyIndex = -1;
   let missing = [];   // 欠品にしたjobインデックスの配列
   let doneCount = 0;  // 集め終わった数（プログレス表示用）
 
@@ -1402,7 +1422,7 @@
     DB.lastUnits = runUnits; saveDB();   // 次回の初期値として記憶
     // 配列を回転：k番目から最後まで + 先頭からk-1番目まで
     job = pendingJob.slice(k).concat(pendingJob.slice(0, k));
-    idx = 0; missing = []; doneCount = 0;
+    idx = 0; missing = []; completed = []; excluded = []; doneCount = 0;
     show('work'); renderWork();
   }
   $('ssTop').onclick = ()=> beginJob(0);
@@ -1410,19 +1430,17 @@
 
   /* ===== WORK ===== */
   function fmtCode(code){ return '<span class="pfx">'+code[0]+'</span>'+code.slice(1); }
-  function activeTotal(){ return job.length - missing.length; }  // 欠品を除いた集める総数
+  function activeTotal(){ return job.length - missing.length - excluded.length; }  // 欠品を除いた集める総数
   function renderWork(){
     // 今のidxが欠品なら、欠品でない次の部品まで飛ばす
-    while(idx < job.length && missing.includes(idx)) idx++;
+    while(idx < job.length && (missing.includes(idx)||completed.includes(idx)||excluded.includes(idx))) idx++;
     if(idx >= job.length){ finish(); return; }
     const cur = job[idx];
     $('prog').textContent = (doneCount+1)+' / '+activeTotal();
     $('targetCode').innerHTML = fmtCode(cur.code);
-    // 品名 ・ 個数 を横並びで表示（品名が無ければ個数だけ）
-    const nm = (cur.name||'').trim();
-    const qtyText = (cur.qty||'') + '個';
     $('targetName').style.display='block';
-    $('targetName').innerHTML = (nm ? '<span class="tn-name">'+nm.replace(/</g,'&lt;')+'</span><span class="tn-dot">・</span>' : '') + '<span class="tn-qty">'+qtyText+'</span>';
+    $('targetName').textContent = (cur.name||'').trim() || '品名未登録';
+    setWorkPhase(false);
     $('target').className = 'target';
     $('verdict').textContent=''; $('verdict').className='verdict';
     showPlaceFor(cur.code);              // 登録された場所を表示（棚番 or 地図）
@@ -1436,6 +1454,8 @@
     $('redoBtn').style.display='none';
     matched=false;
     stopScan();
+    lastVal=null; lastTime=0;
+    startScan();
   }
 
   // 読み取り画面に登録場所を表示（棚番=左バッジ、地図=右ボタン）
@@ -1449,7 +1469,7 @@
     // 左上：棚番バッジ（あれば棚番、なければ点線「棚番」ボタン）
     const badge=$('shelfBadge');
     if(shelf){ badge.textContent=shelf; badge.classList.remove('empty'); }
-    else { badge.textContent='棚番'; badge.classList.add('empty'); }
+    else { badge.textContent='未登録'; badge.classList.add('empty'); }
     // パネルは閉じた状態から
     $('shelfPanel').style.display='none';
     $('placeBox').style.display='none';
@@ -1483,10 +1503,11 @@
     if(opening){
       const p=(DB.place&&DB.place[curWorkCode])?DB.place[curWorkCode]:null;
       $('shelfInput').value = p ? (p.shelf||'') : '';
-      $('camArea').style.display='none';   // 入力中はカメラ枠を消す
+      stopScan();
+    $('camArea').style.display='none';   // 入力中はカメラ枠を消す
       setTimeout(()=>$('shelfInput').focus(),50);
     } else {
-      if(!matched) $('camArea').style.display='block';
+      if(!matched){ $('camArea').style.display='block'; if(!running)startScan(); }
     }
   };
   // 棚番を保存
@@ -1501,7 +1522,7 @@
     if(val){ badge.textContent=val; badge.classList.remove('empty'); }
     else { badge.textContent='棚番'; badge.classList.add('empty'); }
     $('shelfPanel').style.display='none';
-    if(!matched) $('camArea').style.display='block';
+    if(!matched){ $('camArea').style.display='block'; if(!running)startScan(); }
   };
 
   // 地図ボタン → この部品の場所（塗り絵）をモーダルで表示
@@ -1509,6 +1530,7 @@
   function openWorkMap(){
     const code=curWorkCode;
     if(!code) return;
+    stopScan();
     // 塗り絵データを探す（ゼロ埋め違いも吸収）
     let key=null;
     const nq=mpNorm(code);
@@ -1579,8 +1601,9 @@
       $('wmWorld').style.transform='translate('+((st.width-W*s)/2)+'px,'+((st.height-H*s)/2)+'px) scale('+s+')';
     });
   }
-  $('wmClose').onclick=()=> $('wmModal').classList.remove('on');
-  $('wmModal').onclick=(e)=>{ if(e.target===$('wmModal')) $('wmModal').classList.remove('on'); };
+  function closeWorkMap(){ $('wmModal').classList.remove('on');if($('work').classList.contains('on')&&!matched&&!running)startScan(); }
+  $('wmClose').onclick=closeWorkMap;
+  $('wmModal').onclick=(e)=>{ if(e.target===$('wmModal'))closeWorkMap(); };
 
   // 一致後：場所まわりをまるごと隠す
   function hidePlaceBox(){
@@ -1683,6 +1706,8 @@
 
     qtySegments = segs;
     qtyChecks = segs.map(()=>false);
+    qtyMethods = segs.map(()=>null);
+    $('qtyTotal').textContent = segs.length>1 ? '合計 '+segs.join(' + ')+' 個（箱ごとに確認）' : '';
     const wrap = $('qtyRows'); wrap.innerHTML='';
     segs.forEach((n,i)=>{
       const row = document.createElement('div');
@@ -1712,13 +1737,14 @@
       }
       const batch = batches ? '<span class="qbatch">'+batches[i]+'</span>' : '';
       row.innerHTML='<div class="qmain"><div class="qnum">'+n+'</div>'+(sub?'<div class="qsub">'+sub+'</div>':'')+batch+'</div><div class="qbox">✓</div>';
-      const hint=document.createElement('div'); hint.className='qsub';
-      hint.textContent=isNum?'📷 個数を読み取る':'必要数を登録してください';
+      const hint=document.createElement('div'); hint.className='qsub qty-state';
+      hint.textContent=isNum?'個数を読み取る':'必要数を登録してください';
       row.querySelector('.qmain').appendChild(hint);
       row.setAttribute('role','button');row.tabIndex=0;
       row.onclick = ()=>{
         if(!isNum){ $('verdict').textContent='必要数が未登録です。ホームに戻り、個数を登録してください。'; return; }
         if(qtyChecks[i])return;
+        $('manualQtyPanel').hidden=true; manualQtyIndex=-1;
         startQtyOcr(n,i,row);
       };
       row.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();row.click();}};
@@ -3325,7 +3351,9 @@
   function resetChecks(){
     stopQtyOcr();
     qtySegments = [];
-    qtyChecks = []; c3=false; skipMode=false;
+    qtyChecks = []; qtyMethods=[]; manualQtyIndex=-1; c3=false; skipMode=false;
+    $('manualQtyPanel').hidden=true;
+    $('activeQtyBatch').hidden=true;
     $('qtyRows').innerHTML='';
     $('cntNote').style.display='none';
     $('chk3').classList.remove('checked');
@@ -3338,6 +3366,11 @@
     const allQty = qtyChecks.length>0 && qtyChecks.every(v=>v);
     const ok = matched && allQty && (!skipMode || c3);
     $('nextBtn').classList.toggle('locked', !ok);
+    $('nextBtn').disabled=!ok;
+    $('nextBtn').textContent=ok?'確認完了・次の部品へ':'確認後に次の部品へ';
+    $('manualQtyBtn').hidden=allQty;
+    $('manualQtyHint').hidden=allQty;
+    $('quantityResume').hidden=allQty || !matched || $('ocrModal').classList.contains('on') || !$('manualQtyPanel').hidden;
   }
   $('nextBtn').onclick = () => {
     updateNext();
@@ -3346,10 +3379,12 @@
       $('verdict').textContent= skipMode ? '個数を読み取り、品名を確認してください' : '必要数と一致する個数表示を読み取ってください';
       return;
     }
-    doneCount++;            // この部品を集め終わった
+    if(!completed.includes(idx)) completed.push(idx);
+    job[idx].verification = qtySegments.map((quantity,i)=>({quantity,method:qtyMethods[i]}));
+    doneCount=completed.length;
     idx++;
     // 欠品を飛ばして次の集める部品へ
-    while(idx < job.length && missing.includes(idx)) idx++;
+    while(idx < job.length && (missing.includes(idx)||completed.includes(idx)||excluded.includes(idx))) idx++;
     if (idx < job.length){ renderWork(); }
     else { finish(); }
   };
@@ -3369,45 +3404,28 @@
     undoFn=null;
   };
 
-  // 後回し：今の部品をjob末尾へ移動（idxはそのまま＝次が繰り上がる）
-  $('postponeBtn').onclick = ()=>{
-    if(matched) return;        // 一致/確認済みのときは押させない
+  // 順序は変えず、出庫不要と在庫不足を別々に記録する。
+  function omitCurrent(reason){
+    if(matched || !job[idx])return;
+    const original=idx,p=job[idx],list=reason==='excluded'?excluded:missing;
+    if(!list.includes(idx))list.push(idx);
     sndTap();
-    const moved = job[idx];
-    missing = missing.map(m=> m>idx ? m-1 : m);  // 配列詰めに合わせて欠品indexを補正
-    job.splice(idx,1);
-    job.push(moved);
-    showUndo('「'+(moved.name||moved.code)+'」を後回しにした', ()=>{
-      job.pop();
-      job.splice(idx,0,moved);
-      missing = missing.map(m=> m>=idx ? m+1 : m);
-      renderWork();
+    showUndo('「'+(p.name||p.code)+'」を'+(reason==='excluded'?'出庫不要':'在庫不足')+'にした',()=>{
+      if(reason==='excluded')excluded=excluded.filter(i=>i!==original);
+      else missing=missing.filter(i=>i!==original);
+      idx=original;show('work');renderWork();
     });
-    renderWork();
-  };
-
-  // 欠品：missingに記録してすぐ次へ
-  $('missBtn').onclick = ()=>{
-    if(matched) return;
-    sndTap();
-    const missedIdx = idx;
-    const p = job[missedIdx];
-    missing.push(missedIdx);
-    showUndo('「'+(p.name||p.code)+'」を欠品にした', ()=>{
-      missing = missing.filter(m=>m!==missedIdx);
-      idx = missedIdx;
-      renderWork();
-    });
-    idx++;
-    while(idx < job.length && missing.includes(idx)) idx++;
-    if(idx < job.length){ renderWork(); } else { finish(); }
-  };
+    idx++;renderWork();
+  }
+  $('excludeBtn').onclick=()=>omitCurrent('excluded');
+  $('missBtn').onclick=()=>omitCurrent('missing');
 
   /* ----- スキップ（バーコードなし・手動確認） ----- */
   $('skipBtn').onclick = ()=>{
     if(matched) return;              // すでに確認済みなら無視
     matched = true;                  // 以後スキャンも無効化
     skipMode = true;
+    setWorkPhase(true, true);
     try{ stopScan(); }catch(e){}
     if(navigator.vibrate) navigator.vibrate(40);
     // 上の表示：一致(緑)とは違う色で「手動確認」と分かるように
@@ -3429,23 +3447,31 @@
   $('redoBtn').onclick = ()=>{ renderWork(); };
 
   /* ===== barcode scan ===== */
-  let reader=null, running=false, lastVal=null, lastTime=0, matched=false;
+  let reader=null, running=false, lastVal=null, lastTime=0, matched=false, scanEpoch=0;
   async function startScan(){
     if (running){ stopScan(); return; }
     if (typeof ZXing==='undefined'){ $('verdict').className='verdict ng'; $('verdict').textContent='読み取りライブラリを読めんかった'; return; }
+    if(matched||!$('work').classList.contains('on'))return;
+    const token=++scanEpoch, item=job[idx];
     try {
       reader = new ZXing.BrowserMultiFormatReader();
+      const activeReader=reader;
       $('camArea').classList.add('scanning');
       $('camStartBtn').textContent='■ 止める'; running=true;
-      $('verdict').className='verdict'; $('verdict').textContent='棚のバーコードをかざしてな';
-      await reader.decodeFromVideoDevice(null,'video',(result)=>{ if(result) onScan(result.getText()); });
+      $('verdict').className='verdict'; $('verdict').textContent='部品のバーコードを枠に合わせてください';
+      await activeReader.decodeFromVideoDevice(null,'video',(result)=>{ if(result && token===scanEpoch && job[idx]===item && $('work').classList.contains('on')) onScan(result.getText()); });
+      if(token!==scanEpoch)activeReader.reset();
     } catch(e){
-      $('verdict').className='verdict ng'; $('verdict').textContent='カメラを開けんかった（権限/https を確認）';
+      if(token!==scanEpoch)return;
+      $('verdict').className='verdict ng'; $('verdict').textContent='カメラを開けません。カメラの許可を確認して再開してください。';
       stopScan();
     }
   }
   function stopScan(){
+    scanEpoch++;
     if (reader){ try{reader.reset();}catch(e){} }
+    reader=null;
+    const stream=$('video').srcObject;if(stream)stream.getTracks().forEach(t=>t.stop());$('video').srcObject=null;
     running=false; $('camArea').classList.remove('scanning');
     $('camStartBtn').textContent='📷 読み取り開始';
   }
@@ -3453,7 +3479,7 @@
   // カメラ枠ぜんたいタップでシャッター開閉（開く=起動、閉じる=停止）
   $('camArea').onclick = ()=>{ startScan(); };
   function onScan(val){
-    if(matched) return;
+    if(matched || !$('work').classList.contains('on') || !job[idx]) return;
     const now=Date.now();
     if (val===lastVal && now-lastTime<1200) return;
     lastVal=val; lastTime=now;
@@ -3469,11 +3495,12 @@
 
     if (resolvedCode === target){
       matched=true;
+      setWorkPhase(true);
       if (navigator.vibrate) navigator.vibrate(120);
       sndOK();
       stopScan();
       $('target').className='target match';
-      $('verdict').className='verdict ok'; $('verdict').textContent='✓ コード一致！ 次は計量器の個数を読み取ってください';
+      $('verdict').className='verdict ok'; $('verdict').textContent='';
       hidePlaceBox();   // 一致後は地図を消す（個数確認だけ）
       buildQtyRows(job[idx].qty);  // 個数行を作る（+で2分割 or 1つ）
       $('camArea').style.display='none';
@@ -3500,12 +3527,23 @@
   function finish(){
     stopScan();
     $('undoToast').classList.remove('show');
-    const collected = job.length - missing.length;
-    $('finishCount').textContent = collected+'個 完了';
+    stopQtyOcr();
+    const collected = completed.length;
+    $('finishTitle').textContent = missing.length?'在庫不足の部品があります':'部品の確認が完了';
+    $('finishCount').textContent = collected+'部品 確認済み / 出庫不要 '+excluded.length+'件 / 在庫不足 '+missing.length+'件';
+    $('excludedCard').hidden=!excluded.length;
+    $('excludedList').replaceChildren();
+    excluded.forEach(i=>{
+      const row=document.createElement('div');row.className='miss-row';
+      const label=document.createElement('div');label.className='info';label.textContent=job[i].code+' '+(job[i].name||'');
+      const button=document.createElement('button');button.className='back-btn';button.textContent='集める';
+      button.onclick=()=>{excluded=excluded.filter(n=>n!==i);idx=i;show('work');renderWork();};
+      row.append(label,button);$('excludedList').appendChild(row);
+    });
     // 欠品リスト
     if(missing.length){
       $('missCard').style.display='block';
-      $('missTitle').textContent = '⚠ 欠品だった部品（'+missing.length+'件）';
+      $('missTitle').textContent = '⚠ 在庫不足の部品（'+missing.length+'件）';
       const wrap=$('missList'); wrap.innerHTML='';
       // missingは現在のjob配列のインデックス。表示用にコピーして処理
       missing.slice().forEach(mi=>{
@@ -3762,7 +3800,51 @@
 
   window.addEventListener('pagehide', stopScan);
 
-  /* 個数は共通OCRで照合。チェックは一致コールバックからだけ付ける。 */
+  $('quantityReaderHost').appendChild($('ocrModal'));
+  function setWorkPhase(quantity, manual=false){
+    $('work').classList.toggle('quantity-phase',quantity);
+    $('workTitle').textContent=quantity?'個数を確認':'部品を確認';
+    $('partStep').className=quantity?'complete':'active';
+    $('quantityStep').className=quantity?'active':'';
+    $('partStep').querySelector('b').textContent=quantity?'✓':'1';
+    $('matchBanner').hidden=!quantity;
+    $('matchBanner').textContent=manual?'品名・コードを自分で確認してください':'✓ 部品が一致しました';
+    $('matchBanner').classList.toggle('manual',manual);
+    $('scanInstruction').hidden=quantity;
+    $('pickExceptions').hidden=quantity;
+    $('pickLocation').hidden=quantity;
+    $('manualQtyPanel').hidden=true;
+    window.scrollTo(0,0);
+  }
+  $('quantityResume').onclick=()=>guideQtyRead();
+  $('manualQtyBtn').onclick=()=>{
+    if(!matched)return;
+    const i=qtyChecks.findIndex(v=>!v);
+    if(i<0 || !/^\d{1,7}$/.test(qtySegments[i])){
+      $('verdict').textContent='必要数が未登録です。先に必要数を登録してください。';return;
+    }
+    stopQtyOcr();manualQtyIndex=i;
+    $('manualQtyPanel').hidden=false;$('quantityResume').hidden=true;
+    $('manualQtyText').textContent=(qtyChecks.length>1?(i+1)+'箱目：':'')+qtySegments[i]+'個を自分で数えて確認してください。';
+    $('manualQtyConfirm').textContent=qtySegments[i]+'個そろっていることを確認した';
+    $('manualQtyConfirm').focus({preventScroll:true});
+  };
+  $('manualQtyCancel').onclick=()=>{
+    $('manualQtyPanel').hidden=true;manualQtyIndex=-1;guideQtyRead();
+  };
+  $('manualQtyConfirm').onclick=()=>{
+    const i=manualQtyIndex;
+    if(!matched||i<0||qtyChecks[i]||$('manualQtyPanel').hidden)return;
+    qtyChecks[i]=true;qtyMethods[i]='manual';
+    const row=$('qtyRows').children[i];row.classList.add('checked');
+    row.querySelector('.qty-state').textContent='✓ '+qtySegments[i]+'個 自分で確認済み';
+    $('manualQtyPanel').hidden=true;manualQtyIndex=-1;
+    $('verdict').className='verdict ok';
+    $('verdict').textContent=qtyChecks.every(Boolean)?'✓ 個数を自分で確認しました':'✓ この箱を自分で確認しました。次の箱も確認してください。';
+    updateNext();
+  };
+
+  /* OCRの照合は2フレームの一致で確定。自己確認とは記録を分ける。 */
   function guideQtyRead(){
     const i=qtyChecks.findIndex(v=>!v);
     if(i<0)return;
@@ -3776,17 +3858,23 @@
   function startQtyOcr(targetNum,rowIndex,rowEl){
     if(!matched||qtyChecks[rowIndex]||!/^\d{1,7}$/.test(String(targetNum)))return;
     const item=job[idx],itemIndex=idx;
+    $('quantityResume').hidden=true;
+    $('activeQtyBatch').hidden=qtyChecks.length<2;
+    $('activeQtyBatch').textContent=(rowIndex+1)+'箱目 / '+qtyChecks.length+'箱：'+targetNum+'個を確認';
+    [...$('qtyRows').children].forEach((el,i)=>el.classList.toggle('reading',i===rowIndex));
     window.QuantityVerifier.open({expected:String(Number(targetNum)),code:item.code,
+      inline:true,onClose:()=>{updateNext();},
       batch:qtyChecks.length>1?`${rowIndex+1}箱目 / ${qtyChecks.length}箱`:'',
       onMatch:result=>{
         if(!matched||job[idx]!==item||idx!==itemIndex||!rowEl.isConnected||qtyChecks[rowIndex]||result.value!==String(Number(qtySegments[rowIndex])))return;
-        qtyChecks[rowIndex]=true;rowEl.classList.add('checked');
-        rowEl.querySelector('.qmain').lastElementChild.textContent='✓ '+result.value+'個 読取一致';
+        qtyChecks[rowIndex]=true;qtyMethods[rowIndex]='ocr';rowEl.classList.add('checked');
+        rowEl.querySelector('.qty-state').textContent='✓ '+result.value+'個 読取一致';
         updateNext();sndOK();if(navigator.vibrate)navigator.vibrate(120);
         const remaining=qtyChecks.filter(v=>!v).length;
         $('verdict').className='verdict ok';
         $('verdict').textContent=remaining?'✓ この箱は一致。次の箱を用意して、未確認の個数をタップしてください。':skipMode&&!c3?'✓ 個数一致！ 品名も確認してください。':'✓ 個数一致！ 次へ進めます。';
       }});
+    updateNext();
   }
   function stopQtyOcr(){window.QuantityVerifier?.close();}
 

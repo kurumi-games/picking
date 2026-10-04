@@ -1,0 +1,90 @@
+/* ver72: bright, two-stage picking. All styles are scoped to the work screen. */
+#work{background:#f5f8fc;color:#14202f;color-scheme:light}
+#work [hidden],#finish [hidden]{display:none!important}
+#work .wrap{padding:16px 16px 28px;max-width:540px}
+#work .topbar{margin-bottom:18px;gap:10px}
+#work .topbar h2{font-size:24px;flex:1;letter-spacing:.03em}
+#work .topbar .back{color:#14202f;min-width:44px;min-height:44px;padding:4px;background:transparent;border:0;font-size:28px}
+#work .progress-text{font-size:14px;color:#526171;white-space:nowrap}
+.pick-steps{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:20px;color:#677583;font-size:15px;font-weight:800}
+.pick-steps span{display:flex;align-items:center;gap:7px;white-space:nowrap}
+.pick-steps b{display:grid;place-items:center;width:32px;height:32px;background:#dfe5ec;border-radius:50%;color:#546271;font-size:18px}
+.pick-steps i{height:2px;background:#d9e1eb;flex:1;max-width:50px}
+.pick-steps .active{color:#0860d7}.pick-steps .active b{background:#0860d7;color:#fff}
+.pick-steps .complete{color:#187345}.pick-steps .complete b{background:#187345;color:#fff}
+.match-banner{padding:12px 16px;background:#e4f5eb;color:#126638;border:1px solid #c5e8d4;border-radius:12px;font-size:17px;font-weight:800;margin-bottom:14px}
+.match-banner.manual{background:#edf3ff;color:#215c9c;border-color:#cdddf2}
+#work .target,#work .target.match,#work .target.manual{padding:18px;text-align:left;background:#fff;border:1px solid #dce5ee;box-shadow:none;margin-bottom:14px}
+#work .target-name{margin:0 0 10px;font-size:clamp(22px,6.2vw,30px);font-weight:850;line-height:1.4;overflow-wrap:anywhere}
+#work .target .code{font-size:clamp(28px,8.6vw,40px);letter-spacing:.01em;line-height:1.25;color:#101923;word-break:normal;overflow-wrap:anywhere}
+#work .target .code .pfx{color:inherit}
+.pick-location{display:flex;align-items:center;gap:12px;background:#eaf3ff;border-radius:12px;margin-top:15px;padding:12px}
+.pick-shelf{flex:1;min-width:0}.pick-shelf>span{display:block;font-size:13px;color:#526171;font-weight:700}
+#work .loc-l,#work .loc-r{position:static;border:0;background:transparent;border-radius:8px;min-height:44px;margin:0;padding:0;white-space:normal}
+#work .loc-l{font-size:28px;justify-content:flex-start;color:#123c72;overflow-wrap:anywhere}
+#work .loc-l.empty{font-size:20px;color:#536579}
+#work .loc-r{font-size:16px;color:#1263c4;background:#fff;border:1px solid #c9dcf5;padding:8px 12px}
+.pick-instruction{font-size:21px;line-height:1.45;font-weight:800;text-align:center;margin:2px 0 14px}
+#work .cam-area{aspect-ratio:16/9;background:#e4edf7;border:1px solid #ccd9e7;margin-bottom:10px}
+#work .cam-shutter{background:#eaf1f9;border:0}
+#work .cam-start{background:#0965db;box-shadow:none;font-size:17px}
+#work .cam-area.scanning .cam-start{background:#fff;color:#17457d;border:1px solid #ccd9e7;bottom:8px;min-height:36px;font-size:13px;padding:5px 16px}
+#work .scan-line{display:none;animation:none;height:36%;top:27%;left:8%;right:8%;border:3px solid #2682ef;background:transparent;box-shadow:none;border-radius:10px}
+#work .scanning .scan-line{display:block}
+#work .verdict{font-size:15px;line-height:1.5;margin-bottom:12px;overflow-wrap:anywhere}
+#work .verdict:empty{display:none}
+.pick-exceptions{display:grid;gap:10px;margin-top:4px}
+#work .pick-exceptions .btn{min-height:56px;font-size:19px;filter:none}
+#excludeBtn{background:#fff;color:#172434;border:1.5px solid #c5d0dc}
+#excludeBtn small{display:block;font-size:13px;font-weight:500;color:#5a6775;margin-top:4px}
+#work #missBtn{background:#fff3d6;border:1.5px solid #efc266;color:#865306}
+#work .work-foot{margin-top:2px}
+#work #skipBtn,#work #redoBtn{font-size:14px;background:transparent;border:0;color:#526579;text-decoration:underline;min-height:44px;padding:10px}
+#work .confirm-box{padding:0;border:0;background:transparent;margin-bottom:0}
+.quantity-label{font-weight:800;font-size:18px;margin:0 0 8px}
+#qtyTotal{display:block;font-size:13px;color:#526579;font-weight:600;margin-top:4px}
+#work .qty-row{background:#eaf4ff;border:1px solid #c5dfff;padding:14px 18px;margin-bottom:12px;gap:10px}
+#work .qty-row .qnum{font-size:56px;line-height:1.15;color:#004ca8}
+#work .qty-row .qnum:after{content:' 個';font-size:22px}
+#work .qty-row .qbox{width:30px;height:30px;flex-basis:30px;font-size:20px;border-width:2px;border-color:#7a9bc3}
+#work .qty-row .qsub{font-size:13px;color:#265c95;font-weight:600}
+#work .qty-row.checked{background:#e9f6ee;border-color:#a4d9ba}
+#work .qty-row.checked .qnum,#work .qty-row.checked .qsub{color:#176e40}
+#work .qty-row.checked .qbox{border-color:#187345;background:#187345}
+#work #chk3{background:#fff7df;border:1px solid #e9c77b;border-radius:10px;padding:12px;margin-bottom:12px}
+#work .manual-qty{margin-top:14px;background:#fff;border:2px solid #0965db;color:#0960cc;font-size:17px;min-height:52px}
+.manual-hint{font-size:13px;color:#596977;text-align:center;margin:7px 0 12px}
+.manual-qty-panel{padding:16px;margin-top:12px;background:#fff;border:2px solid #2571ce;border-radius:12px}
+.manual-qty-panel p{font-weight:750;font-size:18px;line-height:1.5;margin-bottom:12px}
+.manual-qty-panel .btn{margin-top:8px}
+#work #quantityResume{color:#075abd;background:#edf5ff;border:1px solid #bad4f5;margin-top:8px}
+#work #nextBtn{background:#0864d5;min-height:56px;margin-top:10px}
+#work #nextBtn:disabled{background:#dbe2eb;color:#697685;filter:none;cursor:default}
+/* Shared verifier stays inline: identity and needed quantity remain visible. */
+#work .ocr-modal{position:static;padding:0;background:transparent;overflow:visible;color:inherit;overscroll-behavior:auto}
+#work .ocr-modal.on{display:block}
+#work .ocr-card{padding:0;border:0;background:transparent;max-width:none}
+#work .ocr-head{margin:14px 0 8px;align-items:flex-start;gap:4px}
+#work .ocr-head h2{font-size:18px;line-height:1.4}
+#work .ocr-close{font-size:20px;min-width:36px;min-height:36px}
+#work #ocrPart,#work .ocr-target{display:none}
+#work .ocr-hint{font-size:13px;margin:5px 0 10px}
+#work .ocr-cam{background:#e5edf5;border:1px solid #bdcde0;border-radius:12px}
+#work #ocrFrame{border-color:#1681f7;box-shadow:0 0 0 1500px #0002}
+#work .ocr-result{font-size:27px;margin-top:12px}
+#work .ocr-status{font-size:14px;line-height:1.5;margin:6px 0 10px}
+#work .ocr-settings{margin:8px 0;color:#45617c;font-size:13px}
+#work .ocr-settings summary{cursor:pointer;padding:8px 0;min-height:36px}
+#work .ocr-card .btn{background:#0965db;min-height:48px}
+#work .ocr-adjust{margin-top:0}
+#work .shelf-panel input{min-width:0}
+#finish .miss-card{width:100%;max-width:540px}
+@media(min-width:600px){#work .wrap{padding-top:24px}}
+#work.quantity-phase .topbar{margin-bottom:12px}
+#work.quantity-phase .pick-steps{margin-bottom:12px}
+#work.quantity-phase .target{padding:14px;margin-bottom:12px}
+#work.quantity-phase .target-name{font-size:21px;margin-bottom:6px}
+#work.quantity-phase .target .code{font-size:30px}
+#work.quantity-phase .match-banner{padding:10px 14px;margin-bottom:12px;font-size:16px}
+#work .qty-row.reading{border:2px solid #4194ed}
+#activeQtyBatch{font-size:16px;font-weight:800;color:#154f91;margin:12px 0 4px}
