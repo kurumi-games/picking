@@ -16,7 +16,7 @@ const server=http.createServer((req,res)=>{const p=path.resolve(root,'.'+req.url
   else if(await page.locator('#finish').evaluate(e=>e.classList.contains('on')))await page.locator('#homeBtn2').click();
   await page.locator('#rows .c-in').nth(0).fill('C00000040');await page.locator('#rows .q-in').nth(0).fill(qty);
   await page.locator('#rows .c-in').nth(1).fill('C00000050');await page.locator('#rows .q-in').nth(1).fill('50');
-  await page.locator('#startBtn').click();await page.locator('#ssUnits').fill(units);await page.locator('#ssTop').click();
+  await page.locator('#startBtn').click();await page.locator('#ssUnits').fill(units);await page.locator('#ssList .ss-row').first().click();
  }
  async function scan(code='C00000040'){await page.evaluate(code=>window.scanCode(code),code);}
  async function ready(){await page.waitForFunction(()=>!document.getElementById('ocrShoot').disabled);}

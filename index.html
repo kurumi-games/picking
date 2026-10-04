@@ -77,7 +77,6 @@
   .ss-info { flex:1; min-width:0; display:flex; flex-direction:column; }
   .ss-info b { font-family:ui-monospace,Menlo,monospace; font-size:14px; }
   .ss-name { font-size:11.5px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  #ssShelf:disabled { opacity:.5; cursor:default; }
   .ss-hint { font-size:12px; color:var(--muted); line-height:1.6; margin:2px 2px 12px; }
 
   /* ===== 倉庫マップ ===== */
@@ -569,7 +568,7 @@
   <div class="wrap">
     <div class="home-title">
       <h1>ピッキング補助</h1>
-      <div class="ver-tag">ver72（部品・個数を見やすく確認）</div>
+      <div class="ver-tag">ver73（一覧からタップして開始）</div>
     </div>
     <div class="home-btns">
       <button class="home-btn go" id="goBtn">GO</button>
@@ -587,7 +586,7 @@
   <div class="wrap">
     <div style="text-align:center; padding:14px 0 16px;">
       <h2 style="font-size:22px; font-weight:900;">ピッキング補助</h2>
-      <div class="ver-tag" style="margin:4px 0 0;">ver72（部品・個数を見やすく確認）</div>
+      <div class="ver-tag" style="margin:4px 0 0;">ver73（一覧からタップして開始）</div>
     </div>
 
     <a href="qty-read-test.html" class="btn" style="display:block;text-align:center;text-decoration:none;margin:0 0 18px;">📷 個数読取テスト</a>
@@ -840,14 +839,10 @@
       <button class="back" id="startselBack">←</button>
       <h2>どこからスタート？</h2>
     </div>
-    <p class="ss-hint">どこから始めても一周して、スタートの1個手前がゴールになる（順番どおり・飛ばしなし）。</p>
     <div class="fieldwrap" style="margin-bottom:14px;">
       <label style="display:block; font-size:12px; color:var(--muted); font-weight:700; margin-bottom:5px;">製造台数（50台ずつに分けて出す。空欄なら分けない）</label>
       <input class="boxin" id="ssUnits" type="number" inputmode="numeric" placeholder="例: 100" style="text-transform:none;">
     </div>
-    <button class="btn ok" id="ssTop" style="margin-bottom:10px;">⬇ 上から順にスタート</button>
-    <button class="btn" id="ssShelf" style="margin-bottom:16px;">🏷 棚番ありからスタート</button>
-    <p class="go-section-label">または、好きな行をタップしてスタート</p>
     <div id="ssList"></div>
   </div>
 </section>
@@ -1388,18 +1383,6 @@
     pendingJob = list;
     ssBackTo = backTo || 'input';
     $('ssUnits').value = DB.lastUnits || '';   // 前回の台数を初期値に
-    // 「棚番あり」の最初の行を探す
-    const k = list.findIndex(it => shelfOf(it));
-    const sb = $('ssShelf');
-    if(k >= 0){
-      sb.disabled = false;
-      sb.textContent = '🏷 棚番ありからスタート（'+(k+1)+'番目・'+shelfOf(list[k])+'）';
-      sb.onclick = ()=> beginJob(k);
-    } else {
-      sb.disabled = true;
-      sb.textContent = '🏷 棚番ありの行がない';
-      sb.onclick = null;
-    }
     // 行リスト（タップでその行からスタート）
     const wrap = $('ssList'); wrap.innerHTML='';
     list.forEach((it,i)=>{
@@ -1425,7 +1408,6 @@
     idx = 0; missing = []; completed = []; excluded = []; doneCount = 0;
     show('work'); renderWork();
   }
-  $('ssTop').onclick = ()=> beginJob(0);
   $('startselBack').onclick = ()=> show(ssBackTo);
 
   /* ===== WORK ===== */
